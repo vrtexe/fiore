@@ -1,0 +1,128 @@
+:root {
+  --bg: #0a0c0f;
+  --surface: #11151a;
+  --ink: #f4f2ec;
+  --muted: #a7ada6;
+  --line: rgba(244, 242, 236, 0.12);
+  --accent: #b8f26d;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: start center;
+  padding: 64px 16px;
+}
+
+.app {
+  width: min(480px, 100%);
+}
+
+header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+h1 {
+  margin: 0 0 24px;
+  font-size: 40px;
+  letter-spacing: -0.03em;
+}
+
+h1 small {
+  color: var(--accent);
+  font-size: 0.6em;
+}
+
+.count {
+  color: var(--muted);
+  font-family: ui-monospace, Menlo, monospace;
+}
+
+.add {
+  display: flex;
+  gap: 8px;
+}
+
+input[name='todo'] {
+  flex: 1;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+}
+
+button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--bg);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button.ghost {
+  padding: 6px;
+  background: transparent;
+  color: var(--muted);
+}
+
+button.ghost:hover {
+  color: var(--ink);
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+  fill: currentColor;
+}
+
+.list {
+  margin: 24px 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid var(--line);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 4px;
+  border-bottom: 1px solid var(--line);
+}
+
+.item label {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.item input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+}
+
+.item.done span {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.hint {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
