@@ -32,13 +32,21 @@ test('effects rerun when what they read changes, and stop cleanly', () => {
   assert.deepEqual(cleanups, ['cleanup', 'cleanup']);
 });
 
-test('update changes the value in place and always notifies', () => {
+test('update sets the value its function returns', () => {
+  const count = state(1);
+  const { update } = count;
+  update((value) => value + 1);
+
+  assert.equal(count.get(), 2);
+});
+
+test('mutate changes the value in place and always notifies', () => {
   const list = state([1, 2]);
   const lengths = [];
   effect(() => lengths.push(list.get().length));
   const before = list.get();
 
-  list.update((items) => items.push(3));
+  list.mutate((items) => items.push(3));
 
   assert.equal(list.get(), before);
   assert.deepEqual(lengths, [2, 3]);

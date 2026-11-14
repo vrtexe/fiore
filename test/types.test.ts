@@ -20,5 +20,9 @@ Label({ text: 'static' });
 Label({ text: name });
 Label({ text: () => name.get().toUpperCase() });
 
+name.update((value) => value.trim());
+// @ts-expect-error update has to return the new value
+name.update((value) => value.length);
+
 const doubled: number = read(computed(() => 2));
 void doubled;

@@ -82,24 +82,34 @@ function runIn(computation, nextOwner, fn) {
 export function state(value) {
   /** @type {Source} */
   const source = { subs: new Set() };
+
+  /** @param {T} next */
+  function set(next) {
+    if (!Object.is(next, value)) {
+      value = next;
+      notify(source);
+    }
+  }
+
   return {
     [SIGNAL]: true,
     get() {
       track(source);
       return value;
     },
-    /** @param {T} next */
-    set(next) {
-      if (!Object.is(next, value)) {
-        value = next;
-        notify(source);
-      }
+    set,
+    /**
+     * Sets the value that `fn` returns for the current value, for example `(count) => count + 1`.
+     * @param {(value: T) => T} fn
+     */
+    update(fn) {
+      set(fn(value));
     },
     /**
      * Changes the value in place, for example with `list.push(item)`, and always notifies.
      * @param {(value: T) => unknown} fn
      */
-    update(fn) {
+    mutate(fn) {
       fn(value);
       notify(source);
     },
