@@ -1,0 +1,58 @@
+{
+  "name": "@fiorejs/jsx",
+  "version": "0.1.0",
+  "description": "JSX runtime for fiorejs. Write HTML and SVG as JSX and get real DOM nodes, with no virtual DOM and no re-rendering.",
+  "license": "MIT",
+  "author": "vrtexe",
+  "type": "module",
+  "keywords": [
+    "fiore",
+    "fiorejs",
+    "jsx",
+    "jsx-runtime",
+    "dom",
+    "html",
+    "svg",
+    "typescript"
+  ],
+  "exports": {
+    "./jsx-runtime": {
+      "types": "./jsx-runtime.d.ts",
+      "default": "./jsx-runtime.js"
+    },
+    "./jsx-dev-runtime": {
+      "types": "./jsx-dev-runtime.d.ts",
+      "default": "./jsx-dev-runtime.js"
+    }
+  },
+  "files": [
+    "jsx-runtime.js",
+    "jsx-runtime.d.ts",
+    "jsx-dev-runtime.js",
+    "jsx-dev-runtime.d.ts"
+  ],
+  "scripts": {
+    "test": "tsc -p test && node --test test/out/"
+  },
+  "peerDependencies": {
+    "fiorejs": "^1.1.5"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://github.com/vrtexe/fiore-jsx#readme",
+  "bugs": {
+    "url": "https://github.com/vrtexe/fiore-jsx/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vrtexe/fiore-jsx.git"
+  },
+  "devDependencies": {
+    "@types/jsdom": "^30.0.0",
+    "@types/node": "^26.6.6",
+    "fiorejs": "^1.1.5",
+    "jsdom": "^31.0.1",
+    "typescript": "~5.9"
+  }
+}

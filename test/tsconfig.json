@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fiorejs/jsx",
+    "strict": true,
+    "lib": ["es2022", "dom", "dom.iterable"],
+    "types": ["node"],
+    "rootDir": ".",
+    "outDir": "out"
+  },
+  "include": ["*.tsx"]
+}
