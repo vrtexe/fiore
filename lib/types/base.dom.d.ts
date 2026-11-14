@@ -38,6 +38,8 @@ export type BindContext =
   | { element: BaseElement; kind: 'child' };
 
 export type Plugin = {
+  /** Identifies the plugin; registering the same name again replaces it. */
+  name: string;
   /** Return true to take over the value; call `apply` now and whenever it changes. */
   bind?(value: unknown, apply: (value: unknown) => void, context: BindContext): boolean | void;
 };

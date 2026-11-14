@@ -183,6 +183,7 @@ A plugin can take over a property, attribute or child value before it is applied
 import { use } from 'fiorejs';
 
 use({
+  name: 'my-observables',
   bind(value, apply, context) {
     if (!(value instanceof MyObservable)) return false;
     apply(value.current);
@@ -192,7 +193,32 @@ use({
 });
 ```
 
-`context.kind` is `'property'`, `'attribute'` or `'child'`, with `context.name` for properties and attributes, and `context.element` is the element being built. Listeners in `event` are never offered to plugins. The plugin API can still change in a minor version.
+`context.kind` is `'property'`, `'attribute'` or `'child'`, with `context.name` for properties and attributes, and `context.element` is the element being built. Listeners in `event` are never offered to plugins. Registering a plugin with a name that is already registered replaces the earlier plugin, so a plugin module that runs again, for example after a hot reload, does not register twice. The plugin API can still change in a minor version.
+
+A plugin package usually calls `use()` in its own module. A module runs once per page however often it is imported, so the plugin is registered once.
+
+#### One copy of fiorejs
+
+Plugins are registered on the copy of fiorejs they import. If a page loads fiorejs from two different URLs, for example from two CDNs or two installed versions, a plugin can end up on one copy while elements are created by the other. fiorejs logs a warning in the console when a second copy loads.
+
+Without a bundler, use an import map so every module resolves `fiorejs` to the same URL:
+
+```html
+<script type="importmap">
+  {
+    "imports": {
+      "fiorejs": "https://cdn.jsdelivr.net/npm/fiorejs@1.2.0/lib/html.js",
+      "fiorejs/svg": "https://cdn.jsdelivr.net/npm/fiorejs@1.2.0/lib/svg.js",
+      "fiorejs/math": "https://cdn.jsdelivr.net/npm/fiorejs@1.2.0/lib/math.js"
+    }
+  }
+</script>
+<script type="module">
+  import { div } from 'fiorejs';
+</script>
+```
+
+Plugin packages should import fiorejs by its package name, never by a URL or relative path, so the import map applies to them too.
 
 Import styles:
 

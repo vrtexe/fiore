@@ -23,6 +23,7 @@ function signal(value) {
 
 const contexts = [];
 use({
+  name: 'test-signals',
   bind(value, apply, context) {
     if (!value?.isSignal) {
       return false;
@@ -100,4 +101,21 @@ test('a bound child can switch between nodes, lists and nothing', () => {
 
   content.set(document.createElement('b'));
   assert.equal(el.innerHTML, '[<b></b>]');
+});
+
+test('registering a plugin name again replaces the earlier plugin', () => {
+  const marker = { isMarker: true };
+  use({ name: 'marker', bind: (value, apply) => value === marker && (apply('first'), true) });
+  use({ name: 'marker', bind: (value, apply) => value === marker && (apply('second'), true) });
+
+  assert.equal(div({ children: marker }).textContent, 'second');
+});
+
+test('loading a second copy of fiorejs logs a warning', async (t) => {
+  const warn = t.mock.method(console, 'warn', () => {});
+
+  await import('../lib/core/plugins.js?second-copy');
+
+  assert.equal(warn.mock.callCount(), 1);
+  assert.match(warn.mock.calls[0].arguments[0], /fiorejs is loaded twice/);
 });

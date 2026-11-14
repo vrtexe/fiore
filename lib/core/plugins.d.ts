@@ -1,5 +1,5 @@
 /**
- * Registers a plugin that can take over values before they are applied.
+ * Registers a plugin; a plugin with the same name replaces the earlier one.
  * @param {Plugin} plugin
  */
 export function use(plugin: Plugin): void;
@@ -10,7 +10,6 @@ export function use(plugin: Plugin): void;
  * @param {BindContext} context
  */
 export function bind(value: unknown, apply: (value: unknown) => void, context: BindContext): boolean;
-/** @import { type Plugin, type BindContext } from '../types/base.dom.d.ts' */
 /** @type {Plugin[]} */
 export const plugins: Plugin[];
 import type { Plugin } from '../types/base.dom.d.ts';
