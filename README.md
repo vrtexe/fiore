@@ -29,10 +29,10 @@ Vite, esbuild and Babel read the same setting, or take it as `jsxImportSource: '
 const save = () => console.log('saved');
 
 document.body.append(
-  <form class="card" onSubmit={(event) => event.preventDefault()}>
+  <form class="card" onsubmit={(event) => event.preventDefault()}>
     <label for="name">Name</label>
     <input id="name" value="Ada" required />
-    <button type="submit" aria-label="Save" onClick={save}>
+    <button type="submit" aria-label="Save" onclick={save}>
       Save
     </button>
   </form>,
@@ -45,16 +45,15 @@ Each JSX prop goes to one of the fiorejs inputs:
 
 | Prop | Applied as | Example |
 | --- | --- | --- |
-| `on` + capitalised event name | event listener | `onClick`, `onKeydown`, `onPointerdown` |
-| `on:` + any event name | event listener | `on:cart-add`, `on:my-event` |
+| `on` + event name | event listener | `onclick`, `onkeydown`, `oncart-add` |
 | `style` with an object | style properties | `style={{ height: '10px' }}` |
 | a writable property of the element | property | `value`, `checked`, `className`, `type` |
 | anything else | attribute | `class`, `for`, `aria-label`, `data-id`, `list` |
 
-The event name after `on` is the DOM event name with its first letter capitalised, so `keydown` becomes `onKeydown`, not `onKeyDown`. A listener can also be an object with `handler` and `options`, which go to `addEventListener`:
+Everything after `on` is used as the event name, exactly as written, so custom events work the same way as built-in ones: `oncart-add` listens to `cart-add`. A listener can also be an object with `handler` and `options`, which go to `addEventListener`:
 
 ```tsx
-<input onKeydown={{ handler: (event) => console.log(event.key), options: { once: true } }} />
+<input onkeydown={{ handler: (event) => console.log(event.key), options: { once: true } }} />
 ```
 
 On SVG elements every prop except listeners and a `style` object is set as an attribute.
@@ -80,7 +79,7 @@ function Card(props: { title: string; children?: Child }) {
 
 ## Types
 
-Tags, attributes, properties and listeners are typed per element. In a listener, `event.currentTarget` is the element. Listeners added with `on:` receive a `CustomEvent`; annotate the parameter to type its `detail`. Custom elements (tags with a hyphen) accept any prop.
+Tags, attributes, properties and listeners are typed per element. In a listener, `event.currentTarget` is the element. Listeners for custom event names with a hyphen receive a `CustomEvent`; annotate the parameter to type its `detail`. Custom elements (tags with a hyphen) accept any prop.
 
 A JSX expression is typed as `Node`, not as the specific element. Cast it when you need the element type:
 
@@ -92,6 +91,7 @@ const input = (<input value="Ada" />) as HTMLInputElement;
 
 - `a`, `script`, `style` and `title` always create HTML elements, also inside `<svg>`.
 - `key` is ignored, because nothing is diffed.
+- Every prop that starts with `on` is treated as a listener, so a custom element property such as `online` has to be set in code.
 
 ## License
 

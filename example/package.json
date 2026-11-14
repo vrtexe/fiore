@@ -1,0 +1,18 @@
+{
+  "name": "fiore-jsx-example",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@fiorejs/jsx": "file:..",
+    "fiorejs": "^1.1.5"
+  },
+  "devDependencies": {
+    "typescript": "~5.9",
+    "vite": "^8.3.8"
+  }
+}

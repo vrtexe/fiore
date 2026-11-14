@@ -13,26 +13,29 @@ type Listener<T extends Element, E> =
     };
 
 type EventProps<T extends Element, M> = {
-  [K in keyof M & string as `on${Capitalize<K>}`]?: Listener<T, M[K]> | undefined | null;
+  [K in keyof M & string as `on${K}`]?: Listener<T, M[K]> | undefined | null;
 };
 
 type CommonProps<T extends Element> = {
   children?: Child;
   class?: string | undefined | null;
   style?: string | Partial<CSSStyleDeclaration> | undefined | null;
-  [event: `on:${string}`]: Listener<T, CustomEvent> | undefined | null;
+  [event: `on${string}-${string}`]: Listener<T, CustomEvent> | undefined | null;
 };
 
 type HTMLTag = keyof HTMLElementTagNameMap & keyof HTMLElementsAttributesMap;
 type SVGTag = Exclude<keyof SVGElementTagNameMap, 'a' | 'script' | 'style' | 'title'> &
   keyof HTMLElementsAttributesMap;
 
-type HTMLProps<K extends HTMLTag> = Omit<HTMLElementsAttributesMap[K], 'class' | 'style'> &
-  Omit<ElementProps<HTMLElementTagNameMap[K]>, keyof HTMLElementsAttributesMap[K] | 'style'> &
+type HTMLProps<K extends HTMLTag> = Omit<HTMLElementsAttributesMap[K], `on${string}` | 'class' | 'style'> &
+  Omit<
+    ElementProps<HTMLElementTagNameMap[K]>,
+    keyof HTMLElementsAttributesMap[K] | `on${string}` | 'style'
+  > &
   EventProps<HTMLElementTagNameMap[K], HTMLEventMapOf<HTMLElementTagNameMap[K]>> &
   CommonProps<HTMLElementTagNameMap[K]>;
 
-type SVGProps<K extends SVGTag> = Omit<HTMLElementsAttributesMap[K], 'class' | 'className' | 'style'> &
+type SVGProps<K extends SVGTag> = Omit<HTMLElementsAttributesMap[K], `on${string}` | 'class' | 'className' | 'style'> &
   EventProps<SVGElementTagNameMap[K], SVGEventMapOf<SVGElementTagNameMap[K]>> &
   CommonProps<SVGElementTagNameMap[K]>;
 

@@ -9,7 +9,7 @@ globalThis.document = window.document;
 test('flat props become properties, attributes and listeners', () => {
   let clicked: HTMLButtonElement | undefined;
   const button = (
-    <button class="btn" aria-label="Save" type="submit" onClick={(event) => (clicked = event.currentTarget)}>
+    <button class="btn" aria-label="Save" type="submit" onclick={(event) => (clicked = event.currentTarget)}>
       Save
     </button>
   ) as HTMLButtonElement;
@@ -86,13 +86,13 @@ test('function components receive props and children', () => {
   assert.equal(card.outerHTML, '<section><h2>Hello</h2>body</section>');
 });
 
-test('on: listens to any event name, with options', () => {
+test('on prefix listens to any event name, with options', () => {
   const details: unknown[] = [];
   let keys = 0;
   const box = (
     <div
-      on:cart-add={(event) => details.push(event.detail)}
-      onKeydown={{ handler: () => keys++, options: { once: true } }}
+      oncart-add={(event) => details.push(event.detail)}
+      onkeydown={{ handler: () => keys++, options: { once: true } }}
     />
   ) as HTMLDivElement;
 
@@ -106,11 +106,11 @@ test('on: listens to any event name, with options', () => {
 
 test('types reject unknown props and mismatched listeners', () => {
   // @ts-expect-error unknown event name
-  void (<button onClik={() => {}} />);
+  void (<button onclik={() => {}} />);
   // @ts-expect-error click is not a keyboard event
-  void (<button onClick={(event: KeyboardEvent) => event.key} />);
+  void (<button onclick={(event: KeyboardEvent) => event.key} />);
   // @ts-expect-error popstate only exists on body
-  void (<div onPopstate={() => {}} />);
-  void (<body onPopstate={(event) => event.state} />);
-  void (<my-widget any-prop="1" onClick={() => {}} />);
+  void (<div onpopstate={() => {}} />);
+  void (<body onpopstate={(event) => event.state} />);
+  void (<my-widget any-prop="1" onclick={() => {}} />);
 });

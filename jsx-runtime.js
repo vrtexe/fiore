@@ -54,10 +54,8 @@ export function jsx(type, props) {
   const data = { props: {}, attributes: {}, event: {}, children: flatten(children) };
 
   for (const [name, value] of Object.entries(rest)) {
-    if (name.startsWith('on:')) {
-      data.event[name.slice(3)] = value;
-    } else if (/^on[A-Z]/.test(name)) {
-      data.event[name.slice(2).toLowerCase()] = value;
+    if (name.startsWith('on')) {
+      data.event[name.slice(2)] = value;
     } else if (name === 'style' && typeof value === 'object') {
       data.props.style = value;
     } else if (!isSvg && isWritableProperty(type, name)) {
