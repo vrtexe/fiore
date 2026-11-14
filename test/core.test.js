@@ -103,6 +103,20 @@ test('a bound child can switch between nodes, lists and nothing', () => {
   assert.equal(el.innerHTML, '[<b></b>]');
 });
 
+test('a bound child keeps and reorders nodes it returns again', () => {
+  const [a, b, c] = ['a', 'b', 'c'].map((tag) => document.createElement(tag));
+  const rows = signal([a, b, c]);
+  const el = div({ children: ['<', rows, '>'] });
+  const focusLike = b;
+
+  rows.set([c, a, b]);
+  assert.equal(el.innerHTML, '&lt;<c></c><a></a><b></b>&gt;');
+  assert.equal(el.querySelector('b'), focusLike);
+
+  rows.set([a]);
+  assert.equal(el.innerHTML, '&lt;<a></a>&gt;');
+});
+
 test('registering a plugin name again replaces the earlier plugin', () => {
   const marker = { isMarker: true };
   use({ name: 'marker', bind: (value, apply) => value === marker && (apply('first'), true) });
