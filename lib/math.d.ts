@@ -1,8 +1,9 @@
 /**
- * @param {MathElementData<'a'>} data
- * @returns {MathMLElementTagNameMap['a']}
+ * @deprecated `a` is not a MathML element; wrap the math in an HTML `a` or set an `href` attribute instead.
+ * @param {MathElementData<'mrow'>} data
+ * @returns {MathMLElement}
  */
-export function a(data: MathElementData<"a">): MathMLElementTagNameMap["a"];
+export function a(data: MathElementData<"mrow">): MathMLElement;
 /**
  * @param {MathElementData<'annotation'>} data
  * @returns {MathMLElementTagNameMap['annotation']}
