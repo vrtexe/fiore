@@ -3,7 +3,7 @@ import type { ElementProps, Live, LiveAttributes } from 'fiorejs/type/base.dom.d
 import type { HTMLEventMapOf } from 'fiorejs/type/html.dom.d.ts';
 import type { SVGEventMapOf } from 'fiorejs/type/svg.dom.d.ts';
 
-type ChildValue = Node | string | number | bigint | boolean | null | undefined;
+type ChildValue = Node | string | number | bigint | boolean | null | undefined | ChildValue[];
 
 /** A child: a value, a live value from a plugin such as @fiorejs/signals, a promise, or a list of children. */
 export type Child = Live<ChildValue> | Promise<ChildValue> | Child[];

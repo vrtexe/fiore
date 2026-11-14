@@ -8,6 +8,7 @@ declare module 'fiorejs/type/base.dom.d.ts' {
 const name = () => 'Ada';
 
 void (<span>{name}</span>);
+void (<ul>{() => [<li>a</li>, <li>b</li>]}</ul>);
 void (<input value={name} placeholder={() => 'Name'} class={() => 'field'} />);
 void (<svg viewBox={() => '0 0 10 10'} />);
 // @ts-expect-error a getter must still return the right type
