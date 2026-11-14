@@ -1,0 +1,53 @@
+# Stages a release on npm with trusted publishing (OIDC), so no npm token is stored in this
+# repository. npmjs.com must have the trusted publisher configured for vrtexe/fiore-signals with
+# workflow npm-publish.yml; "npm stage publish" is allowed by default. A maintainer then approves
+# the staged version with 2FA on npmjs.com or with `npm stage approve <stage-id>`.
+
+name: publish
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: main
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: |
+          npm version "$APP_VERSION" --no-git-tag-version --allow-same-version
+          git config user.name "github-actions[bot]"
+          git config user.email "htmljs+github-actions[bot]@users.noreply.github.com"
+          git add package.json package-lock.json
+          git commit -m "Release version $APP_VERSION" || true
+          git push origin HEAD:main
+        env:
+          APP_VERSION: ${{ github.event.release.tag_name }}
+
+  publish:
+    needs: version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ github.event.release.tag_name }}
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+      - run: npm version "$APP_VERSION" --no-git-tag-version --allow-same-version
+        env:
+          APP_VERSION: ${{ github.event.release.tag_name }}
+      - run: npm stage publish
