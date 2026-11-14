@@ -39,9 +39,9 @@ function flatten(children) {
 }
 
 /**
- * @param {string | ((props: any) => Node)} type
+ * @param {string | ((props: any) => Node | Promise<Node>)} type
  * @param {Record<string, unknown>} props
- * @returns {Node}
+ * @returns {Node | Promise<Node>}
  */
 export function jsx(type, props) {
   if (typeof type === 'function') {
@@ -75,7 +75,7 @@ export function jsx(type, props) {
  */
 export function Fragment({ children }) {
   const fragment = document.createDocumentFragment();
-  fragment.append(...flatten(children));
+  fragment.append(...element('div', { children: flatten(children) }).childNodes);
   return fragment;
 }
 

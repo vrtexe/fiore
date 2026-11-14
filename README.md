@@ -75,6 +75,22 @@ function Card(props: { title: string; children?: Child }) {
 }
 ```
 
+A component can be `async`. Its place stays empty until it resolves, and then it is filled with the result:
+
+```tsx
+async function User(props: { id: number }) {
+  const user = await fetch(`/users/${props.id}`).then((response) => response.json());
+  return <p>{user.name}</p>;
+}
+
+<section>
+  <h2>Profile</h2>
+  <User id={1} />
+</section>;
+```
+
+An async component has to be the child of an element or a fragment; on its own it is a promise, not a node.
+
 `<>...</>` returns a `DocumentFragment`. Children can be nodes, strings, numbers or nested arrays; `null`, `undefined`, `true` and `false` are skipped.
 
 ## Types

@@ -4,7 +4,7 @@ import { JSDOM } from 'jsdom';
 import type { Child } from '@fiorejs/jsx/jsx-runtime';
 
 const { window } = new JSDOM();
-globalThis.document = window.document;
+Object.assign(globalThis, { document: window.document, Node: window.Node });
 
 test('flat props become properties, attributes and listeners', () => {
   let clicked: HTMLButtonElement | undefined;
@@ -102,6 +102,26 @@ test('on prefix listens to any event name, with options', () => {
 
   assert.deepEqual(details, [42]);
   assert.equal(keys, 1);
+});
+
+test('async components are inserted once they resolve, also inside fragments', async () => {
+  async function Name(props: { value: string }) {
+    await Promise.resolve();
+    return <b>{props.value}</b>;
+  }
+
+  const card = (
+    <p>
+      Hello <Name value="Ada" />
+      <>
+        , <Name value="Grace" />
+      </>
+    </p>
+  ) as HTMLParagraphElement;
+  assert.equal(card.innerHTML, 'Hello , ');
+
+  await new Promise((resolve) => setTimeout(resolve));
+  assert.equal(card.innerHTML, 'Hello <b>Ada</b>, <b>Grace</b>');
 });
 
 test('types reject unknown props and mismatched listeners', () => {

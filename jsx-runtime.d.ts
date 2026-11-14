@@ -45,6 +45,9 @@ type SVGIntrinsicElements = { [K in SVGTag]: SVGProps<K> };
 export namespace JSX {
   type Element = Node;
 
+  /** Components may be async; their result is inserted once it resolves. */
+  type ElementType = string | ((props: any) => Node | Promise<Node>);
+
   interface ElementChildrenAttribute {
     children: {};
   }
@@ -56,7 +59,7 @@ export namespace JSX {
 }
 
 export function jsx(
-  type: string | ((props: any) => Node),
+  type: string | ((props: any) => Node | Promise<Node>),
   props: Record<string, unknown>,
   key?: unknown,
 ): Node;

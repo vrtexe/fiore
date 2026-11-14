@@ -35,7 +35,7 @@
     "test": "tsc -p test && node --test test/out/"
   },
   "peerDependencies": {
-    "fiorejs": "^1.1.5"
+    "fiorejs": "^1.2.0"
   },
   "publishConfig": {
     "access": "public"
@@ -51,7 +51,7 @@
   "devDependencies": {
     "@types/jsdom": "^30.0.0",
     "@types/node": "^26.6.6",
-    "fiorejs": "^1.1.5",
+    "fiorejs": "file:../html-dom-js",
     "jsdom": "^31.0.1",
     "typescript": "~5.9"
   }
