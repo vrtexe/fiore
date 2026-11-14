@@ -18,13 +18,14 @@
   },
   "files": [
     "index.js",
-    "template"
+    "templates"
   ],
   "engines": {
-    "node": ">=20"
+    "node": ">=20.16"
   },
   "scripts": {
-    "test": "node --test test/create.test.js"
+    "generate": "node scripts/generate-js.js",
+    "test": "node scripts/generate-js.js --check && node --test test/create.test.js"
   },
   "publishConfig": {
     "access": "public"
@@ -36,5 +37,9 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/vrtexe/fiore-create.git"
+  },
+  "devDependencies": {
+    "prettier": "^3.10.1",
+    "typescript": "~5.9.0"
   }
 }

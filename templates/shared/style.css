@@ -83,12 +83,6 @@ button.ghost:hover {
   color: var(--ink);
 }
 
-.icon {
-  width: 18px;
-  height: 18px;
-  fill: currentColor;
-}
-
 .list {
   margin: 24px 0;
   padding: 0;
