@@ -35,7 +35,7 @@ document.body.append(
 
 | Function | What it does |
 | --- | --- |
-| `state(value)` | A value with `get()` and `set(value)`. Reading it inside an effect, a computed or a binding subscribes to it. Setting an equal value (`Object.is`) does nothing. |
+| `state(value)` | A value with `get()`, `set(value)` and `update(fn)`. Reading it inside an effect, a computed or a binding subscribes to it. Setting an equal value (`Object.is`) does nothing. |
 | `computed(fn)` | A value derived from other signals. It is calculated on first read and again on the next read after an input changed. |
 | `effect(fn)` | Runs `fn` now and whenever a signal it read changes. Returns a function that stops it. If `fn` returns a function, that function runs before the next run and when the effect stops. |
 | `untrack(fn)` | Runs `fn` without subscribing to the signals it reads. |
@@ -94,6 +94,12 @@ A signal tracks its value, not what is inside it. Replace arrays and objects ins
 todos.set([...todos.get(), next]);          // updates
 todos.get().push(next);                     // does not update
 user.set({ ...user.get(), name: 'Grace' }); // updates
+```
+
+Copying is cheap for most lists, because only references are copied. For very large arrays or objects, `update(fn)` changes the value in place and notifies even though it is still the same array; the return value of `fn` is ignored:
+
+```js
+todos.update((list) => list.push(next));
 ```
 
 For deeply nested data, give the fields that change on their own their own signal.

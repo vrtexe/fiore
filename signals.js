@@ -95,6 +95,14 @@ export function state(value) {
         notify(source);
       }
     },
+    /**
+     * Changes the value in place, for example with `list.push(item)`, and always notifies.
+     * @param {(value: T) => unknown} fn
+     */
+    update(fn) {
+      fn(value);
+      notify(source);
+    },
   };
 }
 

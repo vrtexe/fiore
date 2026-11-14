@@ -32,6 +32,18 @@ test('effects rerun when what they read changes, and stop cleanly', () => {
   assert.deepEqual(cleanups, ['cleanup', 'cleanup']);
 });
 
+test('update changes the value in place and always notifies', () => {
+  const list = state([1, 2]);
+  const lengths = [];
+  effect(() => lengths.push(list.get().length));
+  const before = list.get();
+
+  list.update((items) => items.push(3));
+
+  assert.equal(list.get(), before);
+  assert.deepEqual(lengths, [2, 3]);
+});
+
 test('computed values are lazy, cached and consistent inside effects', () => {
   const count = state(1);
   let runs = 0;

@@ -9,6 +9,8 @@ export interface Signal<T> {
 
 export interface State<T> extends Signal<T> {
   set(value: T): void;
+  /** Changes the value in place, for example with `list.push(item)`, and always notifies; the return value is ignored. */
+  update(fn: (value: T) => unknown): void;
 }
 
 export interface Computed<T> extends Signal<T> {}
