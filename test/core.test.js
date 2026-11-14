@@ -111,6 +111,17 @@ test('registering a plugin name again replaces the earlier plugin', () => {
   assert.equal(div({ children: marker }).textContent, 'second');
 });
 
+test('pre plugins are asked first and post plugins last', () => {
+  const shared = { isShared: true };
+  const claim = (text) => (value, apply) => value === shared && (apply(text), true);
+  use({ name: 'late', order: 'post', bind: claim('post') });
+  use({ name: 'plain', bind: claim('plain') });
+  assert.equal(div({ children: shared }).textContent, 'plain');
+
+  use({ name: 'early', order: 'pre', bind: claim('pre') });
+  assert.equal(div({ children: shared }).textContent, 'pre');
+});
+
 test('loading a second copy of fiorejs logs a warning', async (t) => {
   const warn = t.mock.method(console, 'warn', () => {});
 

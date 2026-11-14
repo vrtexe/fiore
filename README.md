@@ -195,6 +195,8 @@ use({
 
 `context.kind` is `'property'`, `'attribute'` or `'child'`, with `context.name` for properties and attributes, and `context.element` is the element being built. Listeners in `event` are never offered to plugins. Registering a plugin with a name that is already registered replaces the earlier plugin, so a plugin module that runs again, for example after a hot reload, does not register twice. The plugin API can still change in a minor version.
 
+Plugins are asked in turn, and the first one that returns `true` handles the value. Set `order: 'pre'` to be asked before other plugins, or `order: 'post'` to be asked only after all others; plugins in the same group are asked in the order they were registered.
+
 A plugin package usually calls `use()` in its own module. A module runs once per page however often it is imported, so the plugin is registered once.
 
 #### One copy of fiorejs

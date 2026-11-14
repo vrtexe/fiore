@@ -10,7 +10,7 @@ export function use(plugin: Plugin): void;
  * @param {BindContext} context
  */
 export function bind(value: unknown, apply: (value: unknown) => void, context: BindContext): boolean;
-/** @type {Plugin[]} */
-export const plugins: Plugin[];
+/** @type {Plugin[]} Registered plugins in the order they are asked: 'pre', then unordered, then 'post'. */
+export let plugins: Plugin[];
 import type { Plugin } from '../types/base.dom.d.ts';
 import type { BindContext } from '../types/base.dom.d.ts';
