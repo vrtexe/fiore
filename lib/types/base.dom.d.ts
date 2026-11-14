@@ -21,12 +21,32 @@ export type ReadonlyKeys<T> = {
 }[keyof T];
 
 export type RecursivePartial<T> = {
-  [P in keyof T]?: T[P] extends object ? RecursivePartial<T[P]> : T[P];
+  [P in keyof T]?: Live<T[P] extends object ? RecursivePartial<T[P]> : T[P]>;
+};
+
+/** Plugins add the types of the live values they bind, e.g. `state: State<T>`. */
+export interface LiveValues<T> {}
+
+export type Live<T> = T | LiveValues<T>[keyof LiveValues<T>];
+
+export type LiveAttributes<A> = {
+  [K in keyof A as K extends `on${string}` ? never : K]: Live<A[K]>;
+};
+
+export type BindContext =
+  | { element: BaseElement; kind: 'property' | 'attribute'; name: string }
+  | { element: BaseElement; kind: 'child' };
+
+export type Plugin = {
+  /** Return true to take over the value; call `apply` now and whenever it changes. */
+  bind?(value: unknown, apply: (value: unknown) => void, context: BindContext): boolean | void;
 };
 
 export type PickWritable<T> = Pick<T, WritableKeys<T>>;
 
-export type Children = string | BaseElement | (BaseElement | string)[];
+export type Children =
+  | Live<string | BaseElement | (BaseElement | string)[]>
+  | Live<BaseElement | string>[];
 
 export type ElementProps<T extends BaseElement> = PickWritable<
   RecursivePartial<T>

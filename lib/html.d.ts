@@ -559,6 +559,7 @@ export function video(data: ElementData<"video">): HTMLElementTagNameMap["video"
  */
 export function wbr(data: ElementData<"wbr">): HTMLElementTagNameMap["wbr"];
 export { element };
+export { use } from "./core/plugins.js";
 declare const _default: Readonly<{
     element: typeof element;
     a: typeof a;

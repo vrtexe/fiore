@@ -171,6 +171,29 @@ declare global {
 }
 ```
 
+### Attribute values
+
+`null`, `undefined` and `false` leave an attribute out. Every other value, including `0` and `''`, is set as a string. Attributes with a hyphen such as `aria-expanded` and `data-open` keep `false` as the string `"false"`.
+
+### Plugins (experimental)
+
+A plugin can take over a property, attribute or child value before it is applied. `use()` registers it; `bind` returns `true` for the values it handles and calls `apply` with the current value now and whenever the value changes:
+
+```js
+import { use } from 'fiorejs';
+
+use({
+  bind(value, apply, context) {
+    if (!(value instanceof MyObservable)) return false;
+    apply(value.current);
+    value.subscribe(apply);
+    return true;
+  },
+});
+```
+
+`context.kind` is `'property'`, `'attribute'` or `'child'`, with `context.name` for properties and attributes, and `context.element` is the element being built. Listeners in `event` are never offered to plugins. The plugin API can still change in a minor version.
+
 Import styles:
 
 ```js

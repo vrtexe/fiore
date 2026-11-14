@@ -1,5 +1,5 @@
 import type { HTMLElementsAttributesMap } from './attributes.d.ts';
-import type { BaseElement, Children, CustomEventData, ElementProps } from './base.dom.d.ts';
+import type { BaseElement, Children, CustomEventData, ElementProps, LiveAttributes } from './base.dom.d.ts';
 
 export type HTMLEventMapOf<T extends HTMLElement> = T extends HTMLBodyElement
   ? HTMLBodyElementEventMap
@@ -16,7 +16,7 @@ export type ElementData<
   E extends HTMLElementEventMap = HTMLEventMapOf<HTMLElementTagNameMap[T]>,
 > = {
   props?: ElementProps<HTMLElementTagNameMap[T]> | undefined | null;
-  attributes?: HTMLElementsAttributesMap[T] | undefined | null;
+  attributes?: LiveAttributes<HTMLElementsAttributesMap[T]> | undefined | null;
   event?: ElementEventData<HTMLElementTagNameMap[T], E> | undefined | null;
   children?: Children | undefined | null;
 };
@@ -57,7 +57,7 @@ export type DeprecatedElementData<
   E extends HTMLElementEventMap = HTMLEventMapOf<HTMLElementDeprecatedTagNameMap[T]>,
 > = {
   props?: ElementProps<HTMLElementDeprecatedTagNameMap[T]> | undefined | null;
-  attributes?: HTMLElementsAttributesMap[T] | undefined | null;
+  attributes?: LiveAttributes<HTMLElementsAttributesMap[T]> | undefined | null;
   event?:
     | ElementEventData<HTMLElementDeprecatedTagNameMap[T], E>
     | undefined

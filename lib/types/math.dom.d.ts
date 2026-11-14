@@ -1,5 +1,5 @@
 import type { HTMLElementsAttributesMap } from './attributes.d.ts';
-import type { Children, CustomEventData, ElementProps } from './base.dom.d.ts';
+import type { Children, CustomEventData, ElementProps, LiveAttributes } from './base.dom.d.ts';
 
 export type MathDomEventListener<
   T extends MathMLElement,
@@ -32,7 +32,7 @@ export type MathElementData<
   E extends MathMLElementEventMap = MathMLElementEventMap,
 > = {
   props?: ElementProps<MathMLElementTagNameMap[T]> | undefined | null;
-  attributes?: HTMLElementsAttributesMap[T] | undefined | null;
+  attributes?: LiveAttributes<HTMLElementsAttributesMap[T]> | undefined | null;
   event?: MathElementEventData<MathMLElementTagNameMap[T], E> | undefined | null;
   children?: Children | undefined | null;
 };

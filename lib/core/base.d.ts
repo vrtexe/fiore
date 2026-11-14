@@ -1,7 +1,7 @@
-/** @import { type BaseElement, type ElementProps, type Children } from '../types/base.dom.d.ts' */
-/** @import { type ElementEventData, } from '../types/html.dom.d.ts' */
-/** @import { type SVGElementEventData } from '../types/svg.dom.d.ts' */
-/** @import { type HTMLElementsAttributesMap } from '../types/attributes.d.ts' */
+/** @import { BaseElement, ElementProps, Children } from '../types/base.dom.d.ts' */
+/** @import { ElementEventData } from '../types/html.dom.d.ts' */
+/** @import { SVGElementEventData } from '../types/svg.dom.d.ts' */
+/** @import { HTMLElementsAttributesMap } from '../types/attributes.d.ts' */
 /**
  * @template {BaseElement} T
  * @param {T} element

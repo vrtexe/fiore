@@ -1,5 +1,5 @@
 import type { HTMLElementsAttributesMap } from './attributes.d.ts';
-import type { Children, CustomEventData, ElementProps } from './base.dom.d.ts';
+import type { Children, CustomEventData, ElementProps, LiveAttributes } from './base.dom.d.ts';
 
 export type SVGEventMapOf<T extends SVGElement> = T extends SVGSVGElement
   ? SVGSVGElementEventMap
@@ -36,7 +36,7 @@ export type SVGElementData<
   E extends SVGElementEventMap = SVGEventMapOf<SVGElementTagNameMap[T]>,
 > = {
   props?: ElementProps<SVGElementTagNameMap[T]> | undefined | null;
-  attributes?: HTMLElementsAttributesMap[T] | undefined | null;
+  attributes?: LiveAttributes<HTMLElementsAttributesMap[T]> | undefined | null;
   event?: SVGElementEventData<SVGElementTagNameMap[T], E> | undefined | null;
   children?: Children | undefined | null;
 };
