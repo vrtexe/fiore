@@ -117,6 +117,25 @@ test('a bound child keeps and reorders nodes it returns again', () => {
   assert.equal(el.innerHTML, '&lt;<a></a>&gt;');
 });
 
+test('a promise child is inserted where it was once it resolves', async () => {
+  const el = div({ children: ['a', Promise.resolve(document.createElement('b')), 'c'] });
+  assert.equal(el.innerHTML, 'ac');
+
+  await Promise.resolve();
+  await Promise.resolve();
+  assert.equal(el.innerHTML, 'a<b></b>c');
+});
+
+test('a rejected promise child leaves its place empty and logs the error', async (t) => {
+  const error = t.mock.method(console, 'error', () => {});
+
+  const el = div({ children: ['a', Promise.reject(new Error('failed')), 'c'] });
+  await new Promise((resolve) => setTimeout(resolve));
+
+  assert.equal(el.innerHTML, 'ac');
+  assert.equal(error.mock.calls[0].arguments[0].message, 'failed');
+});
+
 test('registering a plugin name again replaces the earlier plugin', () => {
   const marker = { isMarker: true };
   use({ name: 'marker', bind: (value, apply) => value === marker && (apply('first'), true) });

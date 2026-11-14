@@ -48,9 +48,13 @@ export type Plugin = {
 
 export type PickWritable<T> = Pick<T, WritableKeys<T>>;
 
+type Child = BaseElement | string;
+
+/** A promise child is shown once it resolves; until then its place stays empty. */
 export type Children =
-  | Live<string | BaseElement | (BaseElement | string)[]>
-  | Live<BaseElement | string>[];
+  | Live<Child | Child[]>
+  | Promise<Child | Child[] | null | undefined>
+  | (Live<Child> | Promise<Child | Child[] | null | undefined>)[];
 
 export type ElementProps<T extends BaseElement> = PickWritable<
   RecursivePartial<T>

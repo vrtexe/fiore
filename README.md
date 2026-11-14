@@ -171,6 +171,19 @@ declare global {
 }
 ```
 
+### Promise children
+
+A child can be a promise, for example the result of an `async` component. Its place stays empty until the promise resolves, and is then filled with the result. If the promise rejects, the place stays empty and the error is logged with `console.error`.
+
+```js
+async function User(id) {
+  const user = await fetch(`/users/${id}`).then((response) => response.json());
+  return p({ children: user.name });
+}
+
+section({ children: [h2({ children: 'Profile' }), User(1)] });
+```
+
 ### Attribute values
 
 `null`, `undefined` and `false` leave an attribute out. Every other value, including `0` and `''`, is set as a string. Attributes with a hyphen such as `aria-expanded` and `data-open` keep `false` as the string `"false"`.
