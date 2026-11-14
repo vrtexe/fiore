@@ -1,9 +1,12 @@
 import type { HTMLElementsAttributesMap } from 'fiorejs/type/attributes.d.ts';
-import type { ElementProps } from 'fiorejs/type/base.dom.d.ts';
+import type { ElementProps, Live, LiveAttributes } from 'fiorejs/type/base.dom.d.ts';
 import type { HTMLEventMapOf } from 'fiorejs/type/html.dom.d.ts';
 import type { SVGEventMapOf } from 'fiorejs/type/svg.dom.d.ts';
 
-export type Child = Node | string | number | bigint | boolean | null | undefined | Child[];
+type ChildValue = Node | string | number | bigint | boolean | null | undefined;
+
+/** A child: a value, a live value from a plugin such as @fiorejs/signals, a promise, or a list of children. */
+export type Child = Live<ChildValue> | Promise<ChildValue> | Child[];
 
 type Listener<T extends Element, E> =
   | ((this: T, ev: E & { readonly currentTarget: T }) => unknown)
@@ -18,8 +21,8 @@ type EventProps<T extends Element, M> = {
 
 type CommonProps<T extends Element> = {
   children?: Child;
-  class?: string | undefined | null;
-  style?: string | Partial<CSSStyleDeclaration> | undefined | null;
+  class?: Live<string | undefined | null>;
+  style?: Live<string | Partial<CSSStyleDeclaration> | undefined | null>;
   [event: `on${string}-${string}`]: Listener<T, CustomEvent> | undefined | null;
 };
 
@@ -27,7 +30,7 @@ type HTMLTag = keyof HTMLElementTagNameMap & keyof HTMLElementsAttributesMap;
 type SVGTag = Exclude<keyof SVGElementTagNameMap, 'a' | 'script' | 'style' | 'title'> &
   keyof HTMLElementsAttributesMap;
 
-type HTMLProps<K extends HTMLTag> = Omit<HTMLElementsAttributesMap[K], `on${string}` | 'class' | 'style'> &
+type HTMLProps<K extends HTMLTag> = Omit<LiveAttributes<HTMLElementsAttributesMap[K]>, 'class' | 'style'> &
   Omit<
     ElementProps<HTMLElementTagNameMap[K]>,
     keyof HTMLElementsAttributesMap[K] | `on${string}` | 'style'
@@ -35,7 +38,7 @@ type HTMLProps<K extends HTMLTag> = Omit<HTMLElementsAttributesMap[K], `on${stri
   EventProps<HTMLElementTagNameMap[K], HTMLEventMapOf<HTMLElementTagNameMap[K]>> &
   CommonProps<HTMLElementTagNameMap[K]>;
 
-type SVGProps<K extends SVGTag> = Omit<HTMLElementsAttributesMap[K], `on${string}` | 'class' | 'className' | 'style'> &
+type SVGProps<K extends SVGTag> = Omit<LiveAttributes<HTMLElementsAttributesMap[K]>, 'class' | 'className' | 'style'> &
   EventProps<SVGElementTagNameMap[K], SVGEventMapOf<SVGElementTagNameMap[K]>> &
   CommonProps<SVGElementTagNameMap[K]>;
 
