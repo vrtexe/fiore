@@ -26,11 +26,11 @@ export function effect(fn: () => void | (() => void)): () => void;
 export function untrack<T>(fn: () => T): T;
 export function isSignal(value: unknown): value is Signal<unknown>;
 export function read<T>(value: Reactive<T>): T;
-export function each<T>(
+export function each<T, N extends Node = Node>(
   items: Reactive<readonly T[]>,
-  render: (item: T, index: number) => Node,
+  render: (item: T, index: number) => N,
   key?: (item: T) => unknown,
-): () => Node[];
+): () => N[];
 
 export const plugin: Plugin;
 

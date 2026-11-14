@@ -1,5 +1,5 @@
-import { div, input } from 'fiorejs';
-import { computed, read, state, type Reactive } from '@fiorejs/signals';
+import { div, input, li, ul } from 'fiorejs';
+import { computed, each, read, state, type Reactive } from '@fiorejs/signals';
 
 const name = state('Ada');
 
@@ -26,3 +26,5 @@ name.update((value) => value.length);
 
 const doubled: number = read(computed(() => 2));
 void doubled;
+
+ul({ children: each(state(['a', 'b']), (item) => li({ children: item })) });
