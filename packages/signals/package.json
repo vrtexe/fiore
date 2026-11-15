@@ -15,13 +15,12 @@
   ],
   "exports": {
     ".": {
-      "types": "./signals.d.ts",
-      "default": "./signals.js"
+      "types": "./src/signals.d.ts",
+      "default": "./src/signals.js"
     }
   },
   "files": [
-    "signals.js",
-    "signals.d.ts"
+    "src"
   ],
   "scripts": {
     "test": "tsc -p test && node --expose-gc --test test/signals.test.js"
@@ -32,16 +31,17 @@
   "publishConfig": {
     "access": "public"
   },
-  "homepage": "https://github.com/vrtexe/fiore-signals#readme",
+  "homepage": "https://github.com/vrtexe/fiore/tree/main/packages/signals#readme",
   "bugs": {
-    "url": "https://github.com/vrtexe/fiore-signals/issues"
+    "url": "https://github.com/vrtexe/fiore/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vrtexe/fiore-signals.git"
+    "url": "git+https://github.com/vrtexe/fiore.git",
+    "directory": "packages/signals"
   },
   "devDependencies": {
-    "fiorejs": "file:../html-dom-js",
+    "fiorejs": "file:../..",
     "jsdom": "^31.0.1",
     "typescript": "~5.9"
   }

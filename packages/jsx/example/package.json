@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@fiorejs/jsx": "file:..",
-    "fiorejs": "^1.1.5"
+    "fiorejs": "file:../../.."
   },
   "devDependencies": {
     "typescript": "~5.9",

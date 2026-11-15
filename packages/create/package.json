@@ -30,13 +30,14 @@
   "publishConfig": {
     "access": "public"
   },
-  "homepage": "https://github.com/vrtexe/fiore-create#readme",
+  "homepage": "https://github.com/vrtexe/fiore/tree/main/packages/create#readme",
   "bugs": {
-    "url": "https://github.com/vrtexe/fiore-create/issues"
+    "url": "https://github.com/vrtexe/fiore/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vrtexe/fiore-create.git"
+    "url": "git+https://github.com/vrtexe/fiore.git",
+    "directory": "packages/create"
   },
   "devDependencies": {
     "prettier": "^3.10.1",

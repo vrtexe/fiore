@@ -17,25 +17,20 @@
   ],
   "exports": {
     ".": {
-      "types": "./index.d.ts",
-      "default": "./index.js"
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
     },
     "./jsx-runtime": {
-      "types": "./jsx-runtime.d.ts",
-      "default": "./jsx-runtime.js"
+      "types": "./src/jsx-runtime.d.ts",
+      "default": "./src/jsx-runtime.js"
     },
     "./jsx-dev-runtime": {
-      "types": "./jsx-dev-runtime.d.ts",
-      "default": "./jsx-dev-runtime.js"
+      "types": "./src/jsx-dev-runtime.d.ts",
+      "default": "./src/jsx-dev-runtime.js"
     }
   },
   "files": [
-    "index.js",
-    "index.d.ts",
-    "jsx-runtime.js",
-    "jsx-runtime.d.ts",
-    "jsx-dev-runtime.js",
-    "jsx-dev-runtime.d.ts"
+    "src"
   ],
   "scripts": {
     "test": "tsc -p test && tsc -p test/plain && node --test test/out/render.test.js"
@@ -46,18 +41,19 @@
   "publishConfig": {
     "access": "public"
   },
-  "homepage": "https://github.com/vrtexe/fiore-jsx#readme",
+  "homepage": "https://github.com/vrtexe/fiore/tree/main/packages/jsx#readme",
   "bugs": {
-    "url": "https://github.com/vrtexe/fiore-jsx/issues"
+    "url": "https://github.com/vrtexe/fiore/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/vrtexe/fiore-jsx.git"
+    "url": "git+https://github.com/vrtexe/fiore.git",
+    "directory": "packages/jsx"
   },
   "devDependencies": {
     "@types/jsdom": "^30.0.0",
     "@types/node": "^26.6.6",
-    "fiorejs": "file:../html-dom-js",
+    "fiorejs": "file:../..",
     "jsdom": "^31.0.1",
     "typescript": "~5.9"
   }

@@ -45,7 +45,7 @@ test('without a build step it uses plain JavaScript and an import map', () => {
   const manifest = JSON.parse(app.read('package.json'));
 
   assert.equal(app.status, 0);
-  assert.match(app.read('index.html'), /"@fiorejs\/signals": "\.\/node_modules\/@fiorejs\/signals\/signals\.js"/);
+  assert.match(app.read('index.html'), /"@fiorejs\/signals": "\.\/node_modules\/@fiorejs\/signals\/src\/signals\.js"/);
   assert.ok(app.has('src/main.js') && !app.has('tsconfig.json') && !app.has('vite.config.js'));
   assert.deepEqual(manifest.devDependencies, { serve: '^14.0.0' });
   assert.equal(manifest.scripts.dev, 'serve .');

@@ -131,7 +131,7 @@ ${JSON.stringify(
         {
           imports: {
             fiorejs: './node_modules/fiorejs/lib/html.js',
-            ...(signals && { '@fiorejs/signals': './node_modules/@fiorejs/signals/signals.js' }),
+            ...(signals && { '@fiorejs/signals': './node_modules/@fiorejs/signals/src/signals.js' }),
           },
         },
         null,

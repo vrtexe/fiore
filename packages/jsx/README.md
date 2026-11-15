@@ -64,7 +64,7 @@ The name alone decides, never the value, so `width="50%"` stays an attribute and
 
 ### Live values
 
-With a plugin such as [@fiorejs/signals](https://github.com/vrtexe/fiore-signals), a prop can be a signal or a getter function. On built-in elements a signal or getter goes where a plain value with the same name goes, so `title={() => null}` removes the attribute just like `title={null}`. On a custom element every function is a getter, so pass a callback as `() => callback` or assign it in code.
+With a plugin such as [@fiorejs/signals](https://github.com/vrtexe/fiore/tree/main/packages/signals), a prop can be a signal or a getter function. On built-in elements a signal or getter goes where a plain value with the same name goes, so `title={() => null}` removes the attribute just like `title={null}`. On a custom element every function is a getter, so pass a callback as `() => callback` or assign it in code.
 
 Everything after `on` is used as the event name, exactly as written, so custom events work the same way as built-in ones: `oncart-add` listens to `cart-add`. A listener can also be an object with `handler` and `options`, which go to `addEventListener`:
 

@@ -4,9 +4,9 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Board</title>
-    <!-- Serve the repository root, for example with `npx http-server`, and open /demo/board.html. -->
+    <!-- Serve the root of the fiore repository, for example with `npx http-server`, and open /packages/signals/demo/board.html. -->
     <script type="importmap">
-      { "imports": { "fiorejs": "/node_modules/fiorejs/lib/html.js" } }
+      { "imports": { "fiorejs": "/lib/html.js" } }
     </script>
     <style>
       body { font: 14px system-ui, sans-serif; margin: 2rem; }
@@ -20,7 +20,7 @@
   <body>
     <script type="module">
       import { div, h2, button, p, li } from 'fiorejs';
-      import { state, effect } from '../signals.js';
+      import { state, effect } from '../src/signals.js';
 
       const cards = Array.from({ length: 6 }, (_, i) => div({ props: { className: 'card', textContent: `card ${i + 1}` } }));
       const columns = { A: state([cards[0], cards[1], cards[2]]), B: state([cards[3]]), C: state([cards[4], cards[5]]) };
