@@ -48,14 +48,14 @@ Every tag is a function with builder methods:
 
 | Method | Takes | Repeated calls |
 | --- | --- | --- |
-| `props(map)` | JavaScript properties of the element, such as `className`, `value` or `style`. `undefined` leaves a property unchanged. | Combine: later keys win, so a later `style` object replaces an earlier one. |
+| `props(map)` | JavaScript properties of the element, such as `className`, `value` or `style`. `undefined` leaves the element's property unchanged, but a later `undefined` replaces an earlier value of the same builder. | Combine: later keys win, so a later `style` object replaces an earlier one. |
 | `attrs(map)` | Attributes, set with [`setAttribute`](https://developer.mozilla.org/en-US/docs/Web/API/Element/setAttribute). Inline event handlers such as `onclick`, in any case, are ignored, so no handler string is ever run; other names that start with `on`, such as `online`, are set. | Merge: later keys win, and `null` removes an earlier value. |
 | `on(map)` | Listeners: `{ click: fn }` or `{ click: { handler, options } }`. | Add listeners; they never replace each other. |
 | `with(fn)` | A function that gets the builder and returns a builder. | Each call applies its function. |
 | `also(fn)` | A function that gets the created element, after the listeners. The element is not in the document yet, so focusing or measuring does not work there. | Add callbacks, run in order. |
 | `create(children)` | The children, like the `children` key: a node, a string, a number, or an array of these. Creates the element and returns it. | |
 
-Children are nodes, strings, numbers or arrays of these; `null`, `undefined`, `true` and `false` are skipped, so `user.isAdmin && badge()` works.
+Children are nodes, strings, numbers or an array of these; an array is one level deep, and a nested array is not flattened. `null`, `undefined`, `true` and `false` are skipped, so `user.isAdmin && badge()` works.
 
 Each method returns a new builder and leaves the old one unchanged, and the maps are copied when you call the method. A builder can therefore serve as a template:
 
@@ -95,6 +95,8 @@ p('Hello');
 p([strong('Hi'), ' there']);
 p({ props: { className: 'lead' }, attrs: { title: 'Intro' }, on: { click: select }, children: 'Hello' });
 ```
+
+Because a plain object is read as the data object, pass a value that does not come from your own code, such as parsed JSON, storage or a message, through `.create(value)` or `{ children: value }`. Otherwise an object like `{ "props": { "innerHTML": "…" } }` sets properties instead of showing text.
 
 `value`, `selectedIndex` and `checked` are assigned after the attributes and children, so they can refer to them:
 
@@ -230,7 +232,7 @@ Version 2 renames two keys of the data object and adds the builder; everything e
 | --- | --- |
 | `div({ attributes: { … } })` | `div({ attrs: { … } })` or `div.attrs({ … }).create()` |
 | `div({ event: { click } })` | `div({ on: { click } })` or `div.on({ click }).create()` |
-| `div({ children: 'Hi' })` | still works, or `div('Hi')` |
+| `div({ children: 'Hi' })` | still works, or `div.create(value)`; `div('Hi')` is fine for literal text, see [Plain calls](#plain-calls) |
 | `element('div', data)` | `element('div')(data)` |
 
 A plugin's live values must not be plain objects; see [Plugins](#plugins-experimental).

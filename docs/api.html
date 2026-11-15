@@ -939,6 +939,12 @@ svg.circle.<span class="fn">attrs</span>({ r<span class="punc">:</span> <span cl
 <span class="fn">p</span>(<span class="str">'Hello'</span>);
 <span class="fn">p</span>([<span class="fn">strong</span>(<span class="str">'Hi'</span>), <span class="str">' there'</span>]);
 <span class="fn">p</span>({ props<span class="punc">:</span> { className<span class="punc">:</span> <span class="str">'lead'</span> }, attrs<span class="punc">:</span> { title<span class="punc">:</span> <span class="str">'Intro'</span> }, on<span class="punc">:</span> { click<span class="punc">:</span> select }, children<span class="punc">:</span> <span class="str">'Hello'</span> });</code></pre>
+          <p>
+            Because a plain object is read as the data object, pass a value that does not come from your
+            own code, such as parsed JSON, storage or a message, through <code>.create(value)</code> or
+            <code>{ children: value }</code>. Otherwise an object like
+            <code>{ "props": { "innerHTML": "…" } }</code> sets properties instead of showing text.
+          </p>
 
           <h3>The data object</h3>
           <div class="table-wrap">
@@ -996,7 +1002,7 @@ svg.circle.<span class="fn">attrs</span>({ r<span class="punc">:</span> <span cl
               <tbody>
                 <tr>
                   <td><code>props(map)</code></td>
-                  <td>JavaScript properties of the element, such as <code>className</code>, <code>value</code> or <code>style</code>. <code>undefined</code> leaves a property unchanged.</td>
+                  <td>JavaScript properties of the element, such as <code>className</code>, <code>value</code> or <code>style</code>. <code>undefined</code> leaves the element's property unchanged, but a later <code>undefined</code> replaces an earlier value of the same builder.</td>
                   <td>Combine: later keys win, so a later <code>style</code> object replaces an earlier one.</td>
                 </tr>
                 <tr>
