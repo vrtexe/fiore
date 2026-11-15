@@ -997,7 +997,7 @@ svg.circle.<span class="fn">attrs</span>({ r<span class="punc">:</span> <span cl
                 <tr>
                   <td><code>props(map)</code></td>
                   <td>JavaScript properties of the element, such as <code>className</code>, <code>value</code> or <code>style</code>. <code>undefined</code> leaves a property unchanged.</td>
-                  <td>Merge: later keys win, and plain objects such as <code>style</code> merge key by key.</td>
+                  <td>Combine: later keys win, so a later <code>style</code> object replaces an earlier one.</td>
                 </tr>
                 <tr>
                   <td><code>attrs(map)</code></td>
@@ -1073,8 +1073,8 @@ button.<span class="fn">with</span>(card).<span class="fn">props</span>({ type<s
             A plain object such as <code>style</code> or <code>dataset</code> is merged into the element's existing object;
             any other value is assigned whole. Only own keys are copied, and <code>__proto__</code>, <code>constructor</code>
             and <code>prototype</code> are skipped. <code>undefined</code> leaves a property unchanged.
-            Repeated <code>props</code> calls on a builder merge: later keys win, and plain objects such as
-            <code>style</code> merge key by key.
+            Repeated <code>props</code> calls on a builder combine: later keys win, so a later
+            <code>style</code> object replaces an earlier one.
           </p>
           <p>
             Read-only DOM properties are excluded by the type. To set a read-only value, use a

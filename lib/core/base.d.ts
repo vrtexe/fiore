@@ -49,12 +49,6 @@ export function attachEventListenerSvg<T extends SVGElement, E extends SVGElemen
  * @returns {void}
  */
 export function attachEventListener<T extends HTMLElement, E extends HTMLElementEventMap>(element: T, eventData: ElementEventData<T, E> | undefined | null): void;
-/** @import { BaseElement, ElementProps, Children } from '../types/base.dom.d.ts' */
-/** @import { ElementEventData } from '../types/html.dom.d.ts' */
-/** @import { SVGElementEventData } from '../types/svg.dom.d.ts' */
-/** @import { HTMLElementsAttributesMap } from '../types/attributes.d.ts' */
-/** Keys that would reach Object.prototype or a constructor when followed. */
-export const UNSAFE_KEYS: Set<string>;
 export type GenericEventData<T extends HTMLElement | SVGElement, E extends T extends HTMLElement ? HTMLElementEventMap : T extends SVGElement ? SVGElementEventMap : never> = T extends HTMLElement ? ElementEventData<T, E> | undefined | null : T extends SVGElement ? SVGElementEventData<T, E> | undefined | null : never;
 import type { BaseElement } from '../types/base.dom.d.ts';
 import type { ElementProps } from '../types/base.dom.d.ts';

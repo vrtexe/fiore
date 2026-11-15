@@ -104,7 +104,7 @@ export type TagData<T extends BaseElement, A, On> = {
  * `also` callbacks in that order, whatever the order of the calls.
  */
 export interface Builder<T extends BaseElement, A, On> {
-  /** DOM properties. Repeated calls merge: later keys win and plain objects such as `style` merge key by key. */
+  /** DOM properties. Repeated calls combine them; later keys win, so a later `style` object replaces an earlier one. */
   props(map: ElementProps<T>): this;
   /** Attributes. Repeated calls merge: later keys win and `null` removes an earlier value. */
   attrs(map: LiveAttributes<A>): this;
