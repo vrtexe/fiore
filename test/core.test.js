@@ -651,3 +651,17 @@ test('element() returns the same tag for a name, in each namespace', () => {
   assert.equal(svg.element('circle')().namespaceURI, 'http://www.w3.org/2000/svg');
   assert.equal(math.element('mi')().namespaceURI, 'http://www.w3.org/1998/Math/MathML');
 });
+
+test('props merges nested objects at any depth without recursion, also cyclic and very deep ones', () => {
+  const graph = { id: 1 };
+  graph.self = graph;
+  let deep = { leaf: true };
+  for (let i = 0; i < 20000; i++) deep = { next: deep };
+
+  const chart = element('div').props({ graph }).props({ deep }).create();
+  const merged = div.props({ dataset: { a: '1', b: '2' } }).props({ dataset: { b: '3' } }).create();
+
+  assert.equal(chart.graph.self, graph);
+  assert.equal(chart.deep.next.next.next !== undefined, true);
+  assert.deepEqual({ ...merged.dataset }, { a: '1', b: '3' });
+});
