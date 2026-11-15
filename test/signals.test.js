@@ -658,3 +658,129 @@ test('fault injection: the app recovers after any one callback throws during upd
     list.remove();
   }
 });
+
+test('an effect that failed before reading a computed still follows it', () => {
+  const x = state(0);
+  const doubled = computed(() => x.get() * 2);
+  let fail = false;
+  const seen = [];
+  effect(() => {
+    if (fail) throw new Error('boom');
+    seen.push(doubled.get());
+  });
+
+  fail = true;
+  assert.throws(() => x.set(1), /boom/);
+  fail = false;
+  x.set(2);
+  x.set(3);
+
+  assert.deepEqual(seen, [0, 4, 6]);
+});
+
+test('a computed that failed before reading another computed recovers', () => {
+  const x = state(0);
+  const inner = computed(() => x.get() + 1);
+  let fail = false;
+  const outer = computed(() => {
+    if (fail) throw new Error('outer');
+    return inner.get() * 10;
+  });
+  const seen = [];
+  effect(() => {
+    try {
+      seen.push(outer.get());
+    } catch {
+      seen.push('error');
+    }
+  });
+
+  fail = true;
+  x.set(1);
+  fail = false;
+  x.set(2);
+
+  assert.deepEqual(seen, [10, 'error', 30]);
+});
+
+test('a cleanup error is reported when the run itself throws', async () => {
+  const count = state(0);
+  effect(() => {
+    if (count.get() === 1) throw new Error('run failed');
+    return () => {
+      throw new Error('cleanup failed');
+    };
+  });
+
+  const errors = await reported(() => assert.throws(() => count.set(1), /run failed/));
+
+  assert.ok(errors.some((error) => /cleanup failed/.test(String(error))));
+});
+
+test('a failing stop does not hide the error of the first run', async () => {
+  const errors = await reported(() =>
+    assert.throws(
+      () =>
+        effect(() => {
+          effect(() => () => {
+            throw new Error('inner cleanup');
+          });
+          throw new Error('outer');
+        }),
+      /outer/,
+    ),
+  );
+
+  assert.ok(errors.some((error) => /inner cleanup/.test(String(error))));
+});
+
+test('mutate notifies even when its function throws', () => {
+  const list = state([]);
+  const lengths = [];
+  effect(() => lengths.push(list.get().length));
+
+  assert.throws(() =>
+    list.mutate((items) => {
+      items.push(1);
+      throw new Error('mutate failed');
+    }),
+  );
+
+  assert.deepEqual(lengths, [0, 1]);
+});
+
+test('an effect that writes what it read during its first run keeps every cleanup', () => {
+  const count = state(0);
+  const log = [];
+  effect(() => {
+    const value = count.get();
+    log.push(`run${value}`);
+    if (value < 1) count.set(value + 1);
+    return () => log.push(`cleanup${value}`);
+  });
+  count.set(5);
+
+  assert.deepEqual(log, ['run0', 'cleanup0', 'run1', 'cleanup1', 'run5']);
+});
+
+test('an update through many diamond-shaped dependencies stays linear', () => {
+  const source = state(0);
+  let top = source;
+  let runs = 0;
+  for (let i = 0; i < 25; i++) {
+    const below = top;
+    const left = computed(() => (runs++, below.get() + 1));
+    const right = computed(() => (runs++, below.get() + 1));
+    top = computed(() => (runs++, left.get() + right.get()));
+  }
+  const values = [];
+  effect(() => values.push(top.get()));
+  runs = 0;
+  const started = performance.now();
+
+  source.set(1);
+
+  assert.equal(runs, 75);
+  assert.ok(performance.now() - started < 100);
+  assert.equal(values.length, 2);
+});

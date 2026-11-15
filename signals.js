@@ -4,7 +4,7 @@ const SIGNAL = Symbol.for('fiorejs.signal');
 
 /**
  * @typedef {{ subs: Set<Computation>, release?(): void }} Source
- * @typedef {{ sources: Set<Source>, stale(): void }} Computation
+ * @typedef {{ sources: Set<Source>, stale(visited: Set<Computation>): void }} Computation
  * @typedef {{ owned: (() => void)[] }} Owner
  */
 
@@ -29,8 +29,10 @@ function track(source) {
 
 /** @param {Source} source */
 function notify(source) {
+  /** @type {Set<Computation>} Each computed passes a change on once per update, also in diamond-shaped graphs. */
+  const visited = new Set();
   for (const sub of [...source.subs]) {
-    sub.stale();
+    sub.stale(visited);
   }
   flush();
 }
@@ -202,8 +204,12 @@ export function state(value) {
      * @param {(value: T) => unknown} fn
      */
     mutate(fn) {
-      fn(value);
-      notify(source);
+      // The value may already have changed when fn throws, so readers are notified either way.
+      try {
+        fn(value);
+      } finally {
+        notify(source);
+      }
     },
   };
 }
@@ -223,12 +229,16 @@ export function computed(fn) {
   const node = {
     subs: new Set(),
     sources: new Set(),
-    stale() {
-      if (!dirty) {
-        dirty = true;
-        for (const sub of [...node.subs]) {
-          sub.stale();
-        }
+    stale(visited) {
+      if (visited.has(node)) {
+        return;
+      }
+      visited.add(node);
+      // Passed on even when already dirty: a reader whose last run failed before reading this computed still
+      // follows it and must hear about the change.
+      dirty = true;
+      for (const sub of [...node.subs]) {
+        sub.stale(visited);
       }
     },
     release,
@@ -286,26 +296,29 @@ export function effect(fn) {
       if (stopped) {
         return;
       }
+      /** @type {unknown[]} The run's own error first, then errors from the cleanup and stop, which are reported. */
+      const errors = [];
       // A cleanup or an owned effect that throws must not keep this effect from running.
-      /** @type {{ error: unknown } | undefined} */
-      let failure;
       try {
         reset();
       } catch (error) {
-        failure = { error };
+        errors.push(error);
       }
       try {
         const result = runTracked(node, scope, fn);
         cleanup = typeof result === 'function' ? result : undefined;
-      } finally {
-        // Stopped during its own run, also when it then threw: undo what the run set up after the stop.
-        if (stopped) {
+      } catch (error) {
+        errors.unshift(error);
+      }
+      // Stopped during its own run, also when it then threw: undo what the run set up after the stop.
+      if (stopped) {
+        try {
           stop();
+        } catch (error) {
+          errors.push(error);
         }
       }
-      if (failure) {
-        throw failure.error;
-      }
+      rethrow(errors);
     },
   };
 
@@ -328,11 +341,26 @@ export function effect(fn) {
   }
 
   owner?.owned.push(stop);
+  // Writes during the first run are queued until it has finished, so the run is never re-entered and no cleanup
+  // is overwritten.
+  const outermost = !flushing;
+  flushing = true;
   try {
     node.run();
   } catch (error) {
-    stop();
+    try {
+      stop();
+    } catch (stopError) {
+      report(stopError);
+    }
     throw error;
+  } finally {
+    if (outermost) {
+      flushing = false;
+    }
+  }
+  if (outermost) {
+    flush();
   }
   return stop;
 }
