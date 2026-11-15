@@ -222,6 +222,20 @@ test('reordering a bound list moves only the nodes that changed place', () => {
     rows.set(rotated);
     assert.equal(moves, 1);
     assert.deepEqual([...el.children], rotated);
+
+    // A full reverse keeps the old last node in place, so the nodes moved are the cheap ones.
+    const moved = new Set();
+    moves = 0;
+    Node.prototype.insertBefore = function (node, anchor) {
+      moves++;
+      moved.add(node);
+      return insertBefore.call(this, node, anchor);
+    };
+    const reversed = [...rotated].reverse();
+    rows.set(reversed);
+    assert.equal(moves, 99);
+    assert.equal(moved.has(rotated.at(-1)), false);
+    assert.deepEqual([...el.children], reversed);
   } finally {
     Node.prototype.insertBefore = insertBefore;
   }
