@@ -55,15 +55,16 @@ Each JSX prop goes to one of the fiorejs inputs:
 | `on` + event name, in any case | event listener | `onclick`, `onkeydown`, `oncart-add` |
 | `null` | removes the attribute | `title={null}` |
 | `style` with an object | style properties | `style={{ height: '10px' }}` |
-| a writable property of the element | property | `value`, `checked`, `className`, `type` |
+| a camel-case name the element has a writable property for | property | `className`, `textContent`, `htmlFor`, `selectedIndex` |
+| `value`, `checked`, `selected`, `muted`, `indeterminate`, `volume`, `text` or `files`, where the element has it | property | `<input value="Ada" />` |
 | an object or function on a custom element, or a prop its class defines a setter for | property | `<x-chart data={points} />` |
-| anything else | attribute | `class`, `for`, `aria-label`, `data-id`, `list`, `width="50%"` |
+| any other name | attribute | `class`, `for`, `id`, `title`, `type`, `disabled`, `aria-label`, `width="50%"` |
 
-A string for a numeric property, such as `width="50%"` on an `img`, is set as an attribute, so it keeps its meaning. Custom elements are looked up when they are used, so an element defined after its first use still gets its properties. A string for a custom element prop that is only a plain class field, with no setter, is set as an attribute. `value`, `selectedIndex` and `checked` are applied after the attributes and children, so `<select value="b">` selects its option `b`.
+The name alone decides, never the value, so `width="50%"` stays an attribute and `disabled={false}` removes it. Custom elements are looked up when they are used, so an element defined after its first use still gets its properties. A string for a custom element prop that is only a plain class field, with no setter, is set as an attribute. `value`, `selectedIndex` and `checked` are applied after the attributes and children, so `<select value="b">` selects its option `b`.
 
 ### Live values
 
-With a plugin such as [@fiorejs/signals](https://github.com/vrtexe/fiore-signals), a prop can be a signal or a getter function. A signal or getter follows the same rules as a plain value for built-in elements: on a lower-case string or numeric property that has an attribute of the same name, such as `title`, `id` or `width`, it is set as that attribute, so a `null` result removes it and `"50%"` keeps its meaning. `value`, camel-case properties such as `textContent`, and properties without such an attribute, such as `volume` or an option's `text`, stay properties. On a custom element every function is a getter, so pass a callback as `() => callback` or assign it in code.
+With a plugin such as [@fiorejs/signals](https://github.com/vrtexe/fiore-signals), a prop can be a signal or a getter function. On built-in elements a signal or getter goes where a plain value with the same name goes, so `title={() => null}` removes the attribute just like `title={null}`. On a custom element every function is a getter, so pass a callback as `() => callback` or assign it in code.
 
 Everything after `on` is used as the event name, exactly as written, so custom events work the same way as built-in ones: `oncart-add` listens to `cart-add`. A listener can also be an object with `handler` and `options`, which go to `addEventListener`:
 
@@ -90,7 +91,7 @@ function Card(props: { title: string; children?: Child }) {
 }
 ```
 
-A component can be `async`. Its place stays empty until it resolves, and then it is filled with the result:
+A component can be `async`. It returns an empty comment that holds its place, and the comment is replaced with the result when it resolves; a rejection goes to `reportError`. This works anywhere, also outside an element:
 
 ```tsx
 async function User(props: { id: number }) {
@@ -103,8 +104,6 @@ async function User(props: { id: number }) {
   <User id={1} />
 </section>;
 ```
-
-An async component has to be the child of an element or a fragment; on its own it is a promise, not a node.
 
 `<>...</>` returns a `DocumentFragment`. Children can be nodes, strings, numbers or nested arrays; `null`, `undefined`, `true` and `false` are skipped.
 
@@ -122,7 +121,7 @@ const input = (<input value="Ada" />) as HTMLInputElement;
 
 - `a`, `script`, `style` and `title` always create HTML elements, also inside `<svg>`.
 - `key` is accepted and ignored, because nothing is diffed. A `key` after a spread (`<li {...props} key="a" />`) compiles to `createElement` from `@fiorejs/jsx`, which the package exports.
-- Do not spread objects whose keys come from users: a key such as `innerHTML` or `srcdoc` sets that property.
+- Do not spread objects whose keys come from users: a key such as `innerHTML` or `srcdoc` sets that property or attribute.
 - Every prop that starts with `on` is treated as a listener, so a custom element property such as `online` has to be set in code.
 
 ## License

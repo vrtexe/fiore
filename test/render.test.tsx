@@ -124,10 +124,62 @@ test('async components are inserted once they resolve, also inside fragments', a
       </>
     </p>
   ) as HTMLParagraphElement;
-  assert.equal(card.innerHTML, 'Hello , ');
+  assert.equal(card.textContent, 'Hello , ');
 
   await new Promise((resolve) => setTimeout(resolve));
   assert.equal(card.innerHTML, 'Hello <b>Ada</b>, <b>Grace</b>');
+});
+
+test('an async component works on its own', async () => {
+  async function Name() {
+    return <b>Ada</b>;
+  }
+
+  const node = <Name />;
+  assert.ok(node instanceof window.Node);
+  const host = document.createElement('div');
+  host.append(node);
+
+  await new Promise((resolve) => setTimeout(resolve));
+  assert.equal(host.innerHTML, '<b>Ada</b>');
+});
+
+test('a rejected async component is reported and leaves its place empty', async (t) => {
+  const errors: unknown[] = [];
+  const previous = globalThis.reportError;
+  globalThis.reportError = (error) => errors.push(error);
+  t.after(() => {
+    globalThis.reportError = previous;
+  });
+  async function Broken(): Promise<Node> {
+    throw new Error('load failed');
+  }
+
+  const card = (
+    <p>
+      <Broken />
+    </p>
+  ) as HTMLParagraphElement;
+
+  await new Promise((resolve) => setTimeout(resolve));
+  assert.equal(card.textContent, '');
+  assert.match(String(errors[0]), /load failed/);
+});
+
+test('an async component removed before it resolves stays out of the document', async () => {
+  let resolve!: (node: Node) => void;
+  const Late = () => new Promise<Node>((done) => (resolve = done));
+
+  const card = (
+    <p>
+      <Late />
+    </p>
+  ) as HTMLParagraphElement;
+  card.replaceChildren();
+  resolve(document.createElement('b'));
+
+  await new Promise((done) => setTimeout(done));
+  assert.equal(card.innerHTML, '');
 });
 
 test('types reject unknown props and mismatched listeners', () => {
@@ -214,35 +266,53 @@ test('very deep children do not overflow the stack', () => {
   assert.equal(((<div>{deep}</div>) as HTMLDivElement).textContent, 'x');
 });
 
-test('live getters follow the attribute rules for plain string and numeric properties', () => {
+test('plain values, getters and signals with the same name end up in the same place', () => {
+  const SIGNAL = Symbol.for('fiorejs.signal');
   use({
-    name: 'test-getters',
+    name: 'test-live',
     bind: (value, apply) => {
       if (typeof value === 'function') return apply(value()), true;
-      if (value && typeof value === 'object' && 'get' in value) return apply((value as { get(): unknown }).get()), true;
+      if (value && typeof value === 'object' && SIGNAL in value) return apply((value as unknown as { get(): unknown }).get()), true;
       return false;
     },
   });
   try {
-    const box = (<div title={() => null} id={() => 'main'} />) as HTMLDivElement;
-    const image = (<img width={() => '50%'} />) as HTMLImageElement;
-    const field = (<input value={() => 'typed'} />) as HTMLInputElement;
-
-    assert.equal(box.hasAttribute('title'), false);
-    assert.equal(box.id, 'main');
-    assert.equal(image.getAttribute('width'), '50%');
-    assert.equal(field.value, 'typed');
-
-    const signal = <T,>(value: T) => ({ get: () => value }) as unknown as () => T;
-    const tip = (<div title={signal(null)} />) as HTMLDivElement;
-    const sized = (<img width={signal('50%')} />) as HTMLImageElement;
-    const choice = (<option text={() => 'Label'} />) as HTMLOptionElement;
-    assert.equal(tip.hasAttribute('title'), false);
-    assert.equal(sized.getAttribute('width'), '50%');
-    assert.equal(choice.textContent, 'Label');
-    assert.equal(choice.hasAttribute('text'), false);
+    const cases: [tag: string, name: string, value: unknown, check: (el: any) => void][] = [
+      ['div', 'title', 'tip', (el) => assert.equal(el.getAttribute('title'), 'tip')],
+      ['div', 'title', null, (el) => assert.equal(el.hasAttribute('title'), false)],
+      ['div', 'title', false, (el) => assert.equal(el.hasAttribute('title'), false)],
+      ['div', 'id', 'main', (el) => assert.equal(el.id, 'main')],
+      ['img', 'width', '50%', (el) => assert.equal(el.getAttribute('width'), '50%')],
+      ['img', 'width', 100, (el) => assert.equal(el.width, 100)],
+      ['button', 'disabled', true, (el) => assert.equal(el.disabled, true)],
+      ['button', 'disabled', false, (el) => assert.equal(el.hasAttribute('disabled'), false)],
+      ['div', 'hidden', true, (el) => assert.equal(el.hidden, true)],
+      ['div', 'draggable', false, (el) => assert.equal(el.getAttribute('draggable'), 'false')],
+      ['input', 'value', 'typed', (el) => (assert.equal(el.value, 'typed'), assert.equal(el.hasAttribute('value'), false))],
+      ['input', 'checked', true, (el) => (assert.equal(el.checked, true), assert.equal(el.hasAttribute('checked'), false))],
+      ['div', 'textContent', 'text', (el) => assert.equal(el.textContent, 'text')],
+      ['div', 'className', 'box', (el) => assert.equal(el.getAttribute('class'), 'box')],
+      ['audio', 'volume', 0.5, (el) => (assert.equal(el.volume, 0.5), assert.equal(el.hasAttribute('volume'), false))],
+      ['option', 'text', 'Label', (el) => (assert.equal(el.textContent, 'Label'), assert.equal(el.hasAttribute('text'), false))],
+      [
+        'x-undefined',
+        'className',
+        'card',
+        (el) => (assert.equal(el.getAttribute('class'), 'card'), assert.equal(el.hasAttribute('classname'), false)),
+      ],
+    ];
+    for (const [tag, name, value, check] of cases) {
+      const forms = { plain: value, getter: () => value, signal: { [SIGNAL]: true, get: () => value } };
+      for (const [form, input] of Object.entries(forms)) {
+        try {
+          check(jsx(tag, { [name]: input }));
+        } catch (error) {
+          throw new Error(`<${tag} ${name}={${form} ${JSON.stringify(value)}}>: ${(error as Error).message}`);
+        }
+      }
+    }
   } finally {
-    use({ name: 'test-getters', bind: () => false });
+    use({ name: 'test-live', bind: () => false });
   }
 });
 

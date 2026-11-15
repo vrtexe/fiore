@@ -6,4 +6,4 @@ export function createElement(
   type: string | ((props: any) => Node | Promise<Node>),
   props?: Record<string, unknown> | null,
   ...children: Child[]
-): Node | Promise<Node>;
+): Node;

@@ -5,8 +5,8 @@ import type { SVGEventMapOf } from 'fiorejs/type/svg.dom.d.ts';
 
 type ChildValue = Node | string | number | bigint | boolean | null | undefined | ChildValue[];
 
-/** A child: a value, a live value from a plugin such as @fiorejs/signals, a promise, or a list of children. */
-export type Child = Live<ChildValue> | Promise<ChildValue> | Child[];
+/** A child: a value, a live value from a plugin such as @fiorejs/signals, or a list of children. */
+export type Child = Live<ChildValue> | Child[];
 
 type Listener<T extends Element, E> =
   | ((this: T, ev: E & { readonly currentTarget: T }) => unknown)
@@ -50,7 +50,7 @@ type SVGIntrinsicElements = { [K in SVGTag]: SVGProps<K> };
 export namespace JSX {
   type Element = Node;
 
-  /** Components may be async; their result is inserted once it resolves. */
+  /** Components may be async; their place stays empty until they resolve. */
   type ElementType = string | ((props: any) => Node | Promise<Node>);
 
   interface ElementChildrenAttribute {

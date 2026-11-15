@@ -8,7 +8,7 @@ export { Fragment } from './jsx-runtime.js';
  * @param {string | ((props: any) => Node | Promise<Node>)} type
  * @param {Record<string, unknown> | null} [props]
  * @param {...unknown} children
- * @returns {Node | Promise<Node>}
+ * @returns {Node}
  */
 export function createElement(type, props, ...children) {
   /** @type {Record<string, unknown>} */

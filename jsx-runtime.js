@@ -11,63 +11,43 @@ const SVG_TAGS = new Set(
 /** Names of event handlers, in any case. */
 const HANDLER = /^on/i;
 
-/** @type {Map<string, Element>} One probe element per built-in tag, to look up its properties. */
-const probes = new Map();
+/**
+ * Lower-case properties that hold state no attribute of the same name reflects, such as the current value or
+ * whether a box is checked now; they stay properties.
+ */
+const STATE = new Set(['value', 'checked', 'selected', 'muted', 'indeterminate', 'volume', 'text', 'files']);
 
-/** Flags describing a built-in element's property. */
-const WRITABLE = 1;
-const NUMBER = 2;
-const STRING = 4;
-/** Writing the property sets the attribute of the same name, so the attribute can carry the value instead. */
-const REFLECTS = 8;
+/** @type {Map<string, object>} The prototype of each built-in tag. */
+const prototypes = new Map();
 
-/** @type {Map<string, number>} The flags of each built-in property, by tag and name. */
-const kinds = new Map();
+/** @type {WeakMap<object, Map<string, boolean>>} Whether a prototype has a setter, by name. */
+const setters = new WeakMap();
 
 /**
- * @param {string} tag
+ * @param {object} proto
  * @param {string} name
  */
-function kindOf(tag, name) {
-  const key = `${tag} ${name}`;
-  let kind = kinds.get(key);
-  if (kind === undefined) {
-    let probe = probes.get(tag);
-    if (!probe) {
-      probe = document.createElement(tag);
-      probes.set(tag, probe);
-    }
-    kind = 0;
-    if (hasSetter(Object.getPrototypeOf(probe), name)) {
-      const target = /** @type {any} */ (probe);
-      const current = target[name];
-      kind = WRITABLE | (typeof current === 'number' ? NUMBER : typeof current === 'string' ? STRING : 0);
-      if (kind & (NUMBER | STRING)) {
-        // A throwaway element per tag, so writing its own value back has no effect outside.
-        try {
-          target[name] = current;
-          if (probe.hasAttribute(name)) {
-            kind |= REFLECTS;
-          }
-          probe.removeAttribute(name);
-        } catch {
-          // A setter that refuses its own value does not reflect.
-        }
-      }
-    }
-    kinds.set(key, kind);
+function settable(proto, name) {
+  let names = setters.get(proto);
+  if (!names) {
+    names = new Map();
+    setters.set(proto, names);
   }
-  return kind;
+  let result = names.get(name);
+  if (result === undefined) {
+    result = hasSetter(proto, name);
+    names.set(name, result);
+  }
+  return result;
 }
 
 /**
- * Decides whether a prop is set as a property rather than an attribute.
- * Built-in elements use their writable properties. A string for a numeric property, and a live value (a signal or a
- * getter) for a lower-case string or numeric property other than value, go to the attribute when the property
- * reflects to an attribute of the same name, so null removes it and width="50%" keeps its meaning; properties
- * without such an attribute, such as volume, stay properties. A custom element may be defined after its first use
- * and keep class fields off its prototype, so object and function values go to its properties too; it is never
- * constructed to find out.
+ * Decides whether a prop is set as a property rather than an attribute, from its name alone, so a plain value, a
+ * getter and a signal always end up in the same place.
+ * Built-in elements: camel-case names such as textContent or className and the lower-case state properties such as
+ * value and checked are properties where the element has them; every other name is an attribute, so null removes it
+ * and width="50%" keeps its meaning. A custom element may be defined after its first use and keep class fields off
+ * its prototype, so object and function values go to its properties too; it is never constructed to find out.
  * @param {string} tag
  * @param {string} name
  * @param {unknown} value
@@ -75,23 +55,19 @@ function kindOf(tag, name) {
  */
 function isProperty(tag, name, value, definition) {
   if (tag.includes('-')) {
-    if (definition && hasSetter(definition.prototype, name)) {
-      return true;
-    }
-    return typeof value === 'object' || typeof value === 'function';
+    return (
+      settable((definition ?? HTMLElement).prototype, name) || typeof value === 'object' || typeof value === 'function'
+    );
   }
-
-  const kind = kindOf(tag, name);
-  if (!(kind & WRITABLE)) {
+  if (name === name.toLowerCase() && !STATE.has(name)) {
     return false;
   }
-  if (!(kind & REFLECTS)) {
-    return true;
+  let proto = prototypes.get(tag);
+  if (!proto) {
+    proto = Object.getPrototypeOf(document.createElement(tag));
+    prototypes.set(tag, proto);
   }
-  if (typeof value === 'function' || typeof value === 'object') {
-    return name !== name.toLowerCase() || name === 'value';
-  }
-  return !(typeof value === 'string' && kind & NUMBER);
+  return settable(proto, name);
 }
 
 /**
@@ -131,14 +107,30 @@ function flatten(children) {
   return items;
 }
 
+/** @param {unknown} error */
+function report(error) {
+  if (typeof globalThis.reportError === 'function') {
+    globalThis.reportError(error);
+  } else {
+    console.error(error);
+  }
+}
+
 /**
  * @param {string | ((props: any) => Node | Promise<Node>)} type
  * @param {Record<string, unknown>} props
- * @returns {Node | Promise<Node>}
+ * @returns {Node}
  */
 export function jsx(type, props) {
   if (typeof type === 'function') {
-    return type(props);
+    const result = type(props);
+    if (!(result instanceof Promise)) {
+      return result;
+    }
+    // An async component holds its place with an empty comment until it resolves.
+    const marker = document.createComment('');
+    result.then((node) => marker.replaceWith(node), report);
+    return marker;
   }
 
   const { children, ...rest } = props;
