@@ -2,11 +2,11 @@ import { div, button, label, input } from '../lib/html.js';
 
 document.getElementById('app')?.appendChild(
   div({
-    attributes: {
+    attrs: {
       class: 'test-class',
       'aria-label': 'Custom Control',
     },
-    event: {
+    on: {
       click: (e) => {
         e.stopPropagation();
         console.log('Abort event triggered!', e);
@@ -41,7 +41,7 @@ document.getElementById('app')?.appendChild(
         props: {
           className: 'leaflet-control-button',
         },
-        event: {
+        on: {
           click: (e) => {
             e.stopPropagation();
             console.log('Button clicked!', e);

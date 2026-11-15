@@ -1,6 +1,6 @@
 {
   "name": "@fiorejs/signals",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Signals for fiorejs. Bind state to properties, attributes and children, and only the bound DOM spot updates.",
   "license": "MIT",
   "author": "vrtexe",

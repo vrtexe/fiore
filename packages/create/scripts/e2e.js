@@ -39,7 +39,7 @@ for (const [index, flags] of combinations.entries()) {
     }
     writeFileSync(join(cwd, 'package.json'), JSON.stringify(manifest, null, 2) + '\n');
 
-    run(cwd, 'npm', 'install', '--install-links', '--legacy-peer-deps', '--no-audit', '--no-fund');
+    run(cwd, 'npm', 'install', '--install-links', '--no-audit', '--no-fund');
     if (manifest.scripts.build) run(cwd, 'npm', 'run', 'build');
     if (manifest.scripts.lint) run(cwd, 'npm', 'run', 'lint');
     if (manifest.devDependencies.prettier) run(cwd, 'npx', 'prettier', '--check', '.');
