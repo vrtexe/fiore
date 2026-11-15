@@ -1,17 +1,3 @@
-/** @import { HTMLTag, DeprecatedHTMLTag } from '../types/html.dom.d.ts' */
-/**
- * @template {keyof HTMLElementTagNameMap} T
- * @param {T} name
- * @returns {HTMLTag<T>}
- */
-export function htmlTag<T extends keyof HTMLElementTagNameMap>(name: T): HTMLTag<T>;
-/**
- * @deprecated
- * @template {keyof HTMLElementDeprecatedTagNameMap} T
- * @param {T} name
- * @returns {DeprecatedHTMLTag<T>}
- */
-export function deprecatedHtmlTag<T extends keyof HTMLElementDeprecatedTagNameMap>(name: T): DeprecatedHTMLTag<T>;
 /**
  * Returns the tag of any HTML element by name, the same tag function on every call.
  * @template {keyof HTMLElementTagNameMap} T

@@ -105,7 +105,7 @@ input.props({ type: 'range', value: '150' }).attrs({ max: '200' }).of();
 
 ### Elements by name
 
-`element(name)` returns the tag of any element by name, the same tag function on every call: `element('div').props(…).of()`. `fiorejs/svg` and `fiorejs/math` export their own `element`.
+`element(name)` returns the tag of any element by name: `element('div')` is the same function as `div`, so `element('div').props(…).of()` works too. `fiorejs/svg` and `fiorejs/math` export their own `element`.
 
 Import styles:
 

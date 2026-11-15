@@ -1,10 +1,4 @@
 /**
- * @template {keyof MathMLElementTagNameMap} T
- * @param {T} name
- * @returns {MathTag<T>}
- */
-export function mathTag<T extends keyof MathMLElementTagNameMap>(name: T): MathTag<T>;
-/**
  * Returns the tag of any MathML element by name, the same tag function on every call.
  * @template {keyof MathMLElementTagNameMap} T
  * @param {T} name

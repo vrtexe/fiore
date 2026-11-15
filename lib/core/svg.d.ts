@@ -1,10 +1,4 @@
 /**
- * @template {keyof SVGElementTagNameMap} T
- * @param {T} name
- * @returns {SVGTag<T>}
- */
-export function svgTag<T extends keyof SVGElementTagNameMap>(name: T): SVGTag<T>;
-/**
  * Returns the tag of any SVG element by name, the same tag function on every call.
  * @template {keyof SVGElementTagNameMap} T
  * @param {T} name
