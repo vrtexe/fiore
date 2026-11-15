@@ -114,8 +114,8 @@ export interface Builder<T extends BaseElement, A, On> {
   with(fn: (builder: this) => this): this;
   /** Calls `fn` with the created element, after the listeners; it is not connected to the document yet. */
   also(fn: (element: T) => void): this;
-  /** Creates the element with these children and returns it. */
-  of(...children: Children[]): T;
+  /** Creates the element with these children (a node, a string, a number, or an array of these) and returns it. */
+  of(children?: Children): T;
 }
 
 /** A tag function: call it with a data object or children, or start a builder with one of its methods. */
@@ -127,7 +127,7 @@ export interface Tag<T extends BaseElement, A, On> {
   on(map: On): Builder<T, A, On>;
   with(fn: (builder: Builder<T, A, On>) => Builder<T, A, On>): Builder<T, A, On>;
   also(fn: (element: T) => void): Builder<T, A, On>;
-  of(...children: Children[]): T;
+  of(children?: Children): T;
 }
 
 /** A reusable builder function that works on every builder of type `B`, for example every HTML element. */

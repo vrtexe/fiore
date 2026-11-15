@@ -12,14 +12,14 @@ function updateCount() {
 }
 
 function TodoItem(text) {
-  const item = li.props({ className: 'item' }).of(
-    label.of(
+  const item = li.props({ className: 'item' }).of([
+    label.of([
       input
         .props({ type: 'checkbox' })
         .on({ change: (event) => item.classList.toggle('done', event.currentTarget.checked) })
         .of(),
       span(text),
-    ),
+    ]),
     button
       .props({ className: 'ghost' })
       .attrs({ 'aria-label': `Remove ${text}` })
@@ -30,7 +30,7 @@ function TodoItem(text) {
         },
       })
       .of('✕'),
-  );
+  ]);
   return item;
 }
 
@@ -40,8 +40,8 @@ function add(text) {
 }
 
 document.body.append(
-  main.props({ className: 'app' }).of(
-    header.of(h1.of('Fiore ', small('+ DOM')), count),
+  main.props({ className: 'app' }).of([
+    header.of([h1.of(['Fiore ', small('+ DOM')]), count]),
     form
       .props({ className: 'add' })
       .on({
@@ -52,12 +52,12 @@ document.body.append(
           field.focus();
         },
       })
-      .of(field, button.props({ type: 'submit' }).of('Add')),
+      .of([field, button.props({ type: 'submit' }).of('Add')]),
     list,
     p
       .props({ className: 'hint' })
       .of('No virtual DOM: every function returns a real element, and updates are plain DOM calls.'),
-  ),
+  ]),
 );
 
 ['Edit src/main.js', 'Add a component', 'Build something'].forEach(add);

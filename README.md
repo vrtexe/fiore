@@ -33,14 +33,14 @@ document.body.append(
   div
     .props({ className: 'card', style: { padding: '16px' } })
     .attrs({ 'aria-label': 'Sign up' })
-    .of(
+    .of([
       label.props({ htmlFor: 'email' }).of('Email'),
       input.props({ id: 'email', type: 'email', placeholder: 'you@example.com', required: true }).of(),
       button
         .props({ type: 'button' })
         .on({ click: (event) => console.log('clicked', event.currentTarget) })
         .of('Sign up'),
-    ),
+    ]),
 );
 ```
 
@@ -53,7 +53,7 @@ Every tag is a function with builder methods:
 | `on(map)` | Listeners: `{ click: fn }` or `{ click: { handler, options } }`. | Add listeners; they never replace each other. |
 | `with(fn)` | A function that gets the builder and returns a builder. | Each call applies its function. |
 | `also(fn)` | A function that gets the created element, after the listeners. The element is not in the document yet, so focusing or measuring does not work there. | Add callbacks, run in order. |
-| `of(...children)` | The children; creates the element and returns it. | |
+| `of(children)` | The children, like the `children` key: a node, a string, a number, or an array of these. Creates the element and returns it. | |
 
 Children are nodes, strings, numbers or arrays of these; `null`, `undefined`, `true` and `false` are skipped, so `user.isAdmin && badge()` works.
 
@@ -99,7 +99,7 @@ p({ props: { className: 'lead' }, attrs: { title: 'Intro' }, on: { click: select
 `value`, `selectedIndex` and `checked` are assigned after the attributes and children, so they can refer to them:
 
 ```js
-select.props({ value: 'M' }).of(option('S'), option('M'));
+select.props({ value: 'M' }).of([option('S'), option('M')]);
 input.props({ type: 'range', value: '150' }).attrs({ max: '200' }).of();
 ```
 

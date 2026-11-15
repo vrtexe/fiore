@@ -571,7 +571,7 @@ test('the builder applies props, attrs, children, late props, listeners and call
         el.dispatchEvent(new window.Event('change'));
         seen.push([el.value, el.getAttribute('name'), el.className]);
       })
-      .of(option('S'), option('M'));
+      .of([option('S'), option('M')]);
   const listen = { change: (event) => seen.push(['listener', event.currentTarget.value]) };
 
   build((tag) => tag.on(listen).attrs({ name: 'size' }).props({ value: 'M', className: 'pick' }));
@@ -621,14 +621,17 @@ test('builders are immutable templates and copy maps when they are called', () =
   assert.equal(div.of().className, '', 'a tag method starts from an empty builder each time');
 });
 
-test('with applies a modifier and of flattens its children one level', () => {
+test('with applies a modifier, and of takes children like the data object', () => {
   const card = (b) => b.props({ className: 'card' });
   const admin = (b) => (b.attrs({ 'data-admin': '' }));
-  const el = div.with(card).with((b) => (false ? admin(b) : b)).of([span('a'), 'b'], 'c');
+  const el = div.with(card).with((b) => (false ? admin(b) : b)).of([span('a'), false && 'x', null, 'b', 1]);
 
   assert.equal(el.className, 'card');
   assert.equal(el.hasAttribute('data-admin'), false);
-  assert.equal(el.textContent, 'abc');
+  assert.equal(el.textContent, 'ab1');
+  assert.equal(div.of(span('only')).textContent, 'only');
+  assert.equal(div.of('text').textContent, 'text');
+  assert.equal(div.of(null).childNodes.length, 0);
 });
 
 test('a live prop in a template binds once per created element', () => {
