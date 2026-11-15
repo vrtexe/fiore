@@ -665,3 +665,18 @@ test('nested props merge into existing objects with a stack, at any depth', () =
   assert.equal(level.leaf, 'new');
   assert.equal(el.config, existing, 'the existing object is kept and merged into');
 });
+
+test('a cyclic value merged into a cyclic property ends instead of looping', () => {
+  const input = { mode: 'on' };
+  input.self = input;
+  const el = element('div')
+    .also((node) => {
+      node.cfg = { mode: 'off' };
+      node.cfg.self = node.cfg;
+    })
+    .create();
+  assignProperties(el, { cfg: input });
+
+  assert.equal(el.cfg.mode, 'on');
+  assert.equal(el.cfg.self, input, 'the second visit assigns the value whole');
+});
