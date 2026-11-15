@@ -644,9 +644,7 @@ test('a live prop in a template binds once per created element', () => {
   assert.deepEqual([first.title, second.title], ['two', 'two']);
 });
 
-test('element() returns the same tag for a name, in each namespace', () => {
-  assert.equal(element('div'), element('div'));
-  assert.equal(element('div'), div, 'the named export is the same tag');
+test('element() returns a working tag for a name, in each namespace', () => {
   assert.equal(element('div').props({ id: 'x' }).create().id, 'x');
   assert.equal(svg.element('circle')().namespaceURI, 'http://www.w3.org/2000/svg');
   assert.equal(math.element('mi')().namespaceURI, 'http://www.w3.org/1998/Math/MathML');

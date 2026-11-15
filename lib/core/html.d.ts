@@ -1,5 +1,6 @@
+/** @import { HTMLTag, DeprecatedHTMLTag } from '../types/html.dom.d.ts' */
 /**
- * Returns the tag of any HTML element by name, the same tag function on every call.
+ * Returns the tag of any HTML element by name.
  * @template {keyof HTMLElementTagNameMap} T
  * @param {T} name
  * @returns {HTMLTag<T>}

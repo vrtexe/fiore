@@ -24,35 +24,15 @@ export function setAttributes<T extends BaseElement, A extends keyof HTMLElement
  */
 export function replaceChildren(element: BaseElement, children: Children | undefined | null): void;
 /**
- * @template {HTMLElement|SVGElement} T
- * @template {T extends HTMLElement ? HTMLElementEventMap
- * : T extends SVGElement ? SVGElementEventMap : never} E
- * @typedef {T extends HTMLElement ?
- * ElementEventData<T, E> | undefined | null
- * : T extends SVGElement ?
- *  SVGElementEventData<T, E> | undefined | null
- * : never} GenericEventData
+ * Adds the listeners of an `on` map: a function, or an object with `handler` and `options`.
+ * @param {Element} element
+ * @param {Record<string, EventListener | { handler?: EventListener | null, options?: boolean | AddEventListenerOptions | null } | null | undefined> | null | undefined} eventData
  */
-/**
- * @template {SVGElement} T
- * @template {SVGElementEventMap} E
- * @param {T} element
- * @param {SVGElementEventData<T, E> | undefined | null} eventData
- * @returns {void}
- */
-export function attachEventListenerSvg<T extends SVGElement, E extends SVGElementEventMap>(element: T, eventData: SVGElementEventData<T, E> | undefined | null): void;
-/**
- * @template {HTMLElement} T
- * @template {HTMLElementEventMap} E
- * @param {T} element
- * @param {ElementEventData<T, E> | undefined | null} eventData
- * @returns {void}
- */
-export function attachEventListener<T extends HTMLElement, E extends HTMLElementEventMap>(element: T, eventData: ElementEventData<T, E> | undefined | null): void;
-export type GenericEventData<T extends HTMLElement | SVGElement, E extends T extends HTMLElement ? HTMLElementEventMap : T extends SVGElement ? SVGElementEventMap : never> = T extends HTMLElement ? ElementEventData<T, E> | undefined | null : T extends SVGElement ? SVGElementEventData<T, E> | undefined | null : never;
+export function attachEventListener(element: Element, eventData: Record<string, EventListener | {
+    handler?: EventListener | null;
+    options?: boolean | AddEventListenerOptions | null;
+} | null | undefined> | null | undefined): void;
 import type { BaseElement } from '../types/base.dom.d.ts';
 import type { ElementProps } from '../types/base.dom.d.ts';
 import type { HTMLElementsAttributesMap } from '../types/attributes.d.ts';
 import type { Children } from '../types/base.dom.d.ts';
-import type { SVGElementEventData } from '../types/svg.dom.d.ts';
-import type { ElementEventData } from '../types/html.dom.d.ts';
