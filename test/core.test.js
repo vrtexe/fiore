@@ -643,6 +643,7 @@ test('a live prop in a template binds once per created element', () => {
 
 test('element() returns the same tag for a name, in each namespace', () => {
   assert.equal(element('div'), element('div'));
+  assert.equal(element('div'), div, 'the named export is the same tag');
   assert.equal(element('div').props({ id: 'x' }).of().id, 'x');
   assert.equal(svg.element('circle')().namespaceURI, 'http://www.w3.org/2000/svg');
   assert.equal(math.element('mi')().namespaceURI, 'http://www.w3.org/1998/Math/MathML');
