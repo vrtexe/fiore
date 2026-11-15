@@ -21,7 +21,14 @@ Point the JSX compiler at the runtime. In `tsconfig.json`:
 }
 ```
 
-Vite, esbuild and Babel read the same setting, or take it as `jsxImportSource: '@fiorejs/jsx'` in their own JSX options.
+Vite reads this setting from `tsconfig.json` for TypeScript files, so no plugin is needed. Other tools take the import source in their own options:
+
+| Tool | Setting |
+| --- | --- |
+| Vite, JavaScript files | `oxc: { jsx: { importSource: '@fiorejs/jsx' } }` in `vite.config.js` |
+| esbuild | `--jsx=automatic --jsx-import-source=@fiorejs/jsx` |
+| Babel | `@babel/plugin-transform-react-jsx` with `{ runtime: 'automatic', importSource: '@fiorejs/jsx' }` (Babel does not read `tsconfig.json`) |
+| any file | a `/** @jsxImportSource @fiorejs/jsx */` comment at the top |
 
 ## Usage
 
@@ -45,10 +52,14 @@ Each JSX prop goes to one of the fiorejs inputs:
 
 | Prop | Applied as | Example |
 | --- | --- | --- |
-| `on` + event name | event listener | `onclick`, `onkeydown`, `oncart-add` |
+| `on` + event name, in any case | event listener | `onclick`, `onkeydown`, `oncart-add` |
+| `null` | removes the attribute | `title={null}` |
 | `style` with an object | style properties | `style={{ height: '10px' }}` |
 | a writable property of the element | property | `value`, `checked`, `className`, `type` |
-| anything else | attribute | `class`, `for`, `aria-label`, `data-id`, `list` |
+| an object or function on a custom element | property | `<x-chart data={points} />` |
+| anything else | attribute | `class`, `for`, `aria-label`, `data-id`, `list`, `width="50%"` |
+
+A string for a numeric property, such as `width="50%"` on an `img`, is set as an attribute, so it keeps its meaning. Custom elements are looked up when they are used, so an element defined after its first use still gets its properties. `value`, `selectedIndex` and `checked` are applied after the attributes and children, so `<select value="b">` selects its option `b`.
 
 Everything after `on` is used as the event name, exactly as written, so custom events work the same way as built-in ones: `oncart-add` listens to `cart-add`. A listener can also be an object with `handler` and `options`, which go to `addEventListener`:
 
@@ -106,7 +117,8 @@ const input = (<input value="Ada" />) as HTMLInputElement;
 ## Limits
 
 - `a`, `script`, `style` and `title` always create HTML elements, also inside `<svg>`.
-- `key` is ignored, because nothing is diffed.
+- `key` is accepted and ignored, because nothing is diffed. A `key` after a spread (`<li {...props} key="a" />`) compiles to `createElement` from `@fiorejs/jsx`, which the package exports.
+- Do not spread objects whose keys come from users: a key such as `innerHTML` or `srcdoc` sets that property.
 - Every prop that starts with `on` is treated as a listener, so a custom element property such as `online` has to be set in code.
 
 ## License

@@ -20,6 +20,8 @@ type EventProps<T extends Element, M> = {
 };
 
 type CommonProps<T extends Element> = {
+  /** Accepted and ignored, because nothing is diffed. */
+  key?: string | number | bigint | null | undefined;
   children?: Child;
   class?: Live<string | undefined | null>;
   style?: Live<string | Partial<CSSStyleDeclaration> | undefined | null>;
@@ -53,6 +55,11 @@ export namespace JSX {
 
   interface ElementChildrenAttribute {
     children: {};
+  }
+
+  /** Accepted on every element and component and ignored, because nothing is diffed. */
+  interface IntrinsicAttributes {
+    key?: string | number | bigint | null | undefined;
   }
 
   interface IntrinsicElements extends HTMLIntrinsicElements, SVGIntrinsicElements {

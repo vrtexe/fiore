@@ -16,6 +16,10 @@
     "typescript"
   ],
   "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "default": "./index.js"
+    },
     "./jsx-runtime": {
       "types": "./jsx-runtime.d.ts",
       "default": "./jsx-runtime.js"
@@ -26,6 +30,8 @@
     }
   },
   "files": [
+    "index.js",
+    "index.d.ts",
     "jsx-runtime.js",
     "jsx-runtime.d.ts",
     "jsx-dev-runtime.js",

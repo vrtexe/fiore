@@ -1,10 +1,15 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { JSDOM } from 'jsdom';
-import type { Child } from '@fiorejs/jsx/jsx-runtime';
+import { jsx, type Child } from '@fiorejs/jsx/jsx-runtime';
 
 const { window } = new JSDOM();
-Object.assign(globalThis, { document: window.document, Node: window.Node });
+Object.assign(globalThis, {
+  document: window.document,
+  Node: window.Node,
+  customElements: window.customElements,
+  HTMLElement: window.HTMLElement,
+});
 
 test('flat props become properties, attributes and listeners', () => {
   let clicked: HTMLButtonElement | undefined;
@@ -133,4 +138,74 @@ test('types reject unknown props and mismatched listeners', () => {
   void (<div onpopstate={() => {}} />);
   void (<body onpopstate={(event) => event.state} />);
   void (<my-widget any-prop="1" onclick={() => {}} />);
+  // @ts-expect-error SVG props are typed per element
+  void (<circle notAnAttribute={1} />);
+  void ['a'].map((item) => <li key={item}>{item}</li>);
+});
+
+test('custom elements get object values as properties, also when defined after first use', () => {
+  const early = (<x-late items={[1, 2]} />) as HTMLElement & { items?: unknown };
+  assert.deepEqual(early.items, [1, 2]);
+  assert.equal(early.hasAttribute('items'), false);
+
+  window.customElements.define(
+    'x-late',
+    class extends window.HTMLElement {
+      set label(value: string) {
+        this.dataset.label = value;
+      }
+    },
+  );
+  const later = (<x-late label="hi" />) as HTMLElement;
+  assert.equal(later.dataset.label, 'hi');
+});
+
+test('null removes an attribute instead of writing "null"', () => {
+  const el = (<div id={null} title={null} style={null} />) as HTMLDivElement;
+
+  assert.equal(el.hasAttribute('id'), false);
+  assert.equal(el.hasAttribute('title'), false);
+  assert.equal(el.hasAttribute('style'), false);
+});
+
+test('a string for a numeric property stays an attribute', () => {
+  const image = (<img width="50%" />) as HTMLImageElement;
+
+  assert.equal(image.getAttribute('width'), '50%');
+});
+
+test('key is accepted and ignored, also after a spread', () => {
+  const props = { class: 'item' };
+  const item = (
+    <li {...props} key="k">
+      x
+    </li>
+  ) as HTMLLIElement;
+
+  assert.equal(item.className, 'item');
+  assert.equal(item.hasAttribute('key'), false);
+});
+
+test('event handler names are recognised in any case', () => {
+  const el = jsx('button', { ONCLICK: 'alert(1)' }) as HTMLButtonElement;
+
+  assert.equal(el.hasAttribute('onclick'), false);
+});
+
+test('select value is applied after its options', () => {
+  const size = (
+    <select value="b">
+      <option>a</option>
+      <option>b</option>
+    </select>
+  ) as HTMLSelectElement;
+
+  assert.equal(size.value, 'b');
+});
+
+test('very deep children do not overflow the stack', () => {
+  let deep: Child = 'x';
+  for (let i = 0; i < 20000; i++) deep = [deep];
+
+  assert.equal(((<div>{deep}</div>) as HTMLDivElement).textContent, 'x');
 });
