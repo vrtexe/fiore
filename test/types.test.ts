@@ -49,3 +49,5 @@ button.on({ click: (event: KeyboardEvent) => event.key });
 // @ts-expect-error `of` returns the element of the tag
 const wrong: HTMLInputElement = div.of();
 void wrong;
+// @ts-expect-error of takes one children value, an array for several
+div.of('a', 'b');

@@ -20,11 +20,11 @@ const count = state(0);
 const double = computed(() => count.get() * 2);
 
 document.body.append(
-  div.attrs({ class: () => (count.get() > 5 ? 'many' : 'few') }).of(
+  div.attrs({ class: () => (count.get() > 5 ? 'many' : 'few') }).of([
     button.on({ click: () => count.update((n) => n + 1) }).of('+1'),
     span(count),
     span(() => ` doubled: ${double.get()}`),
-  ),
+  ]),
 );
 ```
 
