@@ -41,9 +41,9 @@
         move(list[Math.floor(Math.random() * list.length)], from, to);
       }
 
-      const status = p({ attributes: { id: 'status' } });
-      const view = div({ attributes: { class: 'columns' } , children: Object.keys(columns).map((name) =>
-        div({ attributes: { class: 'column', 'data-column': name }, children: [h2({ children: [name] }), () => columns[name].get()] }),
+      const status = p({ attrs: { id: 'status' } });
+      const view = div({ attrs: { class: 'columns' } , children: Object.keys(columns).map((name) =>
+        div({ attrs: { class: 'column', 'data-column': name }, children: [h2({ children: [name] }), () => columns[name].get()] }),
       ) });
 
       // The page checks itself after every change: each column must show exactly the cards of its state, in order.
@@ -60,9 +60,9 @@
       document.body.append(
         h2({ children: ['Bound columns sharing card nodes'] }),
         div({ children: [
-          button({ attributes: { id: 'only' }, children: ['Move the only card of B to A'], event: { click: () => columns.B.get()[0] && move(columns.B.get()[0], 'B', 'A') } }),
+          button({ attrs: { id: 'only' }, children: ['Move the only card of B to A'], on: { click: () => columns.B.get()[0] && move(columns.B.get()[0], 'B', 'A') } }),
           ' ',
-          button({ attributes: { id: 'random' }, children: ['20 random moves'], event: { click: () => { for (let i = 0; i < 20; i++) randomMove(); } } }),
+          button({ attrs: { id: 'random' }, children: ['20 random moves'], on: { click: () => { for (let i = 0; i < 20; i++) randomMove(); } } }),
         ] }),
         view,
         status,
