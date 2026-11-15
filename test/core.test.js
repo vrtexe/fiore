@@ -13,11 +13,12 @@ const { assignProperties } = await import('../lib/core/base.js');
 const { deprecatedElement } = await import('../lib/core/html.js');
 const { option, select, span } = await import('../lib/html.js');
 
-/** Minimal signal used to exercise the plugin hook. */
+/** Minimal signal used to exercise the plugin hook; like real signals it is not a plain object. */
+const signalPrototype = { isSignal: true };
 function signal(value) {
   const subscribers = new Set();
   return {
-    isSignal: true,
+    __proto__: signalPrototype,
     get: () => value,
     set(next) {
       value = next;
@@ -547,7 +548,7 @@ test('html, svg, MathML and deprecated elements handle props, attributes, childr
   }
 });
 
-test('a plain call takes a data object with only props, attrs, on and children; anything else is children', () => {
+test('a plain call takes a plain object as the data object and anything else as children', () => {
   const count = signal(1);
 
   assert.equal(span().childNodes.length, 0);
@@ -556,7 +557,7 @@ test('a plain call takes a data object with only props, attrs, on and children; 
   assert.equal(span([span('Hi'), ' there']).textContent, 'Hi there');
   assert.equal(span({ children: 'data' }).textContent, 'data');
   assert.equal(span({}).childNodes.length, 0);
-  // A signal is a plain object too, but its keys make it a child.
+  // A live value is not a plain object, so it is a child.
   const live = span(count);
   count.set(2);
   assert.equal(live.textContent, '2');

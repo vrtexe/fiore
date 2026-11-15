@@ -24,7 +24,10 @@ export type RecursivePartial<T> = {
   [P in keyof T]?: Live<T[P] extends object ? RecursivePartial<T[P]> : T[P]>;
 };
 
-/** Plugins add the types of the live values they bind, e.g. `state: State<T>`. */
+/**
+ * Plugins add the types of the live values they bind, e.g. `state: State<T>`. A live value must not be a plain object,
+ * because plain objects are data objects and nested props such as `style`.
+ */
 export interface LiveValues<T> {}
 
 export type Live<T> = T | LiveValues<T>[keyof LiveValues<T>];
@@ -117,7 +120,7 @@ export interface Builder<T extends BaseElement, A, On> {
 
 /** A tag function: call it with a data object or children, or start a builder with one of its methods. */
 export interface Tag<T extends BaseElement, A, On> {
-  /** A plain object with only the keys `props`, `attrs`, `on` and `children` is the data object; anything else is children. */
+  /** A plain object is the data object; anything else is children. */
   (data?: TagData<T, A, On> | Children): T;
   props(map: ElementProps<T>): Builder<T, A, On>;
   attrs(map: LiveAttributes<A>): Builder<T, A, On>;

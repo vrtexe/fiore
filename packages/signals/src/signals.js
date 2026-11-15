@@ -2,6 +2,9 @@ import { use } from 'fiorejs';
 
 const SIGNAL = Symbol.for('fiorejs.signal');
 
+/** Signals inherit their brand, so a signal is not a plain object: fiorejs reads plain objects as data or as nested props. */
+const signalPrototype = Object.freeze({ [SIGNAL]: true });
+
 /**
  * @typedef {{ subs: Set<Computation>, release?(): void, missed?: boolean }} Source
  * @typedef {{ sources: Set<Source>, stale(): void }} Computation
@@ -154,7 +157,7 @@ export function state(value) {
   }
 
   return {
-    [SIGNAL]: true,
+    __proto__: signalPrototype,
     get() {
       track(source);
       return value;
@@ -218,7 +221,7 @@ export function computed(fn) {
   }
 
   return {
-    [SIGNAL]: true,
+    __proto__: signalPrototype,
     get() {
       // The reader subscribes first, so it stays subscribed even when the calculation throws.
       track(node);
@@ -424,10 +427,10 @@ export function resource(source, fetcher) {
   });
 
   return {
-    [SIGNAL]: true,
+    __proto__: signalPrototype,
     get: value.get,
-    loading: { [SIGNAL]: true, get: loading.get },
-    error: { [SIGNAL]: true, get: error.get },
+    loading: { __proto__: signalPrototype, get: loading.get },
+    error: { __proto__: signalPrototype, get: error.get },
     /** Loads again with the last source value. */
     refetch() {
       if (active()) {
