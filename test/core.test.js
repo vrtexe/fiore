@@ -285,8 +285,10 @@ test('a text node passed in by the caller is not overwritten', () => {
 
 test('an error while inserting a resolved promise child is logged', async (t) => {
   const error = t.mock.method(console, 'error', () => {});
-  div({ children: Promise.resolve({ nodeType: 1 }) });
-  await new Promise((resolve) => setTimeout(resolve));
+  let resolve;
+  const el = div({ children: new Promise((done) => (resolve = done)) });
+  resolve(el);
+  await new Promise((done) => setTimeout(done));
 
   assert.equal(error.mock.callCount(), 1);
 });
@@ -436,4 +438,37 @@ test('plugins can read the nodes a child currently occupies', () => {
   div({ children: marker });
 
   assert.equal(context.nodes()[0].data, 'hi');
+});
+
+test('a polluted Object.prototype cannot supply props, attributes, children or listeners', () => {
+  let clicked = 0;
+  Object.prototype.props = { title: 'inherited' };
+  Object.prototype.attributes = { href: 'javascript:alert(1)' };
+  Object.prototype.children = 'injected';
+  Object.prototype.event = { click: () => clicked++ };
+  try {
+    const link = element('a', { props: undefined });
+    const box = div({});
+    box.click();
+
+    assert.equal(link.title, '');
+    assert.equal(link.hasAttribute('href'), false);
+    assert.equal(box.textContent, '');
+    assert.equal(clicked, 0);
+  } finally {
+    delete Object.prototype.props;
+    delete Object.prototype.attributes;
+    delete Object.prototype.children;
+    delete Object.prototype.event;
+  }
+});
+
+test('a plain object with a nodeType key does not break a live child', () => {
+  const content = signal('a');
+  const el = div({ children: content });
+
+  assert.doesNotThrow(() => content.set({ nodeType: 1, id: 'x' }));
+  content.set('d');
+
+  assert.equal(el.textContent, 'd');
 });
