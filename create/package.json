@@ -1,0 +1,45 @@
+{
+  "name": "@fiorejs/create",
+  "version": "0.1.0",
+  "description": "Create a fiorejs app with Vite, TypeScript and JSX: npm create @fiorejs",
+  "license": "MIT",
+  "author": "vrtexe",
+  "type": "module",
+  "keywords": [
+    "fiore",
+    "fiorejs",
+    "create",
+    "template",
+    "vite",
+    "jsx"
+  ],
+  "bin": {
+    "create-fiorejs": "index.js"
+  },
+  "files": [
+    "index.js",
+    "templates"
+  ],
+  "engines": {
+    "node": ">=20.16"
+  },
+  "scripts": {
+    "generate": "node scripts/generate-js.js",
+    "test": "node scripts/generate-js.js --check && node --test test/create.test.js"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://github.com/vrtexe/fiore-create#readme",
+  "bugs": {
+    "url": "https://github.com/vrtexe/fiore-create/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vrtexe/fiore-create.git"
+  },
+  "devDependencies": {
+    "prettier": "^3.10.1",
+    "typescript": "~5.9.0"
+  }
+}
