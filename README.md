@@ -48,7 +48,7 @@ Every tag is a function with builder methods:
 
 | Method | Takes | Repeated calls |
 | --- | --- | --- |
-| `props(map)` | JavaScript properties of the element, such as `className`, `value` or `style`. `undefined` leaves a property unchanged. | Merge: later keys win, and plain objects such as `style` merge key by key. |
+| `props(map)` | JavaScript properties of the element, such as `className`, `value` or `style`. `undefined` leaves a property unchanged. | Combine: later keys win, so a later `style` object replaces an earlier one. |
 | `attrs(map)` | Attributes, set with [`setAttribute`](https://developer.mozilla.org/en-US/docs/Web/API/Element/setAttribute). Inline event handlers such as `onclick`, in any case, are ignored, so no handler string is ever run; other names that start with `on`, such as `online`, are set. | Merge: later keys win, and `null` removes an earlier value. |
 | `on(map)` | Listeners: `{ click: fn }` or `{ click: { handler, options } }`. | Add listeners; they never replace each other. |
 | `with(fn)` | A function that gets the builder and returns a builder. | Each call applies its function. |
