@@ -1059,22 +1059,18 @@
             </div>
             <div class="code-body">
               <div class="gutter" aria-hidden="true">
-                1<br />2<br />3<br />4<br />5<br />6<br />7<br />8<br />9<br />10<br />11<br />12<br />13<br />14<br />15<br />16
+                1<br />2<br />3<br />4<br />5<br />6<br />7<br />8<br />9<br />10<br />11<br />12
               </div>
               <pre><code><span class="kw">import</span> { div, button } <span class="kw">from</span> <span class="str">'fiorejs'</span><span class="punc">;</span>
 
 <span class="kw">const</span> save <span class="punc">=</span> () <span class="punc">=&gt;</span> console<span class="punc">.</span>log(<span class="str">'saved'</span>)<span class="punc">;</span>
 
-<span class="kw">const</span> card <span class="punc">=</span> <span class="fn">div</span>({
-  props<span class="punc">:</span> { className<span class="punc">:</span> <span class="str">'card'</span> },
-  attributes<span class="punc">:</span> { <span class="str">'data-state'</span><span class="punc">:</span> <span class="str">'open'</span> },
-  children<span class="punc">:</span> [
-    <span class="fn">button</span>({
-      event<span class="punc">:</span> { click<span class="punc">:</span> save },
-      children<span class="punc">:</span> <span class="str">'Save'</span>,
-    }),
-  ],
-})<span class="punc">;</span>
+<span class="kw">const</span> card <span class="punc">=</span> div
+  <span class="punc">.</span><span class="fn">props</span>({ className<span class="punc">:</span> <span class="str">'card'</span> })
+  <span class="punc">.</span><span class="fn">attrs</span>({ <span class="str">'data-state'</span><span class="punc">:</span> <span class="str">'open'</span> })
+  <span class="punc">.</span><span class="fn">of</span>(
+    button<span class="punc">.</span><span class="fn">on</span>({ click<span class="punc">:</span> save })<span class="punc">.</span><span class="fn">of</span>(<span class="str">'Save'</span>),
+  )<span class="punc">;</span>
 
 document<span class="punc">.</span>body<span class="punc">.</span><span class="fn">appendChild</span>(card)<span class="punc">;</span></code></pre>
             </div>
@@ -1097,8 +1093,8 @@ document<span class="punc">.</span>body<span class="punc">.</span><span class="f
               <div>
                 <h3>Native nodes, no wrapper</h3>
                 <p>
-                  <code>element()</code> calls <code>document.createElement(tag)</code> and returns
-                  that node. There is no wrapper object between your code and the DOM.
+                  Every tag calls <code>document.createElement</code> and returns that node.
+                  There is no wrapper object between your code and the DOM.
                 </p>
               </div>
               <a class="source" href="https://github.com/vrtexe/fiore/blob/main/lib/core/html.js">lib/core/html.js</a>
@@ -1108,10 +1104,11 @@ document<span class="punc">.</span>body<span class="punc">.</span><span class="f
               <div>
                 <h3>Four inputs, one fixed order</h3>
                 <p>
-                  Props, attributes, children and listeners are applied in that order, every time.
+                  Props, attributes, children and listeners are applied in that order, whatever the
+                  order of the builder calls.
                 </p>
               </div>
-              <a class="source" href="https://github.com/vrtexe/fiore/blob/main/lib/core/html.js">lib/core/html.js</a>
+              <a class="source" href="https://github.com/vrtexe/fiore/blob/main/lib/core/tag.js">lib/core/tag.js</a>
             </article>
 
             <article class="feature">
@@ -1129,7 +1126,7 @@ document<span class="punc">.</span>body<span class="punc">.</span><span class="f
               <div>
                 <h3>Children in any shape</h3>
                 <p>
-                  Pass nodes, strings, numbers, promises or arrays of them. <code>null</code>, <code>undefined</code>,
+                  Pass nodes, strings, numbers or arrays of them. <code>null</code>, <code>undefined</code>,
                   <code>true</code> and <code>false</code> are skipped.
                 </p>
               </div>
@@ -1140,7 +1137,7 @@ document<span class="punc">.</span>body<span class="punc">.</span><span class="f
               <div>
                 <h3>Listener options</h3>
                 <p>
-                  An event value can be a function, or an object with <code>handler</code> and
+                  A listener in <code>on</code> can be a function, or an object with <code>handler</code> and
                   <code>options</code> for <code>addEventListener</code>.
                 </p>
               </div>
@@ -1164,10 +1161,11 @@ document<span class="punc">.</span>body<span class="punc">.</span><span class="f
       <section class="section" id="usage">
         <div class="wrap">
           <div class="section-head">
-            <h2>One call, four inputs.</h2>
+            <h2>One builder, four inputs.</h2>
             <p>
-              The same shape works for <code>div</code>, <code>circle</code> or <code>mi</code>.
-              Every key is optional.
+              The same builder works for <code>div</code>, <code>circle</code> or <code>mi</code>.
+              Every method is optional, and <code>.of()</code> creates the element. A plain call
+              such as <code>div({ props, attrs, on, children })</code> takes the same keys.
             </p>
           </div>
 
@@ -1181,21 +1179,27 @@ document<span class="punc">.</span>body<span class="punc">.</span><span class="f
               </li>
               <li>
                 <div>
-                  <h3>attributes</h3>
-                  <p>Values passed to <code>setAttribute</code>. Falsy values are skipped.</p>
+                  <h3>attrs</h3>
+                  <p>
+                    Values passed to <code>setAttribute</code>. <code>null</code>, <code>undefined</code>
+                    and <code>false</code> leave an attribute out.
+                  </p>
                 </div>
               </li>
               <li>
                 <div>
                   <h3>children</h3>
-                  <p>Nodes, strings, numbers, promises or arrays of them; empty values are skipped.</p>
+                  <p>
+                    Passed to <code>.of()</code>: nodes, strings, numbers or arrays of them; empty
+                    values are skipped.
+                  </p>
                 </div>
               </li>
               <li>
                 <div>
-                  <h3>event</h3>
+                  <h3>on</h3>
                   <p>
-                    Listeners are attached last, as a handler or as
+                    Listeners are attached after the children, as a handler or as
                     <code>{ handler, options }</code>.
                   </p>
                 </div>
@@ -1212,19 +1216,21 @@ document<span class="punc">.</span>body<span class="punc">.</span><span class="f
                 </div>
                 <pre><code><span class="kw">import</span> { element } <span class="kw">from</span> <span class="str">'fiorejs'</span><span class="punc">;</span>
 
-<span class="kw">const</span> panel <span class="punc">=</span> <span class="fn">element</span>(<span class="str">'section'</span>, {
-  props<span class="punc">:</span> { className<span class="punc">:</span> <span class="str">'panel'</span> },
-  attributes<span class="punc">:</span> { <span class="str">'aria-label'</span><span class="punc">:</span> <span class="str">'Details'</span> },
-  children<span class="punc">:</span> [
-    <span class="fn">element</span>(<span class="str">'h2'</span>, { children<span class="punc">:</span> <span class="str">'Details'</span> }),
-    <span class="fn">element</span>(<span class="str">'p'</span>, { children<span class="punc">:</span> <span class="str">'Built with functions.'</span> }),
-  ],
-  event<span class="punc">:</span> {
+<span class="kw">const</span> panel <span class="punc">=</span> <span class="fn">element</span>(<span class="str">'section'</span>)
+  <span class="punc">.</span><span class="fn">props</span>({ className<span class="punc">:</span> <span class="str">'panel'</span> })
+  <span class="punc">.</span><span class="fn">attrs</span>({ <span class="str">'aria-label'</span><span class="punc">:</span> <span class="str">'Details'</span> })
+  <span class="punc">.</span><span class="fn">on</span>({
     click<span class="punc">:</span> { handler<span class="punc">:</span> onClick, options<span class="punc">:</span> { once<span class="punc">:</span> <span class="kw">true</span> } },
-  },
-})<span class="punc">;</span></code></pre>
+  })
+  <span class="punc">.</span><span class="fn">of</span>(
+    <span class="fn">element</span>(<span class="str">'h2'</span>)(<span class="str">'Details'</span>),
+    <span class="fn">element</span>(<span class="str">'p'</span>)(<span class="str">'Built with functions.'</span>),
+  )<span class="punc">;</span></code></pre>
               </div>
-              <p class="side-note">Every tag also has a named export, so <code>element()</code> is never required.</p>
+              <p class="side-note">
+                <code>element(name)</code> returns a tag function with the same builder methods as
+                the named export, so <code>element('div')</code> works wherever <code>div</code> does.
+              </p>
             </div>
           </div>
         </div>
@@ -1272,7 +1278,8 @@ document<span class="punc">.</span>body<span class="punc">.</span><span class="f
             <h2>Add it to your project.</h2>
             <p>
               Install from npm, import a tag and append the node. The package is ESM and has no
-              runtime dependencies.
+              runtime dependencies. Coming from version 1.x or <code>html-dom-js</code>? Read
+              <a class="text-link" href="api.html#upgrading">Upgrading from 1.x</a>.
             </p>
 
             <ol class="close-steps">
@@ -1310,7 +1317,7 @@ document<span class="punc">.</span>body<span class="punc">.</span><span class="f
             <pre class="quick-code"><code><span class="kw">import</span> { div } <span class="kw">from</span> <span class="str">'fiorejs'</span>;
 
 document.body.<span class="fn">appendChild</span>(
-  <span class="fn">div</span>({ children<span class="punc">:</span> <span class="str">'Hello'</span> }),
+  <span class="fn">div</span>(<span class="str">'Hello'</span>),
 );</code></pre>
           </div>
         </div>
