@@ -7,6 +7,11 @@
  */
 export function assignProperties<T extends BaseElement>(element: T, props: ElementProps<T> | null | undefined, late?: boolean): void;
 /**
+ * @param {unknown} value
+ * @returns {value is Record<string, unknown>}
+ */
+export function isPlainObject(value: unknown): value is Record<string, unknown>;
+/**
  * @template {BaseElement} T
  * @template {keyof HTMLElementTagNameMap|keyof SVGElementTagNameMap} A
  * @param {T} element
@@ -44,6 +49,12 @@ export function attachEventListenerSvg<T extends SVGElement, E extends SVGElemen
  * @returns {void}
  */
 export function attachEventListener<T extends HTMLElement, E extends HTMLElementEventMap>(element: T, eventData: ElementEventData<T, E> | undefined | null): void;
+/** @import { BaseElement, ElementProps, Children } from '../types/base.dom.d.ts' */
+/** @import { ElementEventData } from '../types/html.dom.d.ts' */
+/** @import { SVGElementEventData } from '../types/svg.dom.d.ts' */
+/** @import { HTMLElementsAttributesMap } from '../types/attributes.d.ts' */
+/** Keys that would reach Object.prototype or a constructor when followed. */
+export const UNSAFE_KEYS: Set<string>;
 export type GenericEventData<T extends HTMLElement | SVGElement, E extends T extends HTMLElement ? HTMLElementEventMap : T extends SVGElement ? SVGElementEventMap : never> = T extends HTMLElement ? ElementEventData<T, E> | undefined | null : T extends SVGElement ? SVGElementEventData<T, E> | undefined | null : never;
 import type { BaseElement } from '../types/base.dom.d.ts';
 import type { ElementProps } from '../types/base.dom.d.ts';

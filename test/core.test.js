@@ -43,7 +43,7 @@ use({
 
 test('nested props merge into existing objects and other objects are assigned whole', () => {
   const stream = new (class MediaStreamLike {})();
-  const el = element('video', { props: { srcObject: stream, style: { height: '10px' } } });
+  const el = element('video')({ props: { srcObject: stream, style: { height: '10px' } } });
 
   assert.equal(el.srcObject, stream);
   assert.equal(el.style.height, '10px');
@@ -51,7 +51,7 @@ test('nested props merge into existing objects and other objects are assigned wh
 
 test('attributes keep 0 and empty strings, drop false and null, and keep "false" for aria-*', () => {
   const el = div({
-    attributes: { tabindex: 0, title: '', hidden: false, lang: null, 'aria-expanded': false },
+    attrs: { tabindex: 0, title: '', hidden: false, lang: null, 'aria-expanded': false },
   });
 
   assert.equal(el.getAttribute('tabindex'), '0');
@@ -71,7 +71,7 @@ test('children accept strings, numbers, nodes and arrays', () => {
 test('a plugin can bind properties and attributes', () => {
   const value = signal('first');
   const label = signal('Open');
-  const el = input({ props: { value }, attributes: { 'aria-label': label } });
+  const el = input({ props: { value }, attrs: { 'aria-label': label } });
 
   value.set('second');
   label.set(null);
@@ -158,7 +158,7 @@ test('JSON __proto__ keys and inherited keys never reach Object.prototype or the
 
   Object.prototype.id = 'inherited';
   try {
-    assert.equal(div({ props: { className: 'card' }, attributes: { role: 'note' } }).id, '');
+    assert.equal(div({ props: { className: 'card' }, attrs: { role: 'note' } }).id, '');
   } finally {
     delete Object.prototype.id;
   }
@@ -237,7 +237,7 @@ test('inline handler attributes are never set or offered to plugins, in any case
   const offered = [];
   use({ name: 'recorder', order: 'pre', bind: (value, apply, context) => void offered.push(context.name) });
   const el = div({
-    attributes: { onclick: 'go()', OnClick: 'go()', online: 'yes', title: 't' },
+    attrs: { onclick: 'go()', OnClick: 'go()', online: 'yes', title: 't' },
     props: { onclick: () => {} },
   });
   use({ name: 'recorder', bind: () => false });
@@ -276,8 +276,8 @@ test('a text node passed in by the caller is not overwritten, also inside a frag
 });
 
 test('false keeps the attribute only for aria-*, data-* and enumerated attributes', () => {
-  const el = div({ attributes: { 'aria-expanded': false, 'data-open': false, draggable: false, 'http-equiv': false } });
-  const shape = svg.circle({ attributes: { 'stroke-dasharray': false } });
+  const el = div({ attrs: { 'aria-expanded': false, 'data-open': false, draggable: false, 'http-equiv': false } });
+  const shape = svg.circle({ attrs: { 'stroke-dasharray': false } });
 
   assert.equal(el.getAttribute('aria-expanded'), 'false');
   assert.equal(el.getAttribute('data-open'), 'false');
@@ -299,7 +299,7 @@ test('attribute values reach setAttribute unchanged, so Trusted Types objects ke
     return setAttribute.call(this, name, value);
   };
   try {
-    element('iframe', { attributes: { srcdoc: trusted } });
+    element('iframe')({ attrs: { srcdoc: trusted } });
   } finally {
     window.Element.prototype.setAttribute = setAttribute;
   }
@@ -407,7 +407,7 @@ test('plugins get the full path of nested props', () => {
 
 test('value, selectedIndex and checked are applied after attributes and children', () => {
   const size = select({ props: { value: 'b' }, children: [option({ children: 'a' }), option({ children: 'b' })] });
-  const range = input({ props: { type: 'range', value: '150' }, attributes: { max: '200' } });
+  const range = input({ props: { type: 'range', value: '150' }, attrs: { max: '200' } });
 
   assert.equal(size.value, 'b');
   assert.equal(range.value, '150');
@@ -526,15 +526,15 @@ test('bound children stay correct under random updates that move nodes between t
 });
 
 test('html, svg, MathML and deprecated elements handle props, attributes, children and listeners alike', () => {
-  const factories = { html: div, svg: svg.g, math: math.mrow, deprecated: (data) => deprecatedElement('marquee', data) };
+  const factories = { html: div, svg: svg.g, math: math.mrow, deprecated: (data) => deprecatedElement('marquee')(data) };
 
   for (const [name, create] of Object.entries(factories)) {
     let clicks = 0;
     const el = create({
       props: { id: 'x', dataset: { step: '2' } },
-      attributes: { 'aria-label': 'label', hidden: false },
+      attrs: { 'aria-label': 'label', hidden: false },
       children: ['a', span({ children: 'b' }), 0],
-      event: { click: () => clicks++ },
+      on: { click: () => clicks++ },
     });
     el.dispatchEvent(new window.Event('click'));
 
@@ -545,4 +545,104 @@ test('html, svg, MathML and deprecated elements handle props, attributes, childr
     assert.equal(el.textContent, 'ab0', name);
     assert.equal(clicks, 1, name);
   }
+});
+
+test('a plain call takes a data object with only props, attrs, on and children; anything else is children', () => {
+  const count = signal(1);
+
+  assert.equal(span().childNodes.length, 0);
+  assert.equal(span(null).childNodes.length, 0);
+  assert.equal(span('Hello').textContent, 'Hello');
+  assert.equal(span([span('Hi'), ' there']).textContent, 'Hi there');
+  assert.equal(span({ children: 'data' }).textContent, 'data');
+  assert.equal(span({}).childNodes.length, 0);
+  // A signal is a plain object too, but its keys make it a child.
+  const live = span(count);
+  count.set(2);
+  assert.equal(live.textContent, '2');
+});
+
+test('the builder applies props, attrs, children, late props, listeners and callbacks in a fixed order', () => {
+  const seen = [];
+  const build = (chain) =>
+    chain(select)
+      .also((el) => {
+        el.dispatchEvent(new window.Event('change'));
+        seen.push([el.value, el.getAttribute('name'), el.className]);
+      })
+      .of(option('S'), option('M'));
+  const listen = { change: (event) => seen.push(['listener', event.currentTarget.value]) };
+
+  build((tag) => tag.on(listen).attrs({ name: 'size' }).props({ value: 'M', className: 'pick' }));
+  build((tag) => tag.props({ value: 'M', className: 'pick' }).attrs({ name: 'size' }).on(listen));
+
+  const expected = [['listener', 'M'], ['M', 'size', 'pick']];
+  assert.deepEqual(seen, [...expected, ...expected]);
+});
+
+test('repeated builder calls merge props and attrs, and add listeners and callbacks', () => {
+  const clicks = [];
+  const order = [];
+  const el = div
+    .props({ className: 'a', style: { color: 'red', margin: '1px' } })
+    .props({ className: 'b', style: { color: 'blue' } })
+    .attrs({ title: 'one', role: 'note' })
+    .attrs({ title: null })
+    .on({ click: () => clicks.push(1) })
+    .on({ click: () => clicks.push(2) })
+    .also(() => order.push('first'))
+    .also(() => order.push('second'))
+    .of();
+  el.dispatchEvent(new window.Event('click'));
+
+  assert.equal(el.className, 'b');
+  assert.equal(el.style.color, 'blue');
+  assert.equal(el.style.margin, '1px');
+  assert.equal(el.hasAttribute('title'), false);
+  assert.equal(el.getAttribute('role'), 'note');
+  assert.deepEqual(clicks, [1, 2]);
+  assert.deepEqual(order, ['first', 'second']);
+});
+
+test('builders are immutable templates and copy maps when they are called', () => {
+  const style = { color: 'red' };
+  const card = div.props({ className: 'card', style });
+  style.color = 'blue';
+  const marked = card.attrs({ 'data-marked': '' });
+
+  const plain = card.of('A');
+  const special = marked.of('B');
+
+  assert.equal(plain.style.color, 'red');
+  assert.equal(plain.hasAttribute('data-marked'), false);
+  assert.equal(special.className, 'card');
+  assert.equal(special.hasAttribute('data-marked'), true);
+  assert.equal(div.of().className, '', 'a tag method starts from an empty builder each time');
+});
+
+test('with applies a modifier and of flattens its children one level', () => {
+  const card = (b) => b.props({ className: 'card' });
+  const admin = (b) => (b.attrs({ 'data-admin': '' }));
+  const el = div.with(card).with((b) => (false ? admin(b) : b)).of([span('a'), 'b'], 'c');
+
+  assert.equal(el.className, 'card');
+  assert.equal(el.hasAttribute('data-admin'), false);
+  assert.equal(el.textContent, 'abc');
+});
+
+test('a live prop in a template binds once per created element', () => {
+  const label = signal('one');
+  const template = div.props({ title: label });
+  const first = template.of();
+  const second = template.of();
+  label.set('two');
+
+  assert.deepEqual([first.title, second.title], ['two', 'two']);
+});
+
+test('element() returns the same tag for a name, in each namespace', () => {
+  assert.equal(element('div'), element('div'));
+  assert.equal(element('div').props({ id: 'x' }).of().id, 'x');
+  assert.equal(svg.element('circle')().namespaceURI, 'http://www.w3.org/2000/svg');
+  assert.equal(math.element('mi')().namespaceURI, 'http://www.w3.org/1998/Math/MathML');
 });

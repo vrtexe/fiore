@@ -10,11 +10,11 @@ const { div, element } = await import('../lib/html.js');
 
 test('nested props, attributes, children and listeners work without plugins', () => {
   let clicks = 0;
-  const el = element('button', {
+  const el = element('button')({
     props: { title: 'Save', style: { height: '10px' } },
-    attributes: { 'aria-label': 'Save', tabindex: 0 },
+    attrs: { 'aria-label': 'Save', tabindex: 0 },
     children: ['Save ', 1],
-    event: { click: () => clicks++ },
+    on: { click: () => clicks++ },
   });
   el.click();
 
