@@ -34,8 +34,20 @@ export type LiveAttributes<A> = {
 };
 
 export type BindContext =
-  | { element: BaseElement; kind: 'property' | 'attribute'; name: string }
-  | { element: BaseElement; kind: 'child' };
+  | {
+      element: BaseElement;
+      kind: 'property';
+      name: string;
+      /** The full key path for nested props, for example ['style', 'color']. */
+      path: string[];
+    }
+  | { element: BaseElement; kind: 'attribute'; name: string }
+  | {
+      element: BaseElement;
+      kind: 'child';
+      /** The nodes the child currently occupies; they can move to another parent, for example from a fragment. */
+      nodes(): readonly ChildNode[];
+    };
 
 export type Plugin = {
   /** Identifies the plugin; registering the same name again replaces it. */
@@ -48,7 +60,8 @@ export type Plugin = {
 
 export type PickWritable<T> = Pick<T, WritableKeys<T>>;
 
-type Child = Node | string | number;
+/** false, true, null and undefined are skipped, so `condition && node` works. */
+type Child = Node | string | number | boolean | null | undefined;
 
 /** A promise child is shown once it resolves; until then its place stays empty. */
 export type Children =

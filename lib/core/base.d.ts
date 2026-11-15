@@ -1,9 +1,11 @@
 /**
+ * Assigns the props except `value`, `selectedIndex` and `checked`, or only those when `late` is true.
  * @template {BaseElement} T
  * @param {T} element
  * @param {ElementProps<T> | null | undefined} props
+ * @param {boolean} [late]
  */
-export function assignProperties<T extends BaseElement>(element: T, props: ElementProps<T> | null | undefined): void;
+export function assignProperties<T extends BaseElement>(element: T, props: ElementProps<T> | null | undefined, late?: boolean): void;
 /**
  * @template {BaseElement} T
  * @template {keyof HTMLElementTagNameMap|keyof SVGElementTagNameMap} A

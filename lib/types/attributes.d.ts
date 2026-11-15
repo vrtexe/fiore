@@ -1554,8 +1554,6 @@ export interface SVGAttributes<T extends EventTarget> extends AriaAttributes, DO
 
   // allow any data- attribute
   [key: `data-${string}`]: any;
-
-  [key: string]: any;
 }
 
 export interface HTMLTemplateAttributes extends HTMLAttributes<HTMLElement> {

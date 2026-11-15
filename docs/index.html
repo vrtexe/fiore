@@ -1101,7 +1101,7 @@ document<span class="punc">.</span>body<span class="punc">.</span><span class="f
                   that node. There is no wrapper object between your code and the DOM.
                 </p>
               </div>
-              <a class="source" href="https://github.com/vrtexe/fiore/blob/main/lib/core/html.js#L17">lib/core/html.js:17</a>
+              <a class="source" href="https://github.com/vrtexe/fiore/blob/main/lib/core/html.js">lib/core/html.js</a>
             </article>
 
             <article class="feature">
@@ -1111,29 +1111,29 @@ document<span class="punc">.</span>body<span class="punc">.</span><span class="f
                   Props, attributes, children and listeners are applied in that order, every time.
                 </p>
               </div>
-              <a class="source" href="https://github.com/vrtexe/fiore/blob/main/lib/core/html.js#L19-L22">lib/core/html.js:19</a>
+              <a class="source" href="https://github.com/vrtexe/fiore/blob/main/lib/core/html.js">lib/core/html.js</a>
             </article>
 
             <article class="feature">
               <div>
-                <h3>Nested props assigned in place</h3>
+                <h3>Nested props merged in place</h3>
                 <p>
-                  A <code>style</code> object is walked and merged with <code>Object.assign</code>,
-                  so nested values reach the element property they belong to.
+                  A plain object such as <code>style</code> or <code>dataset</code> is merged into the element's existing object.
+                  Only own keys are copied, so a polluted prototype never reaches the element.
                 </p>
               </div>
-              <a class="source" href="https://github.com/vrtexe/fiore/blob/main/lib/core/base.js#L19-L34">lib/core/base.js:19</a>
+              <a class="source" href="https://github.com/vrtexe/fiore/blob/main/lib/core/base.js">lib/core/base.js</a>
             </article>
 
             <article class="feature">
               <div>
                 <h3>Children in any shape</h3>
                 <p>
-                  Pass one node, a string or an array. Arrays are spread into
-                  <code>replaceChildren</code>.
+                  Pass nodes, strings, numbers, promises or arrays of them. <code>null</code>, <code>undefined</code>,
+                  <code>true</code> and <code>false</code> are skipped.
                 </p>
               </div>
-              <a class="source" href="https://github.com/vrtexe/fiore/blob/main/lib/core/base.js#L62-L73">lib/core/base.js:62</a>
+              <a class="source" href="https://github.com/vrtexe/fiore/blob/main/lib/core/base.js">lib/core/base.js</a>
             </article>
 
             <article class="feature">
@@ -1144,7 +1144,7 @@ document<span class="punc">.</span>body<span class="punc">.</span><span class="f
                   <code>options</code> for <code>addEventListener</code>.
                 </p>
               </div>
-              <a class="source" href="https://github.com/vrtexe/fiore/blob/main/lib/core/base.js#L115-L127">lib/core/base.js:115</a>
+              <a class="source" href="https://github.com/vrtexe/fiore/blob/main/lib/core/base.js">lib/core/base.js</a>
             </article>
 
             <article class="feature">
@@ -1155,7 +1155,7 @@ document<span class="punc">.</span>body<span class="punc">.</span><span class="f
                   with the same pattern for SVG and MathML.
                 </p>
               </div>
-              <a class="source" href="https://github.com/vrtexe/fiore/blob/main/lib/core/html.d.ts#L8">lib/core/html.d.ts:8</a>
+              <a class="source" href="https://github.com/vrtexe/fiore/blob/main/lib/core/html.d.ts">lib/core/html.d.ts</a>
             </article>
           </div>
         </div>
@@ -1188,7 +1188,7 @@ document<span class="punc">.</span>body<span class="punc">.</span><span class="f
               <li>
                 <div>
                   <h3>children</h3>
-                  <p>A node, a string or an array, passed to <code>replaceChildren</code>.</p>
+                  <p>Nodes, strings, numbers, promises or arrays of them; empty values are skipped.</p>
                 </div>
               </li>
               <li>

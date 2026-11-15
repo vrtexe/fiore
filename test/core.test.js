@@ -8,6 +8,8 @@ Object.assign(globalThis, { document: window.document, Node: window.Node });
 const { div, input, element, use } = await import('../lib/html.js');
 const { default: math } = await import('../lib/math.js');
 const { default: svg } = await import('../lib/svg.js');
+const { assignProperties } = await import('../lib/core/base.js');
+const { option, select, span } = await import('../lib/html.js');
 
 /** Minimal signal used to exercise the plugin hook. */
 function signal(value) {
@@ -76,7 +78,7 @@ test('a plugin can bind properties and attributes', () => {
   assert.equal(el.hasAttribute('aria-label'), false);
   assert.deepEqual(
     contexts.slice(-2).map(({ kind, name }) => [kind, name]),
-    [['property', 'value'], ['attribute', 'aria-label']],
+    [['attribute', 'aria-label'], ['property', 'value']],
   );
 });
 
@@ -234,13 +236,14 @@ test('textContent and innerHTML props are kept when there are no children', () =
   assert.equal(div({ props: { innerHTML: '<b>x</b>' } }).innerHTML, '<b>x</b>');
 });
 
-test('on* attributes are never offered to plugins', () => {
+test('on* attributes are never set or offered to plugins, in any case', () => {
   const offered = [];
   use({ name: 'recorder', order: 'pre', bind: (value, apply, context) => void offered.push(context.name) });
-  div({ attributes: { onclick: 'go()', title: 't' } });
+  const el = div({ attributes: { onclick: 'go()', OnClick: 'go()', title: 't' }, props: { onclick: () => {} } });
   use({ name: 'recorder', bind: () => false });
 
   assert.deepEqual(offered, ['title']);
+  assert.equal(el.hasAttribute('onclick'), false);
 });
 
 test('a plugin that binds a child without applying it yet still gets a place', () => {
@@ -286,4 +289,113 @@ test('false keeps the attribute only for aria-*, data-* and enumerated attribute
 
 test('undefined props leave the property unchanged', () => {
   assert.equal(div({ props: { title: undefined } }).title, '');
+});
+
+test('attribute values reach setAttribute unchanged, so Trusted Types objects keep working', () => {
+  const trusted = { toString: () => '<p>x</p>' };
+  const calls = [];
+  const setAttribute = window.Element.prototype.setAttribute;
+  window.Element.prototype.setAttribute = function (name, value) {
+    calls.push(value);
+    return setAttribute.call(this, name, value);
+  };
+  try {
+    element('iframe', { attributes: { srcdoc: trusted } });
+  } finally {
+    window.Element.prototype.setAttribute = setAttribute;
+  }
+
+  assert.equal(calls[0], trusted);
+});
+
+test('a node repeated in a bound list is kept once and later updates still work', () => {
+  const [a, b] = ['a', 'b'].map((tag) => document.createElement(tag));
+  const rows = signal(null);
+  const el = div({ children: rows });
+
+  rows.set([a, b, a]);
+  assert.equal(el.innerHTML, '<a></a><b></b>');
+  rows.set([b, a]);
+  rows.set(null);
+  assert.equal(el.innerHTML, '');
+});
+
+test('moveBefore is used for moves when the browser has it', () => {
+  const nodes = ['a', 'b', 'c'].map((tag) => document.createElement(tag));
+  const rows = signal(nodes);
+  const el = div({ children: rows });
+  document.body.append(el);
+  let moved = 0;
+  Node.prototype.moveBefore = function (node, anchor) {
+    moved++;
+    return this.insertBefore(node, anchor);
+  };
+  try {
+    rows.set([nodes[2], nodes[0], nodes[1]]);
+  } finally {
+    delete Node.prototype.moveBefore;
+    el.remove();
+  }
+
+  assert.equal(moved, 1);
+  assert.deepEqual([...el.children], [nodes[2], nodes[0], nodes[1]]);
+});
+
+test('a bound property update does not read the current value first', () => {
+  const title = signal('a');
+  const el = div({ props: { title } });
+  let reads = 0;
+  Object.defineProperty(el, 'title', { get: () => (reads++, ''), set() {}, configurable: true });
+
+  title.set('b');
+
+  assert.equal(reads, 0);
+});
+
+test('use() requires a plugin name', () => {
+  assert.throws(() => use({ bind: () => false }), /needs a plugin with a name/);
+});
+
+test('objects from another window are replaced, not merged into', () => {
+  const el = div();
+  const foreign = Object.create(null);
+  el.bag = foreign;
+
+  assignProperties(el, { bag: { x: 1 } });
+
+  assert.notEqual(el.bag, foreign);
+  assert.equal(foreign.x, undefined);
+});
+
+test('plugins get the full path of nested props', () => {
+  const paths = [];
+  use({ name: 'paths', order: 'pre', bind: (value, apply, context) => void (context.kind === 'property' && paths.push(context.path.join('.'))) });
+  div({ props: { style: { color: 'red' } } });
+  use({ name: 'paths', bind: () => false });
+
+  assert.deepEqual(paths, ['style', 'style.color']);
+});
+
+test('value, selectedIndex and checked are applied after attributes and children', () => {
+  const size = select({ props: { value: 'b' }, children: [option({ children: 'a' }), option({ children: 'b' })] });
+  const range = input({ props: { type: 'range', value: '150' }, attributes: { max: '200' } });
+
+  assert.equal(size.value, 'b');
+  assert.equal(range.value, '150');
+});
+
+test('a very deep bound array does not overflow the stack', () => {
+  let deep = 'x';
+  for (let i = 0; i < 20000; i++) deep = [deep];
+
+  assert.equal(div({ children: signal(deep) }).textContent, 'x');
+});
+
+test('plugins can read the nodes a child currently occupies', () => {
+  let context;
+  const marker = { isMarker: true };
+  use({ name: 'nodes', bind: (value, apply, ctx) => value === marker && ((context = ctx), apply('hi'), true) });
+  div({ children: marker });
+
+  assert.equal(context.nodes()[0].data, 'hi');
 });
