@@ -56,9 +56,9 @@
   ],
   "scripts": {
     "start": "npx http-server@14.1.1 . -a 127.0.0.1 -p 3100",
-    "test": "npx -y -p typescript@5.9 tsc -p test && node --test test/core.test.js test/no-plugin.test.js",
+    "test": "tsc -p test && node --test test/core.test.js test/no-plugin.test.js",
     "clean-types": "node ./clean-types.js",
-    "generate-types": "npm run clean-types && npx -p typescript@5.9 tsc -p tsconfig.json"
+    "generate-types": "npm run clean-types && tsc -p tsconfig.json"
   },
   "homepage": "https://github.com/vrtexe/fiore#readme",
   "bugs": {
@@ -70,6 +70,7 @@
   },
   "packageManager": "npm@11.6.0",
   "devDependencies": {
-    "jsdom": "^31.0.1"
+    "jsdom": "^31.0.1",
+    "typescript": "5.9.3"
   }
 }

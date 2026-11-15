@@ -149,7 +149,7 @@ use({
 });
 ```
 
-`context.kind` is `'property'`, `'attribute'` or `'child'`, and `context.element` is the element being built. Properties and attributes come with `context.name`; properties also carry `context.path`, the full key path such as `['style', 'color']`. A child comes with `context.nodes()`, the nodes it currently occupies, which can move to another parent, for example when it was built inside a fragment. Listeners in `event`, and props or attributes whose name starts with `on` in any case, are never offered to plugins. A child that a plugin binds without calling `apply` yet keeps an empty place until it does. Registering a plugin with a name that is already registered replaces the earlier plugin, so a plugin module that runs again, for example after a hot reload, does not register twice. The plugin API can still change in a minor version.
+`context.kind` is `'property'`, `'attribute'` or `'child'`, and `context.element` is the element being built. Properties and attributes come with `context.name`; properties also carry `context.path`, the full key path such as `['style', 'color']`. A child comes with `context.nodes()`, the nodes it currently occupies, which can move to another parent, for example when it was built inside a fragment. Listeners in `event`, attributes whose name starts with `on`, and top-level props whose name starts with `on`, in any case, are never offered to plugins; a nested key such as `dataset.onboarding` is. A child that a plugin binds without calling `apply` yet keeps an empty place until it does. Registering a plugin with a name that is already registered replaces the earlier plugin, so a plugin module that runs again, for example after a hot reload, does not register twice. The plugin API can still change in a minor version.
 
 Plugins are asked in turn, and the first one that returns `true` handles the value. Set `order: 'pre'` to be asked before other plugins, or `order: 'post'` to be asked only after all others; plugins in the same group are asked in the order they were registered.
 
@@ -176,8 +176,11 @@ Without a bundler, use an import map so every module resolves `fiorejs` to the s
   {
     "imports": {
       "fiorejs": "https://cdn.jsdelivr.net/npm/fiorejs@1.2.0/lib/html.js",
+      "fiorejs/html": "https://cdn.jsdelivr.net/npm/fiorejs@1.2.0/lib/html.js",
+      "fiorejs/html/deprecated": "https://cdn.jsdelivr.net/npm/fiorejs@1.2.0/lib/html-deprecated.js",
       "fiorejs/svg": "https://cdn.jsdelivr.net/npm/fiorejs@1.2.0/lib/svg.js",
-      "fiorejs/math": "https://cdn.jsdelivr.net/npm/fiorejs@1.2.0/lib/math.js"
+      "fiorejs/math": "https://cdn.jsdelivr.net/npm/fiorejs@1.2.0/lib/math.js",
+      "fiorejs/global": "https://cdn.jsdelivr.net/npm/fiorejs@1.2.0/lib/index.js"
     }
   }
 </script>

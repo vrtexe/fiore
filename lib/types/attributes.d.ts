@@ -950,10 +950,10 @@ export interface HTMLInputAttributes extends HTMLAttributes<HTMLInputElement> {
   src?: string | undefined | null;
   step?: number | string | undefined | null;
   type?: HTMLInputTypeAttribute | undefined | null;
-  value?: any;
+  value?: string | number | undefined | null;
   // needs both casing variants because language tools does lowercase names of non-shorthand attributes
-  defaultValue?: any;
-  defaultvalue?: any;
+  defaultValue?: string | number | undefined | null;
+  defaultvalue?: string | number | undefined | null;
   defaultChecked?: boolean | undefined | null;
   defaultchecked?: boolean | undefined | null;
   width?: number | string | undefined | null;

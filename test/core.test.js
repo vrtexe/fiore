@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { runInNewContext } from 'node:vm';
 import { JSDOM } from 'jsdom';
 
 const { window } = new JSDOM();
@@ -358,13 +359,36 @@ test('use() requires a plugin name', () => {
 
 test('objects from another window are replaced, not merged into', () => {
   const el = div();
-  const foreign = Object.create(null);
-  el.bag = foreign;
+  const foreign = runInNewContext('({ title: "frame" })');
+  el.frame = foreign;
+
+  assignProperties(el, { frame: { title: 'pwned' } });
+
+  assert.notEqual(el.frame, foreign);
+  assert.equal(foreign.title, 'frame');
+});
+
+test('objects without a prototype are replaced, not merged into', () => {
+  const el = div();
+  const bare = Object.create(null);
+  el.bag = bare;
 
   assignProperties(el, { bag: { x: 1 } });
 
-  assert.notEqual(el.bag, foreign);
-  assert.equal(foreign.x, undefined);
+  assert.notEqual(el.bag, bare);
+});
+
+test('nested keys that start with on are still offered to plugins', () => {
+  const step = signal('2');
+  const el = div({ props: { dataset: { onboardingStep: step } } });
+
+  assert.equal(el.dataset.onboardingStep, '2');
+});
+
+test('a very long child list does not overflow the argument limit', () => {
+  const items = Array.from({ length: 200000 }, (_, i) => String(i % 10));
+
+  assert.equal(div({ children: items }).childNodes.length, 200000);
 });
 
 test('plugins get the full path of nested props', () => {

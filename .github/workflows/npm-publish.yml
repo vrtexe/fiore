@@ -1,8 +1,9 @@
 # Stages a release on npm with trusted publishing (OIDC), so no npm token is stored in this
-# repository. npmjs.com must have the trusted publisher configured for vrtexe/fiore with workflow
-# npm-publish.yml and environment npm. The workflow can only stage a version ("npm stage publish",
-# allowed by default for trusted publishers); a maintainer then approves it with 2FA on npmjs.com
-# or with `npm stage approve <stage-id>`.
+# repository. Set up the trust once, allowing staged publishing only (never --allow-publish):
+#   npm trust github fiorejs --file npm-publish.yml --repository vrtexe/fiore --environment npm --allow-stage-publish
+# Restrict the GitHub environment "npm" to release tags. A maintainer then approves the staged version
+# with 2FA on npmjs.com or with `npm stage approve <stage-id>`. The tests run in their own job without
+# the OIDC permission, before the version commit is pushed.
 
 name: publish
 
@@ -11,7 +12,24 @@ on:
     types: [published]
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          ref: ${{ github.event.release.tag_name }}
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - run: npm ci --ignore-scripts
+      - run: npm test
+
   version:
+    needs: test
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -44,6 +62,7 @@ jobs:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
           ref: ${{ github.event.release.tag_name }}
+          persist-credentials: false
       - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
         with:
           node-version: 24
@@ -52,6 +71,4 @@ jobs:
       - run: npm version "$APP_VERSION" --no-git-tag-version --allow-same-version
         env:
           APP_VERSION: ${{ github.event.release.tag_name }}
-      - run: npm ci
-      - run: npm test
       - run: npm stage publish
