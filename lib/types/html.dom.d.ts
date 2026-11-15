@@ -1,5 +1,5 @@
-import type { HTMLElementsAttributesMap } from './attributes.d.ts';
-import type { BaseElement, Children, CustomEventData, ElementProps, LiveAttributes } from './base.dom.d.ts';
+import type { HTMLAttributes, HTMLElementsAttributesMap } from './attributes.d.ts';
+import type { BaseElement, Builder, CustomEventData, Modifier, Tag, TagData } from './base.dom.d.ts';
 
 export type HTMLEventMapOf<T extends HTMLElement> = T extends HTMLBodyElement
   ? HTMLBodyElementEventMap
@@ -14,12 +14,19 @@ export type HTMLEventMapOf<T extends HTMLElement> = T extends HTMLBodyElement
 export type ElementData<
   T extends keyof HTMLElementTagNameMap,
   E extends HTMLElementEventMap = HTMLEventMapOf<HTMLElementTagNameMap[T]>,
-> = {
-  props?: ElementProps<HTMLElementTagNameMap[T]> | undefined | null;
-  attributes?: LiveAttributes<HTMLElementsAttributesMap[T]> | undefined | null;
-  event?: ElementEventData<HTMLElementTagNameMap[T], E> | undefined | null;
-  children?: Children | undefined | null;
-};
+> = TagData<HTMLElementTagNameMap[T], HTMLElementsAttributesMap[T], ElementEventData<HTMLElementTagNameMap[T], E>>;
+
+export type HTMLTag<T extends keyof HTMLElementTagNameMap> = Tag<
+  HTMLElementTagNameMap[T],
+  HTMLElementsAttributesMap[T],
+  ElementEventData<HTMLElementTagNameMap[T]>
+>;
+
+/** A builder of any HTML element; `HTMLModifier` functions accept every HTML tag. */
+export type HTMLBuilder<T extends HTMLElement = HTMLElement> = Builder<T, HTMLAttributes<T>, ElementEventData<T>>;
+
+/** A reusable modifier for every HTML tag: `const card: HTMLModifier = (b) => b.props({ className: 'card' })`. */
+export type HTMLModifier = Modifier<HTMLBuilder>;
 
 export type DomEventListener<
   T extends BaseElement,
@@ -55,12 +62,14 @@ export type ElementEventData<
 export type DeprecatedElementData<
   T extends keyof HTMLElementDeprecatedTagNameMap,
   E extends HTMLElementEventMap = HTMLEventMapOf<HTMLElementDeprecatedTagNameMap[T]>,
-> = {
-  props?: ElementProps<HTMLElementDeprecatedTagNameMap[T]> | undefined | null;
-  attributes?: LiveAttributes<HTMLElementsAttributesMap[T]> | undefined | null;
-  event?:
-    | ElementEventData<HTMLElementDeprecatedTagNameMap[T], E>
-    | undefined
-    | null;
-  children?: Children | undefined | null;
-};
+> = TagData<
+  HTMLElementDeprecatedTagNameMap[T],
+  HTMLElementsAttributesMap[T],
+  ElementEventData<HTMLElementDeprecatedTagNameMap[T], E>
+>;
+
+export type DeprecatedHTMLTag<T extends keyof HTMLElementDeprecatedTagNameMap> = Tag<
+  HTMLElementDeprecatedTagNameMap[T],
+  HTMLElementsAttributesMap[T],
+  ElementEventData<HTMLElementDeprecatedTagNameMap[T]>
+>;

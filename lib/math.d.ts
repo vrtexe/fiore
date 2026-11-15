@@ -1,160 +1,36 @@
-/**
- * @deprecated `a` is not a MathML element; wrap the math in an HTML `a` or set an `href` attribute instead.
- * @param {MathElementData<'mrow'>} [data]
- * @returns {MathMLElement}
- */
-export function a(data?: MathElementData<"mrow">): MathMLElement;
-/**
- * @param {MathElementData<'annotation'>} [data]
- * @returns {MathMLElementTagNameMap['annotation']}
- */
-export function annotation(data?: MathElementData<"annotation">): MathMLElementTagNameMap["annotation"];
-/**
- * @param {MathElementData<'annotation-xml'>} [data]
- * @returns {MathMLElementTagNameMap['annotation-xml']}
- */
-export function annotationXml(data?: MathElementData<"annotation-xml">): MathMLElementTagNameMap["annotation-xml"];
-/**
- * @param {MathElementData<'maction'>} [data]
- * @returns {MathMLElementTagNameMap['maction']}
- */
-export function maction(data?: MathElementData<"maction">): MathMLElementTagNameMap["maction"];
-/**
- * @param {MathElementData<'math'>} [data]
- * @returns {MathMLElementTagNameMap['math']}
- */
-export function math(data?: MathElementData<"math">): MathMLElementTagNameMap["math"];
-/**
- * @param {MathElementData<'merror'>} [data]
- * @returns {MathMLElementTagNameMap['merror']}
- */
-export function merror(data?: MathElementData<"merror">): MathMLElementTagNameMap["merror"];
-/**
- * @param {MathElementData<'mfrac'>} [data]
- * @returns {MathMLElementTagNameMap['mfrac']}
- */
-export function mfrac(data?: MathElementData<"mfrac">): MathMLElementTagNameMap["mfrac"];
-/**
- * @param {MathElementData<'mi'>} [data]
- * @returns {MathMLElementTagNameMap['mi']}
- */
-export function mi(data?: MathElementData<"mi">): MathMLElementTagNameMap["mi"];
-/**
- * @param {MathElementData<'mmultiscripts'>} [data]
- * @returns {MathMLElementTagNameMap['mmultiscripts']}
- */
-export function mmultiscripts(data?: MathElementData<"mmultiscripts">): MathMLElementTagNameMap["mmultiscripts"];
-/**
- * @param {MathElementData<'mn'>} [data]
- * @returns {MathMLElementTagNameMap['mn']}
- */
-export function mn(data?: MathElementData<"mn">): MathMLElementTagNameMap["mn"];
-/**
- * @param {MathElementData<'mo'>} [data]
- * @returns {MathMLElementTagNameMap['mo']}
- */
-export function mo(data?: MathElementData<"mo">): MathMLElementTagNameMap["mo"];
-/**
- * @param {MathElementData<'mover'>} [data]
- * @returns {MathMLElementTagNameMap['mover']}
- */
-export function mover(data?: MathElementData<"mover">): MathMLElementTagNameMap["mover"];
-/**
- * @param {MathElementData<'mpadded'>} [data]
- * @returns {MathMLElementTagNameMap['mpadded']}
- */
-export function mpadded(data?: MathElementData<"mpadded">): MathMLElementTagNameMap["mpadded"];
-/**
- * @param {MathElementData<'mphantom'>} [data]
- * @returns {MathMLElementTagNameMap['mphantom']}
- */
-export function mphantom(data?: MathElementData<"mphantom">): MathMLElementTagNameMap["mphantom"];
-/**
- * @param {MathElementData<'mprescripts'>} [data]
- * @returns {MathMLElementTagNameMap['mprescripts']}
- */
-export function mprescripts(data?: MathElementData<"mprescripts">): MathMLElementTagNameMap["mprescripts"];
-/**
- * @param {MathElementData<'mroot'>} [data]
- * @returns {MathMLElementTagNameMap['mroot']}
- */
-export function mroot(data?: MathElementData<"mroot">): MathMLElementTagNameMap["mroot"];
-/**
- * @param {MathElementData<'mrow'>} [data]
- * @returns {MathMLElementTagNameMap['mrow']}
- */
-export function mrow(data?: MathElementData<"mrow">): MathMLElementTagNameMap["mrow"];
-/**
- * @param {MathElementData<'ms'>} [data]
- * @returns {MathMLElementTagNameMap['ms']}
- */
-export function ms(data?: MathElementData<"ms">): MathMLElementTagNameMap["ms"];
-/**
- * @param {MathElementData<'mspace'>} [data]
- * @returns {MathMLElementTagNameMap['mspace']}
- */
-export function mspace(data?: MathElementData<"mspace">): MathMLElementTagNameMap["mspace"];
-/**
- * @param {MathElementData<'msqrt'>} [data]
- * @returns {MathMLElementTagNameMap['msqrt']}
- */
-export function msqrt(data?: MathElementData<"msqrt">): MathMLElementTagNameMap["msqrt"];
-/**
- * @param {MathElementData<'mstyle'>} [data]
- * @returns {MathMLElementTagNameMap['mstyle']}
- */
-export function mstyle(data?: MathElementData<"mstyle">): MathMLElementTagNameMap["mstyle"];
-/**
- * @param {MathElementData<'msub'>} [data]
- * @returns {MathMLElementTagNameMap['msub']}
- */
-export function msub(data?: MathElementData<"msub">): MathMLElementTagNameMap["msub"];
-/**
- * @param {MathElementData<'msubsup'>} [data]
- * @returns {MathMLElementTagNameMap['msubsup']}
- */
-export function msubsup(data?: MathElementData<"msubsup">): MathMLElementTagNameMap["msubsup"];
-/**
- * @param {MathElementData<'msup'>} [data]
- * @returns {MathMLElementTagNameMap['msup']}
- */
-export function msup(data?: MathElementData<"msup">): MathMLElementTagNameMap["msup"];
-/**
- * @param {MathElementData<'mtable'>} [data]
- * @returns {MathMLElementTagNameMap['mtable']}
- */
-export function mtable(data?: MathElementData<"mtable">): MathMLElementTagNameMap["mtable"];
-/**
- * @param {MathElementData<'mtd'>} [data]
- * @returns {MathMLElementTagNameMap['mtd']}
- */
-export function mtd(data?: MathElementData<"mtd">): MathMLElementTagNameMap["mtd"];
-/**
- * @param {MathElementData<'mtext'>} [data]
- * @returns {MathMLElementTagNameMap['mtext']}
- */
-export function mtext(data?: MathElementData<"mtext">): MathMLElementTagNameMap["mtext"];
-/**
- * @param {MathElementData<'mtr'>} [data]
- * @returns {MathMLElementTagNameMap['mtr']}
- */
-export function mtr(data?: MathElementData<"mtr">): MathMLElementTagNameMap["mtr"];
-/**
- * @param {MathElementData<'munder'>} [data]
- * @returns {MathMLElementTagNameMap['munder']}
- */
-export function munder(data?: MathElementData<"munder">): MathMLElementTagNameMap["munder"];
-/**
- * @param {MathElementData<'munderover'>} [data]
- * @returns {MathMLElementTagNameMap['munderover']}
- */
-export function munderover(data?: MathElementData<"munderover">): MathMLElementTagNameMap["munderover"];
-/**
- * @param {MathElementData<'semantics'>} [data]
- * @returns {MathMLElementTagNameMap['semantics']}
- */
-export function semantics(data?: MathElementData<"semantics">): MathMLElementTagNameMap["semantics"];
 export { mathElement as element };
+/** @deprecated `a` is not a MathML element; wrap the math in an HTML `a` or set an `href` attribute instead. */
+export const a: import("./types/math.dom.js").MathTag<"mrow">;
+export const annotation: import("./types/math.dom.js").MathTag<"annotation">;
+export const annotationXml: import("./types/math.dom.js").MathTag<"annotation-xml">;
+export const maction: import("./types/math.dom.js").MathTag<"maction">;
+export const math: import("./types/math.dom.js").MathTag<"math">;
+export const merror: import("./types/math.dom.js").MathTag<"merror">;
+export const mfrac: import("./types/math.dom.js").MathTag<"mfrac">;
+export const mi: import("./types/math.dom.js").MathTag<"mi">;
+export const mmultiscripts: import("./types/math.dom.js").MathTag<"mmultiscripts">;
+export const mn: import("./types/math.dom.js").MathTag<"mn">;
+export const mo: import("./types/math.dom.js").MathTag<"mo">;
+export const mover: import("./types/math.dom.js").MathTag<"mover">;
+export const mpadded: import("./types/math.dom.js").MathTag<"mpadded">;
+export const mphantom: import("./types/math.dom.js").MathTag<"mphantom">;
+export const mprescripts: import("./types/math.dom.js").MathTag<"mprescripts">;
+export const mroot: import("./types/math.dom.js").MathTag<"mroot">;
+export const mrow: import("./types/math.dom.js").MathTag<"mrow">;
+export const ms: import("./types/math.dom.js").MathTag<"ms">;
+export const mspace: import("./types/math.dom.js").MathTag<"mspace">;
+export const msqrt: import("./types/math.dom.js").MathTag<"msqrt">;
+export const mstyle: import("./types/math.dom.js").MathTag<"mstyle">;
+export const msub: import("./types/math.dom.js").MathTag<"msub">;
+export const msubsup: import("./types/math.dom.js").MathTag<"msubsup">;
+export const msup: import("./types/math.dom.js").MathTag<"msup">;
+export const mtable: import("./types/math.dom.js").MathTag<"mtable">;
+export const mtd: import("./types/math.dom.js").MathTag<"mtd">;
+export const mtext: import("./types/math.dom.js").MathTag<"mtext">;
+export const mtr: import("./types/math.dom.js").MathTag<"mtr">;
+export const munder: import("./types/math.dom.js").MathTag<"munder">;
+export const munderover: import("./types/math.dom.js").MathTag<"munderover">;
+export const semantics: import("./types/math.dom.js").MathTag<"semantics">;
 declare namespace _default {
     export { mathElement as element };
     export { a };
@@ -190,5 +66,4 @@ declare namespace _default {
     export { semantics };
 }
 export default _default;
-import type { MathElementData } from './types/math.dom.js';
 import { mathElement } from './core/math.js';

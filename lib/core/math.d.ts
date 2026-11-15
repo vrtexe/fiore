@@ -1,9 +1,14 @@
-/** @import { type MathElementData } from "../types/math.dom.d.ts"; */
 /**
  * @template {keyof MathMLElementTagNameMap} T
- * @param {T} tag
- * @param {MathElementData<T>} [data]
- * @return {MathMLElementTagNameMap[T]}
+ * @param {T} name
+ * @returns {MathTag<T>}
  */
-export function mathElement<T extends keyof MathMLElementTagNameMap>(tag: T, data?: MathElementData<T>): MathMLElementTagNameMap[T];
-import type { MathElementData } from "../types/math.dom.d.ts";
+export function mathTag<T extends keyof MathMLElementTagNameMap>(name: T): MathTag<T>;
+/**
+ * Returns the tag of any MathML element by name, the same tag function on every call.
+ * @template {keyof MathMLElementTagNameMap} T
+ * @param {T} name
+ * @returns {MathTag<T>}
+ */
+export function mathElement<T extends keyof MathMLElementTagNameMap>(name: T): MathTag<T>;
+import type { MathTag } from '../types/math.dom.d.ts';
