@@ -1,5 +1,6 @@
 import type { HTMLElementsAttributesMap, SVGAttributes } from './attributes.d.ts';
-import type { Builder, CustomEventData, Modifier, Tag, TagData } from './base.dom.d.ts';
+import type { CustomEventData, TagData } from './base.dom.d.ts';
+import type { Builder, Tag } from '../core/builder.js';
 
 export type SVGEventMapOf<T extends SVGElement> = T extends SVGSVGElement
   ? SVGSVGElementEventMap
@@ -46,4 +47,4 @@ export type SVGTag<T extends keyof SVGElementTagNameMap> = Tag<
 export type SVGBuilder<T extends SVGElement = SVGElement> = Builder<T, SVGAttributes<T>, SVGElementEventData<T>>;
 
 /** A reusable modifier for every SVG tag. */
-export type SVGModifier = Modifier<SVGBuilder>;
+export type SVGModifier = (builder: SVGBuilder) => SVGBuilder;
