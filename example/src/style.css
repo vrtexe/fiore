@@ -126,3 +126,7 @@ button.ghost:hover {
   font-size: 14px;
   line-height: 1.5;
 }
+
+input::placeholder {
+  color: var(--muted);
+}

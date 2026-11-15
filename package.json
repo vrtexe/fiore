@@ -38,7 +38,7 @@
     "jsx-dev-runtime.d.ts"
   ],
   "scripts": {
-    "test": "tsc -p test && node --test test/out/render.test.js"
+    "test": "tsc -p test && tsc -p test/plain && node --test test/out/render.test.js"
   },
   "peerDependencies": {
     "fiorejs": "^1.2.0"

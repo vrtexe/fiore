@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { JSDOM } from 'jsdom';
+import { use } from 'fiorejs';
 import { jsx, type Child } from '@fiorejs/jsx/jsx-runtime';
 
 const { window } = new JSDOM();
@@ -187,8 +188,11 @@ test('key is accepted and ignored, also after a spread', () => {
 });
 
 test('event handler names are recognised in any case', () => {
-  const el = jsx('button', { ONCLICK: 'alert(1)' }) as HTMLButtonElement;
+  let clicks = 0;
+  const el = jsx('button', { ONCLICK: () => clicks++ }) as HTMLButtonElement;
+  el.dispatchEvent(new window.Event('CLICK'));
 
+  assert.equal(clicks, 1);
   assert.equal(el.hasAttribute('onclick'), false);
 });
 
@@ -208,4 +212,44 @@ test('very deep children do not overflow the stack', () => {
   for (let i = 0; i < 20000; i++) deep = [deep];
 
   assert.equal(((<div>{deep}</div>) as HTMLDivElement).textContent, 'x');
+});
+
+test('live getters follow the attribute rules for plain string and numeric properties', () => {
+  use({
+    name: 'test-getters',
+    bind: (value, apply) => typeof value === 'function' && (apply(value()), true),
+  });
+  try {
+    const box = (<div title={() => null} id={() => 'main'} />) as HTMLDivElement;
+    const image = (<img width={() => '50%'} />) as HTMLImageElement;
+    const field = (<input value={() => 'typed'} />) as HTMLInputElement;
+
+    assert.equal(box.hasAttribute('title'), false);
+    assert.equal(box.id, 'main');
+    assert.equal(image.getAttribute('width'), '50%');
+    assert.equal(field.value, 'typed');
+  } finally {
+    use({ name: 'test-getters', bind: () => false });
+  }
+});
+
+test('a key inside a spread object is ignored', () => {
+  const props = { key: 'k', class: 'a' };
+  const item = (<li {...props}>x</li>) as HTMLLIElement;
+
+  assert.equal(item.hasAttribute('key'), false);
+  assert.equal(item.className, 'a');
+});
+
+test('props named like DOM methods do not replace the methods', () => {
+  const el = jsx('div', { click: 'x', setAttribute: 'x', 'aria-label': 'y' }) as HTMLDivElement;
+
+  assert.equal(typeof el.click, 'function');
+  assert.equal(el.getAttribute('aria-label'), 'y');
+});
+
+test('a fragment with a very long child list does not overflow', () => {
+  const items = Array.from({ length: 200000 }, (_, i) => String(i % 10));
+
+  assert.equal((<>{items}</>).childNodes.length, 200000);
 });

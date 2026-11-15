@@ -56,10 +56,14 @@ Each JSX prop goes to one of the fiorejs inputs:
 | `null` | removes the attribute | `title={null}` |
 | `style` with an object | style properties | `style={{ height: '10px' }}` |
 | a writable property of the element | property | `value`, `checked`, `className`, `type` |
-| an object or function on a custom element | property | `<x-chart data={points} />` |
+| an object or function on a custom element, or a prop its class defines a setter for | property | `<x-chart data={points} />` |
 | anything else | attribute | `class`, `for`, `aria-label`, `data-id`, `list`, `width="50%"` |
 
-A string for a numeric property, such as `width="50%"` on an `img`, is set as an attribute, so it keeps its meaning. Custom elements are looked up when they are used, so an element defined after its first use still gets its properties. `value`, `selectedIndex` and `checked` are applied after the attributes and children, so `<select value="b">` selects its option `b`.
+A string for a numeric property, such as `width="50%"` on an `img`, is set as an attribute, so it keeps its meaning. Custom elements are looked up when they are used, so an element defined after its first use still gets its properties. A string for a custom element prop that is only a plain class field, with no setter, is set as an attribute. `value`, `selectedIndex` and `checked` are applied after the attributes and children, so `<select value="b">` selects its option `b`.
+
+### Live values
+
+With a plugin such as [@fiorejs/signals](https://github.com/vrtexe/fiore-signals), a prop can be a signal or a getter function. A getter follows the same rules as a plain value for built-in elements: on a lower-case string or numeric property such as `title`, `id` or `width` it is set as an attribute, so a `null` result removes it and `"50%"` keeps its meaning; `value` and camel-case properties such as `textContent` stay properties. On a custom element every function is a getter, so pass a callback as `() => callback` or assign it in code.
 
 Everything after `on` is used as the event name, exactly as written, so custom events work the same way as built-in ones: `oncart-add` listens to `cart-add`. A listener can also be an object with `handler` and `options`, which go to `addEventListener`:
 
