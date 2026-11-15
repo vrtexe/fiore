@@ -36,13 +36,13 @@ document.body.append(
 | Function | What it does |
 | --- | --- |
 | `state(value)` | A value with `get()`, `set(value)`, `update(fn)` and `mutate(fn)`. `update` sets the value `fn` returns, `mutate` changes the value in place. Reading it inside an effect, a computed or a binding subscribes to it. Setting an equal value (`Object.is`) does nothing. |
-| `computed(fn)` | A value derived from other signals. It is calculated on first read and again on the next read after an input changed. While nothing reads it inside an effect or binding, it does not stay subscribed to its inputs and is recalculated on every read. |
+| `computed(fn)` | A value derived from other signals. It is calculated on first read and again on the next read after an input changed. It keeps its value while an effect or binding reads it, also when that reader reruns for another reason. While nothing reads it inside an effect or binding, it does not stay subscribed to its inputs and is recalculated on every read. |
 | `effect(fn)` | Runs `fn` now and whenever a signal it read changes. Returns a function that stops it. If `fn` returns a function, that function runs before the next run and when the effect stops. |
 | `untrack(fn)` | Runs `fn` without subscribing to the signals it reads. |
 | `read(value)` | Returns the current value of a signal, a getter function or a plain value. |
 | `each(items, render, key)` | Renders a list and reuses the nodes of items whose key is unchanged. `render` gets the item's index at the time its row is created. |
 
-Effects run synchronously when a signal is set. If an effect throws, the other effects of that update still run, and the first error is thrown from `set()`. An effect that runs more than 100 times in one update, usually because it sets a signal it reads, stops the update with an error.
+Effects run synchronously when a signal is set. If an effect throws, the other effects of that update still run, and the first error is thrown from `set()`. If an effect's first run throws, the effect is stopped. A cleanup or an inner effect that throws does not stop the effect around it; its error is thrown after the run. An effect that runs more than 100 times in one update, usually because it sets a signal it reads, stops the update with an error.
 
 ## Binding to the DOM
 
@@ -73,7 +73,9 @@ Price({ amount: () => total.get() * 1.081 });
 
 ## Lists
 
-`each` reuses the node of every item whose key it has seen before and only renders new items. Without a key, the item itself is the key; a key that appears more than once gets one row per occurrence. When the order changes, only the rows that are out of place are moved, so a focused input in an unmoved row keeps its focus.
+`each` reuses the node of every item whose key it has seen before and only renders new items. Without a key, the item itself is the key; a key that appears more than once gets one row per occurrence. When the order changes, only the rows that are out of place are moved, so a focused input in an unmoved row keeps its focus; browsers with `moveBefore` keep it in moved rows too. If `render` throws, the list keeps the rows it had.
+
+`each(...)` returns a getter, so put it directly into `children`. Inside a live child, call it: `() => (show.get() ? each(items, render)() : null)`; rows are then reused only while that live child does not rerun.
 
 ```js
 import { ul, li } from 'fiorejs';
@@ -122,6 +124,7 @@ Bindings are stopped automatically:
 - when a live child replaces its content, the bindings inside the old content stop for good
 - when `each` drops an item, or the effect around the list reruns, the bindings inside its rows stop for good
 - when an element is removed from the document, its bindings pause; if it is inserted again, they resume with the current values
+- a live child follows its own nodes, so it pauses and resumes correctly also when it was built in one place and moved, for example out of a JSX fragment
 
 Removal and insertion are detected with a `MutationObserver` on the document, so elements inside a shadow root are not paused.
 

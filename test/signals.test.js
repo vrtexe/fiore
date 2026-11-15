@@ -9,7 +9,7 @@ Object.assign(globalThis, {
   MutationObserver: window.MutationObserver,
 });
 
-const { div, span, input } = await import('fiorejs');
+const { button, div, span, input } = await import('fiorejs');
 const { state, computed, effect, untrack, read, each } = await import('@fiorejs/signals');
 
 const tick = () => new Promise((resolve) => setTimeout(resolve));
@@ -288,4 +288,146 @@ test('an effect stopped during its own run is cleaned up', () => {
 
   assert.equal(runs, 2);
   assert.equal(cleanups, 2);
+});
+
+test('a computed keeps its cache when its reader reruns for another reason', () => {
+  const items = state([1, 2, 3]);
+  const label = state('a');
+  let runs = 0;
+  const total = computed(() => (runs++, items.get().reduce((sum, n) => sum + n, 0)));
+  const doubled = computed(() => total.get() * 2);
+  effect(() => `${label.get()}: ${doubled.get()}`);
+
+  label.set('b');
+  label.set('c');
+
+  assert.equal(runs, 1);
+});
+
+test('an effect whose first run throws is stopped', () => {
+  const count = state(0);
+  let runs = 0;
+  assert.throws(() =>
+    effect(() => {
+      runs++;
+      count.get();
+      throw new Error('broken');
+    }),
+  );
+
+  count.set(1);
+
+  assert.equal(runs, 1);
+});
+
+test('a binding that fails while building leaves no subscriber behind', () => {
+  const record = state(null);
+  let reads = 0;
+  assert.throws(() => div({ children: () => (reads++, record.get().missing.x) }));
+
+  record.set({ missing: { x: 1 } });
+
+  assert.equal(reads, 1);
+});
+
+test('a cleanup that throws does not stop the effect that owns it', () => {
+  const count = state(0);
+  let outerRuns = 0;
+  effect(() => {
+    outerRuns++;
+    count.get();
+    effect(() => () => {
+      throw new Error('cleanup failed');
+    });
+  });
+
+  assert.throws(() => count.set(1), /cleanup failed/);
+  assert.throws(() => count.set(2), /cleanup failed/);
+
+  assert.equal(outerRuns, 3);
+});
+
+test('a binding that fails on re-insertion does not stop its siblings', async (t) => {
+  t.mock.method(console, 'error', () => {});
+  if (typeof globalThis.reportError === 'function') t.mock.method(globalThis, 'reportError', () => {});
+  const good = state('a');
+  const fail = state(false);
+  const wrapper = div({
+    children: [span({ children: () => (fail.get() ? null.boom : 'ok') }), span({ children: good })],
+  });
+  document.body.append(wrapper);
+  await tick();
+  wrapper.remove();
+  await tick();
+  fail.set(true);
+
+  document.body.append(wrapper);
+  await tick();
+  good.set('c');
+
+  assert.equal(wrapper.lastChild.textContent, 'c');
+  wrapper.remove();
+});
+
+test('a live object prop does not pile up bindings when it changes often', () => {
+  const dark = state(false);
+  const color = state('white');
+  const box = div({ props: { style: () => (dark.get() ? { color } : { color: 'black' }) } });
+  document.body.append(box);
+
+  const measure = () => {
+    globalThis.gc();
+    return process.memoryUsage().heapUsed;
+  };
+  for (let i = 0; i < 2000; i++) dark.set(!dark.get());
+  const before = measure();
+  for (let i = 0; i < 20000; i++) dark.set(!dark.get());
+  const growth = measure() - before;
+
+  box.remove();
+  assert.ok(growth < 1_500_000, `heap grew by ${growth} bytes`);
+});
+
+test('each keeps its rows when a render fails partway through', () => {
+  const items = state([1, 2]);
+  const label = state('a');
+  let renders = 0;
+  let reads = 0;
+  const render = (item) => {
+    renders++;
+    if (item === 99) throw new Error('bad row');
+    return span({ children: () => (reads++, `${label.get()}${item}`) });
+  };
+  div({ children: each(items, render) });
+
+  assert.throws(() => items.set([1, 2, 99]), /bad row/);
+  items.set([1, 2]);
+  reads = 0;
+  label.set('b');
+
+  assert.equal(renders, 3);
+  assert.equal(reads, 2);
+});
+
+test('a function in an on* attribute or prop is never called as a binding, in any case', () => {
+  let calls = 0;
+  button({ attributes: { OnClick: () => calls++ }, props: { ONCLICK: () => calls++ } });
+
+  assert.equal(calls, 0);
+});
+
+test('a live child built elsewhere pauses when the place it moved to is removed', async () => {
+  const count = state(1);
+  let reads = 0;
+  const holder = div({ children: () => (reads++, count.get()) });
+  const section = div();
+  section.append(...holder.childNodes);
+  document.body.append(section);
+  await tick();
+
+  section.remove();
+  await tick();
+  count.set(2);
+
+  assert.equal(reads, 1);
 });

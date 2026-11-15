@@ -68,15 +68,44 @@ function flush() {
   }
 }
 
-/** @param {Computation} computation */
-function untrackSources(computation) {
-  for (const source of computation.sources) {
+/**
+ * Calls every function even when some of them throw, then rethrows the first error.
+ * @param {Iterable<() => void>} fns
+ */
+function runAll(fns) {
+  /** @type {unknown[]} */
+  const errors = [];
+  for (const fn of fns) {
+    try {
+      fn();
+    } catch (error) {
+      errors.push(error);
+    }
+  }
+  if (errors.length > 0) {
+    throw errors[0];
+  }
+}
+
+/**
+ * Unsubscribes a computation from sources; a source left without subscribers releases its own sources.
+ * @param {Computation} computation
+ * @param {Iterable<Source>} sources
+ */
+function unsubscribe(computation, sources) {
+  for (const source of sources) {
     source.subs.delete(computation);
     if (source.subs.size === 0) {
       source.release?.();
     }
   }
-  computation.sources.clear();
+}
+
+/** @param {Computation} computation */
+function untrackSources(computation) {
+  const sources = computation.sources;
+  computation.sources = new Set();
+  unsubscribe(computation, sources);
 }
 
 /**
@@ -95,6 +124,28 @@ function runIn(computation, nextOwner, fn) {
   } finally {
     current = previous;
     owner = previousOwner;
+  }
+}
+
+/**
+ * Runs `fn` for a computation, then unsubscribes only from the sources this run no longer read, so a source that
+ * is read again, a computed in particular, keeps its subscription and its cached value.
+ * @template T
+ * @param {Computation} computation
+ * @param {Owner | null} nextOwner
+ * @param {() => T} fn
+ * @returns {T}
+ */
+function runTracked(computation, nextOwner, fn) {
+  const previous = computation.sources;
+  computation.sources = new Set();
+  try {
+    return runIn(computation, nextOwner, fn);
+  } finally {
+    unsubscribe(
+      computation,
+      [...previous].filter((source) => !computation.sources.has(source)),
+    );
   }
 }
 
@@ -174,8 +225,7 @@ export function computed(fn) {
     [SIGNAL]: true,
     get() {
       if (dirty) {
-        untrackSources(node);
-        value = runIn(node, null, fn);
+        value = runTracked(node, null, fn);
         dirty = false;
       }
       track(node);
@@ -190,11 +240,12 @@ export function computed(fn) {
 /**
  * Runs `fn` now and again whenever a signal it read changes; returns a function that stops it.
  * `fn` may return a cleanup function, called before the next run and when stopped.
+ * If the first run throws, the effect is stopped and the error is thrown.
  * @param {() => void | (() => void)} fn
  * @returns {() => void}
  */
 export function effect(fn) {
-  /** @type {(() => void) | void} */
+  /** @type {(() => void) | undefined} */
   let cleanup;
   let stopped = false;
   /** @type {Owner} */
@@ -207,31 +258,51 @@ export function effect(fn) {
       if (stopped) {
         return;
       }
-      reset();
-      const result = runIn(node, scope, fn);
+      // A cleanup or an owned effect that throws must not keep this effect from running.
+      /** @type {{ error: unknown } | undefined} */
+      let failure;
+      try {
+        reset();
+      } catch (error) {
+        failure = { error };
+      }
+      const result = runTracked(node, scope, fn);
       cleanup = typeof result === 'function' ? result : undefined;
       // Stopped during its own run: undo what the run set up after the stop.
       if (stopped) {
-        reset();
+        stop();
+      }
+      if (failure) {
+        throw failure.error;
       }
     },
   };
 
+  /** Stops the effects created by the last run and calls its cleanup, keeping the subscriptions. */
   function reset() {
-    untrackSources(node);
-    scope.owned.splice(0).forEach((stop) => stop());
-    cleanup?.();
+    const owned = scope.owned.splice(0);
+    const done = cleanup;
     cleanup = undefined;
+    runAll(done ? [...owned, done] : owned);
   }
 
   function stop() {
     stopped = true;
     pending.delete(node);
-    reset();
+    try {
+      reset();
+    } finally {
+      untrackSources(node);
+    }
   }
 
   owner?.owned.push(stop);
-  node.run();
+  try {
+    node.run();
+  } catch (error) {
+    stop();
+    throw error;
+  }
   return stop;
 }
 
@@ -267,6 +338,10 @@ export function read(value) {
 }
 
 /**
+ * @typedef {{ node: Node, stop: () => void }} Row
+ */
+
+/**
  * Renders a list and reuses the nodes of items whose key is unchanged. `index` is the item's index when its row
  * was created; a reused row keeps it.
  * @template T
@@ -275,59 +350,99 @@ export function read(value) {
  * @param {(item: T) => unknown} [key]
  */
 export function each(items, render, key = (item) => item) {
-  /** @typedef {{ node: Node, stop: () => void }} Row */
   /** @type {Map<unknown, Row[]>} Rows by key; a repeated key keeps one row per occurrence. */
   let rows = new Map();
 
-  const stopAll = () => {
-    for (const list of rows.values()) {
-      list.forEach((row) => row.stop());
-    }
+  owner?.owned.push(() => {
+    const old = rows;
     rows = new Map();
-  };
-  owner?.owned.push(stopAll);
+    runAll([...old.values()].flat().map((row) => row.stop));
+  });
 
   return () => {
-    /** @type {typeof rows} */
+    /** @type {Map<unknown, Row[]>} */
     const next = new Map();
-    const nodes = read(items).map((item, index) => {
-      const id = key(item);
-      const row = rows.get(id)?.shift() ?? createRow(() => render(item, index));
-      const list = next.get(id);
-      if (list) {
-        list.push(row);
-      } else {
-        next.set(id, [row]);
+    /** @type {Map<unknown, number>} */
+    const taken = new Map();
+    /** @type {Row[]} */
+    const created = [];
+    /** @type {Node[]} */
+    let nodes;
+    try {
+      nodes = read(items).map((item, index) => {
+        const id = key(item);
+        const used = taken.get(id) ?? 0;
+        let row = rows.get(id)?.[used];
+        if (row) {
+          taken.set(id, used + 1);
+        } else {
+          row = createRow(() => render(item, index));
+          created.push(row);
+        }
+        const list = next.get(id);
+        if (list) {
+          list.push(row);
+        } else {
+          next.set(id, [row]);
+        }
+        return row.node;
+      });
+    } catch (error) {
+      // The old rows stay as they were; only the rows made in this failed pass are stopped.
+      try {
+        runAll(created.map((row) => row.stop));
+      } catch {
+        // The render error is the one worth reporting.
       }
-      return row.node;
-    });
+      throw error;
+    }
 
-    stopAll();
+    const kept = new Set([...next.values()].flat());
+    const old = rows;
     rows = next;
+    runAll([...old.values()].flat().filter((row) => !kept.has(row)).map((row) => row.stop));
     return nodes;
   };
 }
 
 /**
  * @param {() => Node} render
- * @returns {{ node: Node, stop: () => void }}
+ * @returns {Row}
  */
 function createRow(render) {
   /** @type {Owner} */
   const scope = { owned: [] };
-  const node = runIn(null, scope, render);
-  return { node, stop: () => scope.owned.splice(0).forEach((stop) => stop()) };
+  const stop = () => runAll(scope.owned.splice(0));
+  try {
+    return { node: runIn(null, scope, render), stop };
+  } catch (error) {
+    try {
+      stop();
+    } catch {
+      // The render error is the one worth reporting.
+    }
+    throw error;
+  }
 }
 
 /**
- * @typedef {{ start: () => () => void, stop?: () => void, disposed?: boolean }} Binding
+ * @typedef {{
+ *   anchor: () => Node | undefined,
+ *   keyed?: Node,
+ *   start: () => () => void,
+ *   stop?: () => void,
+ * }} Binding
  */
 
-/** @type {WeakMap<Element, Binding[]>} Bindings by element, held weakly so a dropped element can be collected. */
+/**
+ * Bindings by the node whose place in the document they follow: the element for a property or attribute, the first
+ * node of the slot for a child, which moves with the slot, for example out of a fragment.
+ * @type {WeakMap<Node, Set<Binding>>}
+ */
 const bindings = new WeakMap();
 let observing = false;
 
-/** Pauses the bindings of elements that leave the document and resumes them when they come back. */
+/** Pauses the bindings of nodes that leave the document and resumes them when they come back. */
 function observe() {
   if (observing || typeof MutationObserver === 'undefined') {
     return;
@@ -342,39 +457,72 @@ function observe() {
 }
 
 /**
- * Calls `fn` for an element node and every element below it.
+ * Calls `fn` for every binding that follows `node` or a node below it; an error is reported and does not stop the
+ * others.
  * @param {Node} node
- * @param {(element: Element) => void} fn
+ * @param {(binding: Binding) => void} fn
  */
 function visit(node, fn) {
-  if (node.nodeType !== Node.ELEMENT_NODE) {
-    return;
+  const walker = document.createTreeWalker(node, 1 | 4 /* elements and text */);
+  for (let current = /** @type {Node | null} */ (node); current; current = walker.nextNode()) {
+    for (const binding of [...(bindings.get(current) ?? [])]) {
+      try {
+        fn(binding);
+      } catch (error) {
+        report(error);
+      }
+    }
   }
-  const element = /** @type {Element} */ (node);
-  fn(element);
-  element.querySelectorAll('*').forEach(fn);
 }
 
-/** @param {Element} element */
-function pause(element) {
-  if (element.isConnected) {
-    return;
+/** @param {unknown} error */
+function report(error) {
+  if (typeof globalThis.reportError === 'function') {
+    globalThis.reportError(error);
+  } else {
+    console.error(error);
   }
-  for (const binding of bindings.get(element) ?? []) {
+}
+
+/** @param {Binding} binding */
+function pause(binding) {
+  if (!binding.anchor()?.isConnected) {
     binding.stop?.();
     binding.stop = undefined;
   }
 }
 
-/** @param {Element} element */
-function resume(element) {
-  if (!element.isConnected) {
+/** @param {Binding} binding */
+function resume(binding) {
+  if (!binding.stop && binding.anchor()?.isConnected) {
+    binding.stop = binding.start();
+  }
+}
+
+/**
+ * Files the binding under the node it currently follows.
+ * @param {Binding} binding
+ */
+function follow(binding) {
+  const node = binding.anchor();
+  if (!node || node === binding.keyed) {
     return;
   }
-  for (const binding of bindings.get(element) ?? []) {
-    if (!binding.stop && !binding.disposed) {
-      binding.stop = binding.start();
-    }
+  forget(binding);
+  let set = bindings.get(node);
+  if (!set) {
+    set = new Set();
+    bindings.set(node, set);
+  }
+  set.add(binding);
+  binding.keyed = node;
+}
+
+/** @param {Binding} binding */
+function forget(binding) {
+  if (binding.keyed) {
+    bindings.get(binding.keyed)?.delete(binding);
+    binding.keyed = undefined;
   }
 }
 
@@ -382,28 +530,30 @@ function resume(element) {
 export const plugin = {
   name: 'fiorejs-signals',
   bind(value, apply, context) {
-    const isListener = context.kind === 'property' && context.name.startsWith('on');
+    const isListener = context.kind !== 'child' && /^on/i.test(context.name);
     if (!isSignal(value) && (typeof value !== 'function' || isListener)) {
       return false;
     }
     const getter = isSignal(value) ? () => value.get() : /** @type {() => unknown} */ (value);
 
     /** @type {Binding} */
-    const binding = { start: () => runIn(null, null, () => effect(() => apply(getter()))) };
+    const binding = {
+      anchor: () => (context.kind === 'child' ? context.nodes()[0] : context.element),
+      start: () =>
+        runIn(null, null, () =>
+          effect(() => {
+            apply(getter());
+            follow(binding);
+          }),
+        ),
+    };
     binding.stop = binding.start();
-    // The surrounding effect or list row stops the binding for good when it reruns or is removed.
+    // The surrounding effect or list row ends the binding for good when it reruns or is removed.
     owner?.owned.push(() => {
-      binding.disposed = true;
+      forget(binding);
       binding.stop?.();
       binding.stop = undefined;
     });
-
-    const list = bindings.get(context.element);
-    if (list) {
-      list.push(binding);
-    } else {
-      bindings.set(context.element, [binding]);
-    }
     observe();
     return true;
   },
