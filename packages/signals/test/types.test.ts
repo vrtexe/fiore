@@ -44,4 +44,4 @@ const plain = resource(() => 42);
 const answer: number | undefined = plain.get();
 void answer;
 
-div.props({ className: classList(['card', { active: name, disabled: () => false }]) }).of();
+div.props({ className: classList(['card', { active: name, disabled: () => false }]) }).create();

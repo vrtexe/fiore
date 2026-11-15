@@ -11,7 +11,7 @@ Create HTML, SVG and MathML elements in JavaScript with one function per tag.
 
 - **Native elements, not wrappers.** Every tag calls `document.createElement` (or `createElementNS` for SVG and MathML) and returns that node, so there is nothing to unwrap before it goes into the DOM.
 - **Props and attributes stay apart.** `props` sets JavaScript properties and `attrs` sets attributes, so you always know which one you set.
-- **A builder per tag.** `div.props(…).attrs(…).on(…).of(children)` records settings and creates the element at `.of()`; a builder is immutable, so it doubles as a template.
+- **A builder per tag.** `div.props(…).attrs(…).on(…).create(children)` records settings and creates the element at `.create()`; a builder is immutable, so it doubles as a template.
 - **A fixed order.** Props, attributes, children and listeners are applied in that order, whatever the order of the calls; only `value`, `selectedIndex` and `checked` wait until after the children.
 - **Typed per tag.** Every tag returns the exact element type, such as `HTMLInputElement`, and checks props, attributes and listeners against that element, for HTML, SVG and MathML.
 - **No dependencies, no build step needed.** The package is plain ES modules with TypeScript declarations.
@@ -33,13 +33,13 @@ document.body.append(
   div
     .props({ className: 'card', style: { padding: '16px' } })
     .attrs({ 'aria-label': 'Sign up' })
-    .of([
-      label.props({ htmlFor: 'email' }).of('Email'),
-      input.props({ id: 'email', type: 'email', placeholder: 'you@example.com', required: true }).of(),
+    .create([
+      label.props({ htmlFor: 'email' }).create('Email'),
+      input.props({ id: 'email', type: 'email', placeholder: 'you@example.com', required: true }).create(),
       button
         .props({ type: 'button' })
         .on({ click: (event) => console.log('clicked', event.currentTarget) })
-        .of('Sign up'),
+        .create('Sign up'),
     ]),
 );
 ```
@@ -53,7 +53,7 @@ Every tag is a function with builder methods:
 | `on(map)` | Listeners: `{ click: fn }` or `{ click: { handler, options } }`. | Add listeners; they never replace each other. |
 | `with(fn)` | A function that gets the builder and returns a builder. | Each call applies its function. |
 | `also(fn)` | A function that gets the created element, after the listeners. The element is not in the document yet, so focusing or measuring does not work there. | Add callbacks, run in order. |
-| `of(children)` | The children, like the `children` key: a node, a string, a number, or an array of these. Creates the element and returns it. | |
+| `create(children)` | The children, like the `children` key: a node, a string, a number, or an array of these. Creates the element and returns it. | |
 
 Children are nodes, strings, numbers or arrays of these; `null`, `undefined`, `true` and `false` are skipped, so `user.isAdmin && badge()` works.
 
@@ -62,8 +62,8 @@ Each method returns a new builder and leaves the old one unchanged, and the maps
 ```js
 const card = div.props({ className: 'card' }).on({ click: select });
 
-card.of(h2('A'));
-card.attrs({ 'aria-label': 'B' }).of(h2('B'));
+card.create(h2('A'));
+card.attrs({ 'aria-label': 'B' }).create(h2('B'));
 ```
 
 `with` applies reusable settings, left to right, or a condition:
@@ -71,7 +71,7 @@ card.attrs({ 'aria-label': 'B' }).of(h2('B'));
 ```js
 const shadow = (b) => b.props({ style: { boxShadow: '0 1px 4px #0003' } });
 
-div.with(shadow).with((b) => (isAdmin ? b.attrs({ 'data-admin': '' }) : b)).of('Settings');
+div.with(shadow).with((b) => (isAdmin ? b.attrs({ 'data-admin': '' }) : b)).create('Settings');
 ```
 
 In TypeScript, type a modifier that works on every HTML tag as `HTMLModifier` (`SVGModifier` for SVG); it keeps the type of the tag it is used on:
@@ -81,8 +81,8 @@ import { button, div, type HTMLModifier } from 'fiorejs';
 
 const card: HTMLModifier = (b) => b.props({ className: 'card' });
 
-div.with(card).of(); // HTMLDivElement
-button.with(card).props({ type: 'submit' }).of('Save'); // HTMLButtonElement
+div.with(card).create(); // HTMLDivElement
+button.with(card).props({ type: 'submit' }).create('Save'); // HTMLButtonElement
 ```
 
 ### Plain calls
@@ -99,13 +99,13 @@ p({ props: { className: 'lead' }, attrs: { title: 'Intro' }, on: { click: select
 `value`, `selectedIndex` and `checked` are assigned after the attributes and children, so they can refer to them:
 
 ```js
-select.props({ value: 'M' }).of([option('S'), option('M')]);
-input.props({ type: 'range', value: '150' }).attrs({ max: '200' }).of();
+select.props({ value: 'M' }).create([option('S'), option('M')]);
+input.props({ type: 'range', value: '150' }).attrs({ max: '200' }).create();
 ```
 
 ### Elements by name
 
-`element(name)` returns the tag of any element by name: `element('div')` is the same function as `div`, so `element('div').props(…).of()` works too. `fiorejs/svg` and `fiorejs/math` export their own `element`.
+`element(name)` returns the tag of any element by name: `element('div')` is the same function as `div`, so `element('div').props(…).create()` works too. `fiorejs/svg` and `fiorejs/math` export their own `element`.
 
 Import styles:
 
@@ -135,13 +135,13 @@ input
     input: (event) => console.log(event.currentTarget.value),
     keydown: { handler: (event) => console.log(event.key), options: { once: true } },
   })
-  .of();
+  .create();
 ```
 
 Custom event names that contain a hyphen are accepted on every element and typed as `CustomEvent`. Annotate the parameter to type its `detail`:
 
 ```ts
-div.on({ 'cart-add': (event: CustomEvent<{ sku: string }>) => console.log(event.detail.sku) }).of();
+div.on({ 'cart-add': (event: CustomEvent<{ sku: string }>) => console.log(event.detail.sku) }).create();
 ```
 
 For a custom event name without a hyphen, add it to the global event map:
@@ -228,8 +228,8 @@ Version 2 renames two keys of the data object and adds the builder; everything e
 
 | 1.x | 2.x |
 | --- | --- |
-| `div({ attributes: { … } })` | `div({ attrs: { … } })` or `div.attrs({ … }).of()` |
-| `div({ event: { click } })` | `div({ on: { click } })` or `div.on({ click }).of()` |
+| `div({ attributes: { … } })` | `div({ attrs: { … } })` or `div.attrs({ … }).create()` |
+| `div({ event: { click } })` | `div({ on: { click } })` or `div.on({ click }).create()` |
 | `div({ children: 'Hi' })` | still works, or `div('Hi')` |
 | `element('div', data)` | `element('div')(data)` |
 

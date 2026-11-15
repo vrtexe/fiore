@@ -1068,8 +1068,8 @@
 <span class="kw">const</span> card <span class="punc">=</span> div
   <span class="punc">.</span><span class="fn">props</span>({ className<span class="punc">:</span> <span class="str">'card'</span> })
   <span class="punc">.</span><span class="fn">attrs</span>({ <span class="str">'data-state'</span><span class="punc">:</span> <span class="str">'open'</span> })
-  <span class="punc">.</span><span class="fn">of</span>(
-    button<span class="punc">.</span><span class="fn">on</span>({ click<span class="punc">:</span> save })<span class="punc">.</span><span class="fn">of</span>(<span class="str">'Save'</span>),
+  <span class="punc">.</span><span class="fn">create</span>(
+    button<span class="punc">.</span><span class="fn">on</span>({ click<span class="punc">:</span> save })<span class="punc">.</span><span class="fn">create</span>(<span class="str">'Save'</span>),
   )<span class="punc">;</span>
 
 document<span class="punc">.</span>body<span class="punc">.</span><span class="fn">appendChild</span>(card)<span class="punc">;</span></code></pre>
@@ -1164,7 +1164,7 @@ document<span class="punc">.</span>body<span class="punc">.</span><span class="f
             <h2>One builder, four inputs.</h2>
             <p>
               The same builder works for <code>div</code>, <code>circle</code> or <code>mi</code>.
-              Every method is optional, and <code>.of()</code> creates the element. A plain call
+              Every method is optional, and <code>.create()</code> creates the element. A plain call
               such as <code>div({ props, attrs, on, children })</code> takes the same keys.
             </p>
           </div>
@@ -1190,7 +1190,7 @@ document<span class="punc">.</span>body<span class="punc">.</span><span class="f
                 <div>
                   <h3>children</h3>
                   <p>
-                    Passed to <code>.of()</code>: nodes, strings, numbers or arrays of them; empty
+                    Passed to <code>.create()</code>: nodes, strings, numbers or arrays of them; empty
                     values are skipped.
                   </p>
                 </div>
@@ -1222,7 +1222,7 @@ document<span class="punc">.</span>body<span class="punc">.</span><span class="f
   <span class="punc">.</span><span class="fn">on</span>({
     click<span class="punc">:</span> { handler<span class="punc">:</span> onClick, options<span class="punc">:</span> { once<span class="punc">:</span> <span class="kw">true</span> } },
   })
-  <span class="punc">.</span><span class="fn">of</span>([
+  <span class="punc">.</span><span class="fn">create</span>([
     <span class="fn">element</span>(<span class="str">'h2'</span>)(<span class="str">'Details'</span>),
     <span class="fn">element</span>(<span class="str">'p'</span>)(<span class="str">'Built with functions.'</span>),
   ])<span class="punc">;</span></code></pre>

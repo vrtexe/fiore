@@ -14,32 +14,32 @@ function remove(todo) {
 }
 
 function TodoItem(todo) {
-  return li.props({ className: classList(['item', { done: todo.done }]) }).of([
-    label.of([
+  return li.props({ className: classList(['item', { done: todo.done }]) }).create([
+    label.create([
       input
         .props({ type: 'checkbox', checked: todo.done })
         .on({ change: (event) => todo.done.set(event.currentTarget.checked) })
-        .of(),
+        .create(),
       span(todo.text),
     ]),
     button
       .props({ className: 'ghost' })
       .attrs({ 'aria-label': `Remove ${todo.text}` })
       .on({ click: () => remove(todo) })
-      .of('✕'),
+      .create('✕'),
   ]);
 }
 
 const field = input
   .props({ name: 'todo', placeholder: 'What needs doing?', required: true })
   .attrs({ autocomplete: 'off' })
-  .of();
+  .create();
 
 document.body.append(
-  main.props({ className: 'app' }).of([
-    header.of([
-      h1.of(['Fiore ', small('+ signals')]),
-      span.props({ className: 'count' }).of(() => `${left.get()} left`),
+  main.props({ className: 'app' }).create([
+    header.create([
+      h1.create(['Fiore ', small('+ signals')]),
+      span.props({ className: 'count' }).create(() => `${left.get()} left`),
     ]),
     form
       .props({ className: 'add' })
@@ -51,11 +51,11 @@ document.body.append(
           field.focus();
         },
       })
-      .of([field, button.props({ type: 'submit' }).of('Add')]),
-    ul.props({ className: 'list' }).of(each(todos, TodoItem, (todo) => todo.id)),
+      .create([field, button.props({ type: 'submit' }).create('Add')]),
+    ul.props({ className: 'list' }).create(each(todos, TodoItem, (todo) => todo.id)),
     p
       .props({ className: 'hint' })
-      .of('Only the parts that read a signal update when it changes; there is no virtual DOM.'),
+      .create('Only the parts that read a signal update when it changes; there is no virtual DOM.'),
   ]),
 );
 

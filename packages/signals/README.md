@@ -20,8 +20,8 @@ const count = state(0);
 const double = computed(() => count.get() * 2);
 
 document.body.append(
-  div.attrs({ class: () => (count.get() > 5 ? 'many' : 'few') }).of([
-    button.on({ click: () => count.update((n) => n + 1) }).of('+1'),
+  div.attrs({ class: () => (count.get() > 5 ? 'many' : 'few') }).create([
+    button.on({ click: () => count.update((n) => n + 1) }).create('+1'),
     span(count),
     span(() => ` doubled: ${double.get()}`),
   ]),
@@ -84,8 +84,8 @@ import { classList, state } from '@fiorejs/signals';
 const active = state(false);
 const enabled = state(true);
 
-div.props({ className: classList(['card', { active, disabled: () => !enabled.get() }]) }).of();
-circle.attrs({ class: classList({ hot: active }) }).of();
+div.props({ className: classList(['card', { active, disabled: () => !enabled.get() }]) }).create();
+circle.attrs({ class: classList({ hot: active }) }).create();
 ```
 
 A condition that is derived from a signal needs a getter or a `computed`: `{ disabled: !enabled.get() }` is evaluated once, when the object is created, and never updates.
