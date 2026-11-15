@@ -33,13 +33,6 @@ test('textContent is kept when there are no children', () => {
   assert.equal(div({ props: { textContent: 'hi' } }).textContent, 'hi');
 });
 
-test('a promise child is inserted once it resolves without plugins', async () => {
-  const el = div({ children: ['a', Promise.resolve('b'), 'c'] });
-  await new Promise((resolve) => setTimeout(resolve));
-
-  assert.equal(el.textContent, 'abc');
-});
-
 test('JSON __proto__ keys do not pollute Object.prototype without plugins', () => {
   div({ props: { dataset: JSON.parse('{"__proto__":{"__proto__":{"polluted":"yes"}}}') } });
 

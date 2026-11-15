@@ -12,7 +12,7 @@ Create HTML, SVG and MathML elements in JavaScript with one function per tag.
 - **Native elements, not wrappers.** Every function calls `document.createElement` (or `createElementNS` for SVG and MathML) and returns that node, so there is nothing to unwrap before it goes into the DOM.
 - **Four inputs in a fixed order.** `props`, `attributes`, `children` and `event` are applied in that order to every element; only `value`, `selectedIndex` and `checked` wait until after the children.
 - **Nested props are merged in place.** A plain object such as `style` or `dataset` is merged into the element's existing object, so `style: { height: '100vh' }` sets one style property. Only the object's own keys are copied.
-- **Children accept nodes, strings, numbers, arrays and promises.** `null`, `undefined`, `true` and `false` are skipped, so `user.isAdmin && badge()` works.
+- **Children accept nodes, strings, numbers and arrays.** `null`, `undefined`, `true` and `false` are skipped, so `user.isAdmin && badge()` works.
 - **Listeners take options.** An event value can be a function, or an object with `handler` and `options` for `addEventListener`.
 - **Typed per tag.** `element()` and every tag function return the exact element type, such as `HTMLInputElement`, and the same holds for SVG and MathML.
 - **No dependencies, no build step needed.** The package is plain ES modules with TypeScript declarations.
@@ -50,8 +50,8 @@ document.body.append(
 Every tag has its own function, and `element(tag, data)` creates any element by name. Each function takes one optional object:
 
 - `props`: JavaScript properties of the element, such as `className`, `value` or `style`. `undefined` leaves a property unchanged.
-- `attributes`: attributes set with [`setAttribute`](https://developer.mozilla.org/en-US/docs/Web/API/Element/setAttribute). Names starting with `on` are ignored, so no inline handler is ever set.
-- `children`: a node, a string, a number, a promise, or an array of these.
+- `attributes`: attributes set with [`setAttribute`](https://developer.mozilla.org/en-US/docs/Web/API/Element/setAttribute). Inline event handlers of the element, such as `onclick` in any case, are ignored, so no handler string is ever run; other names that start with `on`, such as `online`, are set.
+- `children`: a node, a string, a number, or an array of these. The array is one level deep; a nested array is not flattened.
 - `event`: listeners, attached last. Use this for handlers rather than `on*` props or attributes.
 
 `value`, `selectedIndex` and `checked` are assigned after the attributes and children, so they can refer to them:
@@ -112,19 +112,6 @@ declare global {
 }
 ```
 
-### Promise children
-
-A child can be a promise, for example the result of an `async` component. Its place stays empty until the promise resolves, and is then filled with the result. If the promise rejects, the place stays empty and the error is logged with `console.error`.
-
-```js
-async function User(id) {
-  const user = await fetch(`/users/${id}`).then((response) => response.json());
-  return p({ children: user.name });
-}
-
-section({ children: [h2({ children: 'Profile' }), User(1)] });
-```
-
 ### Attribute values
 
 `null`, `undefined` and `false` leave an attribute out. Every other value, including `0` and `''`, is passed to `setAttribute`, which converts it to a string; Trusted Types objects are passed through unchanged. `aria-*` and `data-*` attributes, and the enumerated attributes `contenteditable`, `draggable` and `spellcheck`, keep `false` as the string `"false"`.
@@ -149,7 +136,7 @@ use({
 });
 ```
 
-`context.kind` is `'property'`, `'attribute'` or `'child'`, and `context.element` is the element being built. Properties and attributes come with `context.name`; properties also carry `context.path`, the full key path such as `['style', 'color']`. A child comes with `context.nodes()`, the nodes it currently occupies, which can move to another parent, for example when it was built inside a fragment. Listeners in `event`, attributes whose name starts with `on`, and top-level props whose name starts with `on`, in any case, are never offered to plugins; a nested key such as `dataset.onboarding` is. A child that a plugin binds without calling `apply` yet keeps an empty place until it does. Registering a plugin with a name that is already registered replaces the earlier plugin, so a plugin module that runs again, for example after a hot reload, does not register twice. The plugin API can still change in a minor version.
+`context.kind` is `'property'`, `'attribute'` or `'child'`, and `context.element` is the element being built. Properties and attributes come with `context.name`; properties also carry `context.path`, the full key path such as `['style', 'color']`. A child comes with `context.nodes()`, the nodes it currently occupies, which can move to another parent, for example when it was built inside a fragment. Listeners in `event`, and attributes and top-level props that are inline event handlers of the element, such as `onclick` in any case, are never offered to plugins; other names such as `online`, and nested keys such as `dataset.onboarding`, are. A child that a plugin binds without calling `apply` yet keeps an empty place until it does. Registering a plugin with a name that is already registered replaces the earlier plugin, so a plugin module that runs again, for example after a hot reload, does not register twice. The plugin API can still change in a minor version.
 
 Plugins are asked in turn, and the first one that returns `true` handles the value. Set `order: 'pre'` to be asked before other plugins, or `order: 'post'` to be asked only after all others; plugins in the same group are asked in the order they were registered.
 

@@ -1,13 +1,4 @@
 /**
- * Reads an input from the data object's own keys only, so a polluted Object.prototype cannot supply it.
- * @template {object} D
- * @template {keyof D} K
- * @param {D | undefined} data
- * @param {K} key
- * @returns {D[K] | undefined}
- */
-export function own<D extends object, K extends keyof D>(data: D | undefined, key: K): D[K] | undefined;
-/**
  * Assigns the props except `value`, `selectedIndex` and `checked`, or only those when `late` is true.
  * @template {BaseElement} T
  * @param {T} element

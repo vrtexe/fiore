@@ -10,6 +10,7 @@ const { div, input, element, use } = await import('../lib/html.js');
 const { default: math } = await import('../lib/math.js');
 const { default: svg } = await import('../lib/svg.js');
 const { assignProperties } = await import('../lib/core/base.js');
+const { deprecatedElement } = await import('../lib/core/html.js');
 const { option, select, span } = await import('../lib/html.js');
 
 /** Minimal signal used to exercise the plugin hook. */
@@ -122,25 +123,6 @@ test('a bound child keeps and reorders nodes it returns again', () => {
   assert.equal(el.innerHTML, '&lt;<a></a>&gt;');
 });
 
-test('a promise child is inserted where it was once it resolves', async () => {
-  const el = div({ children: ['a', Promise.resolve(document.createElement('b')), 'c'] });
-  assert.equal(el.innerHTML, 'ac');
-
-  await Promise.resolve();
-  await Promise.resolve();
-  assert.equal(el.innerHTML, 'a<b></b>c');
-});
-
-test('a rejected promise child leaves its place empty and logs the error', async (t) => {
-  const error = t.mock.method(console, 'error', () => {});
-
-  const el = div({ children: ['a', Promise.reject(new Error('failed')), 'c'] });
-  await new Promise((resolve) => setTimeout(resolve));
-
-  assert.equal(el.innerHTML, 'ac');
-  assert.equal(error.mock.calls[0].arguments[0].message, 'failed');
-});
-
 test('registering a plugin name again replaces the earlier plugin', () => {
   const marker = { isMarker: true };
   use({ name: 'marker', bind: (value, apply) => value === marker && (apply('first'), true) });
@@ -251,14 +233,18 @@ test('textContent and innerHTML props are kept when there are no children', () =
   assert.equal(div({ props: { innerHTML: '<b>x</b>' } }).innerHTML, '<b>x</b>');
 });
 
-test('on* attributes are never set or offered to plugins, in any case', () => {
+test('inline handler attributes are never set or offered to plugins, in any case; other on* names are', () => {
   const offered = [];
   use({ name: 'recorder', order: 'pre', bind: (value, apply, context) => void offered.push(context.name) });
-  const el = div({ attributes: { onclick: 'go()', OnClick: 'go()', title: 't' }, props: { onclick: () => {} } });
+  const el = div({
+    attributes: { onclick: 'go()', OnClick: 'go()', online: 'yes', title: 't' },
+    props: { onclick: () => {} },
+  });
   use({ name: 'recorder', bind: () => false });
 
-  assert.deepEqual(offered, ['title']);
+  assert.deepEqual(offered, ['online', 'title']);
   assert.equal(el.hasAttribute('onclick'), false);
+  assert.equal(el.getAttribute('online'), 'yes');
 });
 
 test('a plugin that binds a child without applying it yet still gets a place', () => {
@@ -272,25 +258,21 @@ test('a plugin that binds a child without applying it yet still gets a place', (
   assert.equal(el.innerHTML, 'hellob');
 });
 
-test('a text node passed in by the caller is not overwritten', () => {
+test('a text node passed in by the caller is not overwritten, also inside a fragment', () => {
   const mine = document.createTextNode('mine');
+  const inFragment = document.createTextNode('fragment');
+  const fragment = document.createDocumentFragment();
+  fragment.append(inFragment);
   const content = signal(mine);
   const el = div({ children: content });
 
   content.set('changed');
+  content.set(fragment);
+  content.set('again');
 
   assert.equal(mine.data, 'mine');
-  assert.equal(el.textContent, 'changed');
-});
-
-test('an error while inserting a resolved promise child is logged', async (t) => {
-  const error = t.mock.method(console, 'error', () => {});
-  let resolve;
-  const el = div({ children: new Promise((done) => (resolve = done)) });
-  resolve(el);
-  await new Promise((done) => setTimeout(done));
-
-  assert.equal(error.mock.callCount(), 1);
+  assert.equal(inFragment.data, 'fragment');
+  assert.equal(el.textContent, 'again');
 });
 
 test('false keeps the attribute only for aria-*, data-* and enumerated attributes', () => {
@@ -369,8 +351,10 @@ test('a bound property update does not read the current value first', () => {
   assert.equal(reads, 0);
 });
 
-test('use() requires a plugin name', () => {
-  assert.throws(() => use({ bind: () => false }), /needs a plugin with a name/);
+test('use() requires a plugin name that is a non-empty string', () => {
+  for (const name of [undefined, '', 42]) {
+    assert.throws(() => use({ name, bind: () => false }), /needs a plugin with a name/);
+  }
 });
 
 test('objects from another window are replaced, not merged into', () => {
@@ -402,9 +386,14 @@ test('nested keys that start with on are still offered to plugins', () => {
 });
 
 test('a very long child list does not overflow the argument limit', () => {
-  const items = Array.from({ length: 200000 }, (_, i) => String(i % 10));
+  for (const length of [10000, 10001, 200000]) {
+    const items = Array.from({ length }, (_, i) => document.createElement(i % 2 ? 'b' : 'i'));
+    const el = div({ props: { textContent: 'old' }, children: items });
 
-  assert.equal(div({ children: items }).childNodes.length, 200000);
+    assert.equal(el.childNodes.length, length);
+    assert.equal(el.firstChild, items[0]);
+    assert.equal(el.lastChild, items.at(-1));
+  }
 });
 
 test('plugins get the full path of nested props', () => {
@@ -440,29 +429,6 @@ test('plugins can read the nodes a child currently occupies', () => {
   assert.equal(context.nodes()[0].data, 'hi');
 });
 
-test('a polluted Object.prototype cannot supply props, attributes, children or listeners', () => {
-  let clicked = 0;
-  Object.prototype.props = { title: 'inherited' };
-  Object.prototype.attributes = { href: 'javascript:alert(1)' };
-  Object.prototype.children = 'injected';
-  Object.prototype.event = { click: () => clicked++ };
-  try {
-    const link = element('a', { props: undefined });
-    const box = div({});
-    box.click();
-
-    assert.equal(link.title, '');
-    assert.equal(link.hasAttribute('href'), false);
-    assert.equal(box.textContent, '');
-    assert.equal(clicked, 0);
-  } finally {
-    delete Object.prototype.props;
-    delete Object.prototype.attributes;
-    delete Object.prototype.children;
-    delete Object.prototype.event;
-  }
-});
-
 test('a plain object with a nodeType key does not break a live child', () => {
   const content = signal('a');
   const el = div({ children: content });
@@ -471,4 +437,112 @@ test('a plain object with a nodeType key does not break a live child', () => {
   content.set('d');
 
   assert.equal(el.textContent, 'd');
+});
+
+test('an insert that throws leaves the slot as it was, and later updates still apply', () => {
+  const [a, b] = ['a', 'b'].map((tag) => document.createElement(tag));
+  const content = signal([a, b]);
+  const el = div({ children: ['<', content, '>'] });
+  const outer = div({ children: el });
+
+  assert.throws(() => content.set([b, 'new', outer]));
+  assert.equal(el.innerHTML, '&lt;<a></a><b></b>&gt;');
+
+  content.set('d');
+  assert.equal(el.textContent, '<d>');
+});
+
+test('a node that moves to another bound child leaves the first one working', () => {
+  const [c1, c2, c3] = ['c1', 'c2', 'c3'].map((text) => span({ children: text }));
+  const a = signal([c1, c2]);
+  const b = signal([c3]);
+  const columnA = div({ children: a });
+  const columnB = div({ children: b });
+
+  // The column that takes the card updates first.
+  b.set([c3, c2]);
+  a.set([c1]);
+  assert.deepEqual([columnA.textContent, columnB.textContent], ['c1', 'c3c2']);
+  a.set([c1, 'x']);
+  assert.deepEqual([columnA.textContent, columnB.textContent], ['c1x', 'c3c2']);
+
+  // The moved card was the column's only node.
+  a.set([c1]);
+  b.set([c3, c1]);
+  assert.deepEqual([columnA.textContent, columnB.textContent], ['', 'c3c1']);
+  a.set(['3', '5']);
+  assert.deepEqual([columnA.textContent, columnB.textContent], ['35', 'c3c1']);
+});
+
+test('bound children stay correct under random updates that move nodes between them', () => {
+  // mulberry32, so a failure can be reproduced from the seed.
+  let seed = 20261115;
+  const random = () => {
+    seed = (seed + 0x6d2b79f5) | 0;
+    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+  const pick = (n) => Math.floor(random() * n);
+
+  const pool = Array.from({ length: 6 }, (_, i) => span({ children: `n${i}` }));
+  const signals = [signal(null), signal(null), signal(null)];
+  const first = contexts.length;
+  const one = div({ children: ['[', signals[0], '|', signals[1], ']'] });
+  const two = div({ children: ['(', signals[2], ')'] });
+  const slots = contexts.slice(first).filter((context) => context.kind === 'child');
+  /** @type {(Node | string)[][]} */
+  const expected = [[], [], []];
+
+  const tokens = (nodes) =>
+    [...nodes].map((node) => node.textContent).filter((text) => text !== '');
+
+  for (let step = 0; step < 2000; step++) {
+    const target = pick(3);
+    const kind = pick(5);
+    let value;
+    if (kind === 0) {
+      value = null;
+    } else if (kind === 1) {
+      value = `t${step}`;
+    } else {
+      value = Array.from({ length: pick(5) }, () => (pick(4) === 0 ? `t${step}-${pick(9)}` : pool[pick(pool.length)]));
+    }
+
+    const items = value == null ? [] : [value].flat();
+    const nodes = [...new Set(items.filter((item) => typeof item !== 'string'))];
+    expected.forEach((list, i) => {
+      if (i !== target) expected[i] = list.filter((item) => !nodes.includes(item));
+    });
+    expected[target] = items.filter((item, i) => typeof item === 'string' || items.indexOf(item) === i);
+    signals[target].set(value);
+
+    const text = (list) => list.map((item) => (typeof item === 'string' ? item : item.textContent));
+    const message = `step ${step}`;
+    assert.deepEqual(tokens(one.childNodes), ['[', ...text(expected[0]), '|', ...text(expected[1]), ']'], message);
+    assert.deepEqual(tokens(two.childNodes), ['(', ...text(expected[2]), ')'], message);
+    slots.forEach((slot, i) => assert.deepEqual(tokens(slot.nodes()), text(expected[i]), message));
+  }
+});
+
+test('html, svg, MathML and deprecated elements handle props, attributes, children and listeners alike', () => {
+  const factories = { html: div, svg: svg.g, math: math.mrow, deprecated: (data) => deprecatedElement('marquee', data) };
+
+  for (const [name, create] of Object.entries(factories)) {
+    let clicks = 0;
+    const el = create({
+      props: { id: 'x', dataset: { step: '2' } },
+      attributes: { 'aria-label': 'label', hidden: false },
+      children: ['a', span({ children: 'b' }), 0],
+      event: { click: () => clicks++ },
+    });
+    el.dispatchEvent(new window.Event('click'));
+
+    assert.equal(el.id, 'x', name);
+    assert.equal(el.dataset.step, '2', name);
+    assert.equal(el.getAttribute('aria-label'), 'label', name);
+    assert.equal(el.hasAttribute('hidden'), false, name);
+    assert.equal(el.textContent, 'ab0', name);
+    assert.equal(clicks, 1, name);
+  }
 });

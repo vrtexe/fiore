@@ -63,11 +63,7 @@ export type PickWritable<T> = Pick<T, WritableKeys<T>>;
 /** false, true, null and undefined are skipped, so `condition && node` works. */
 type Child = Node | string | number | boolean | null | undefined;
 
-/** A promise child is shown once it resolves; until then its place stays empty. */
-export type Children =
-  | Live<Child | Child[]>
-  | Promise<Child | Child[] | null | undefined>
-  | (Live<Child> | Promise<Child | Child[] | null | undefined>)[];
+export type Children = Live<Child | Child[]> | Live<Child>[];
 
 export type ElementProps<T extends BaseElement> = PickWritable<
   RecursivePartial<T>
