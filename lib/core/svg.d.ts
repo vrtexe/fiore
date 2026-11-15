@@ -1,5 +1,6 @@
+/** @import { SVGTag } from '../types/svg.dom.d.ts' */
 /**
- * Returns the tag of any SVG element by name, the same tag function on every call.
+ * Returns the tag of any SVG element by name.
  * @template {keyof SVGElementTagNameMap} T
  * @param {T} name
  * @returns {SVGTag<T>}

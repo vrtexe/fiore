@@ -8,6 +8,10 @@ const SVG_TAGS = new Set(
     .map((name) => (name === 'switch_' ? 'switch' : name)),
 );
 
+/** Tag functions by name, so every element name builds its tag function once. */
+const htmlTags = new Map();
+const svgTags = new Map();
+
 /** Names of event handlers, in any case. */
 const HANDLER = /^on/i;
 
@@ -161,8 +165,14 @@ export function jsx(type, props) {
     }
   }
 
-  // @ts-expect-error tag is checked by the JSX types
-  return isSvg ? svgElement(type)(data) : element(type)(data);
+  const tags = isSvg ? svgTags : htmlTags;
+  let create = tags.get(type);
+  if (!create) {
+    // @ts-expect-error tag is checked by the JSX types
+    create = isSvg ? svgElement(type) : element(type);
+    tags.set(type, create);
+  }
+  return create(data);
 }
 
 /**

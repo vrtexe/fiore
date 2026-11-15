@@ -902,8 +902,8 @@ svg.circle.<span class="fn">attrs</span>({ r<span class="punc">:</span> <span cl
         <section id="element">
           <h2>element()</h2>
           <p>
-            <code>element(name)</code> returns the tag of any HTML element by name, the same tag
-            function on every call. The tag creates the element with
+            <code>element(name)</code> returns the tag of any HTML element by name, with the
+            same methods as the named export. The tag creates the element with
             <code>document.createElement</code>, applies the data in a fixed order and returns the
             node. Use it with the builder, <code>element('div').props({ … }).create()</code>, or call
             it directly, <code>element('div')(data)</code>.
