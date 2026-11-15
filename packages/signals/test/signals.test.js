@@ -1102,3 +1102,20 @@ test('classList keeps strings on and toggles object keys by booleans, signals an
   assert.equal(card.className, 'card active disabled shadow');
   assert.equal(shape.getAttribute('class'), 'hot');
 });
+
+test('signals bind through builder props and attrs, nested props and plain-call children', () => {
+  const done = state(false);
+  const color = state('red');
+  const label = state('Ada');
+  const box = input.props({ type: 'checkbox', checked: done, style: { color } }).attrs({ title: label }).of();
+  const text = span(label);
+
+  done.set(true);
+  color.set('blue');
+  label.set('Grace');
+
+  assert.equal(box.checked, true);
+  assert.equal(box.style.color, 'blue');
+  assert.equal(box.getAttribute('title'), 'Grace');
+  assert.equal(text.textContent, 'Grace');
+});

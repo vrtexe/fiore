@@ -1,42 +1,36 @@
 import { button, form, h1, header, input, label, li, main, p, small, span, ul } from 'fiorejs';
 
-const count = span({ props: { className: 'count' } });
-const list = ul({ props: { className: 'list' } });
-const field = input({
-  props: { name: 'todo', placeholder: 'What needs doing?', required: true },
-  attributes: { autocomplete: 'off' },
-});
+const count = span.props({ className: 'count' }).of();
+const list = ul.props({ className: 'list' }).of();
+const field = input
+  .props({ name: 'todo', placeholder: 'What needs doing?', required: true })
+  .attrs({ autocomplete: 'off' })
+  .of();
 
 function updateCount() {
   count.textContent = `${list.children.length} items`;
 }
 
 function TodoItem(text) {
-  const item = li({
-    props: { className: 'item' },
-    children: [
-      label({
-        children: [
-          input({
-            props: { type: 'checkbox' },
-            event: { change: (event) => item.classList.toggle('done', event.currentTarget.checked) },
-          }),
-          span({ children: text }),
-        ],
-      }),
-      button({
-        props: { className: 'ghost' },
-        attributes: { 'aria-label': `Remove ${text}` },
-        event: {
-          click: () => {
-            item.remove();
-            updateCount();
-          },
+  const item = li.props({ className: 'item' }).of(
+    label.of(
+      input
+        .props({ type: 'checkbox' })
+        .on({ change: (event) => item.classList.toggle('done', event.currentTarget.checked) })
+        .of(),
+      span(text),
+    ),
+    button
+      .props({ className: 'ghost' })
+      .attrs({ 'aria-label': `Remove ${text}` })
+      .on({
+        click: () => {
+          item.remove();
+          updateCount();
         },
-        children: '✕',
-      }),
-    ],
-  });
+      })
+      .of('✕'),
+  );
   return item;
 }
 
@@ -46,29 +40,24 @@ function add(text) {
 }
 
 document.body.append(
-  main({
-    props: { className: 'app' },
-    children: [
-      header({ children: [h1({ children: ['Fiore ', small({ children: '+ DOM' })] }), count] }),
-      form({
-        props: { className: 'add' },
-        event: {
-          submit: (event) => {
-            event.preventDefault();
-            add(field.value.trim());
-            field.value = '';
-            field.focus();
-          },
+  main.props({ className: 'app' }).of(
+    header.of(h1.of('Fiore ', small('+ DOM')), count),
+    form
+      .props({ className: 'add' })
+      .on({
+        submit: (event) => {
+          event.preventDefault();
+          add(field.value.trim());
+          field.value = '';
+          field.focus();
         },
-        children: [field, button({ props: { type: 'submit' }, children: 'Add' })],
-      }),
-      list,
-      p({
-        props: { className: 'hint' },
-        children: 'No virtual DOM: every function returns a real element, and updates are plain DOM calls.',
-      }),
-    ],
-  }),
+      })
+      .of(field, button.props({ type: 'submit' }).of('Add')),
+    list,
+    p
+      .props({ className: 'hint' })
+      .of('No virtual DOM: every function returns a real element, and updates are plain DOM calls.'),
+  ),
 );
 
 ['Edit src/main.js', 'Add a component', 'Build something'].forEach(add);

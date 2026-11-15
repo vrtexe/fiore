@@ -26,7 +26,7 @@
     "test": "tsc -p test && node --expose-gc --test test/signals.test.js"
   },
   "peerDependencies": {
-    "fiorejs": "^1.2.0"
+    "fiorejs": "^2.0.0"
   },
   "publishConfig": {
     "access": "public"
