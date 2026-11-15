@@ -649,3 +649,19 @@ test('element() returns a working tag for a name, in each namespace', () => {
   assert.equal(svg.element('circle')().namespaceURI, 'http://www.w3.org/2000/svg');
   assert.equal(math.element('mi')().namespaceURI, 'http://www.w3.org/1998/Math/MathML');
 });
+
+test('nested props merge into existing objects with a stack, at any depth', () => {
+  let existing = { leaf: 'old' };
+  let update = { leaf: 'new' };
+  for (let i = 0; i < 20000; i++) {
+    existing = { next: existing };
+    update = { next: update };
+  }
+  const el = element('div').also((node) => (node.config = existing)).create();
+  assignProperties(el, { config: update });
+
+  let level = el.config;
+  while (level.next) level = level.next;
+  assert.equal(level.leaf, 'new');
+  assert.equal(el.config, existing, 'the existing object is kept and merged into');
+});
