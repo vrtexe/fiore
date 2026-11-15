@@ -10,9 +10,25 @@ Object.assign(globalThis, {
 });
 
 const { button, div, span, input } = await import('fiorejs');
-const { state, computed, effect, untrack, read, each } = await import('@fiorejs/signals');
+const { state, computed, effect, untrack, read, each, resource } = await import('@fiorejs/signals');
 
 const tick = () => new Promise((resolve) => setTimeout(resolve));
+
+/** Collects errors sent to reportError (or console.error) while `fn` runs. */
+async function reported(fn) {
+  const errors = [];
+  const previous = globalThis.reportError;
+  const previousConsole = console.error;
+  globalThis.reportError = (error) => errors.push(error);
+  console.error = (error) => errors.push(error);
+  try {
+    await fn();
+  } finally {
+    globalThis.reportError = previous;
+    console.error = previousConsole;
+  }
+  return errors;
+}
 
 test('effects rerun when what they read changes, and stop cleanly', () => {
   const count = state(1);
@@ -251,25 +267,50 @@ test('each stops its rows when the surrounding effect replaces them', () => {
   assert.equal(row.textContent, 'row 1');
 });
 
-test('an effect that throws does not stop the other effects', () => {
+test('an effect that throws is reported and stopped, and the other effects still run', async () => {
   const count = state(1);
   const seen = [];
+  let failing = 0;
   effect(() => {
+    failing++;
     if (count.get() === 2) throw new Error('first failed');
   });
   effect(() => seen.push(count.get()));
 
-  assert.throws(() => count.set(2), /first failed/);
-  assert.deepEqual(seen, [1, 2]);
+  const errors = await reported(() => count.set(2));
+  count.set(3);
+
+  assert.deepEqual(seen, [1, 2, 3]);
+  assert.equal(failing, 2);
+  assert.equal(errors.length, 1);
 });
 
-test('an effect that keeps setting what it reads is stopped with an error', () => {
+test('an effect that keeps setting what it reads is stopped with an error', async () => {
   const count = state(0);
   effect(() => {
     if (count.get() > 0) count.set(count.get() + 1);
   });
 
-  assert.throws(() => count.set(1), /ran more than 100 times/);
+  const errors = await reported(() => count.set(1));
+
+  assert.match(String(errors[0]), /ran more than 100 times/);
+  count.set(1000);
+  assert.equal(count.get(), 1000);
+});
+
+test('a looping effect does not keep the other effects from seeing the final value', async () => {
+  const count = state(0);
+  effect(() => {
+    const value = count.get();
+    if (value > 0 && value < 1000) count.set(value + 1);
+  });
+  const seen = [];
+  effect(() => seen.push(count.get()));
+
+  const errors = await reported(() => count.set(1));
+
+  assert.equal(errors.length, 1);
+  assert.equal(seen.at(-1), count.get());
 });
 
 test('an effect stopped during its own run is cleaned up', () => {
@@ -304,33 +345,41 @@ test('a computed keeps its cache when its reader reruns for another reason', () 
   assert.equal(runs, 1);
 });
 
-test('an effect whose first run throws is stopped', () => {
+test('an effect whose first run throws is reported and stopped', async () => {
   const count = state(0);
   let runs = 0;
-  assert.throws(() =>
-    effect(() => {
+  let stop;
+  const errors = await reported(() => {
+    stop = effect(() => {
       runs++;
       count.get();
       throw new Error('broken');
-    }),
-  );
+    });
+  });
 
   count.set(1);
+  stop();
 
   assert.equal(runs, 1);
+  assert.equal(errors.length, 1);
 });
 
-test('a binding that fails while building leaves no subscriber behind', () => {
+test('a binding that fails while building is reported, leaves no subscriber behind and still builds the element', async () => {
   const record = state(null);
   let reads = 0;
-  assert.throws(() => div({ children: () => (reads++, record.get().missing.x) }));
+  let element;
+  const errors = await reported(() => {
+    element = div({ children: () => (reads++, record.get().missing.x) });
+  });
 
   record.set({ missing: { x: 1 } });
 
   assert.equal(reads, 1);
+  assert.equal(errors.length, 1);
+  assert.equal(element.tagName, 'DIV');
 });
 
-test('a cleanup that throws does not stop the effect that owns it', () => {
+test('a cleanup that throws does not stop the effect that owns it', async () => {
   const count = state(0);
   let outerRuns = 0;
   effect(() => {
@@ -341,10 +390,13 @@ test('a cleanup that throws does not stop the effect that owns it', () => {
     });
   });
 
-  assert.throws(() => count.set(1), /cleanup failed/);
-  assert.throws(() => count.set(2), /cleanup failed/);
+  const errors = await reported(() => {
+    count.set(1);
+    count.set(2);
+  });
 
   assert.equal(outerRuns, 3);
+  assert.equal(errors.length, 2);
 });
 
 test('a binding that fails on re-insertion does not stop its siblings', async (t) => {
@@ -388,7 +440,7 @@ test('a live object prop does not pile up bindings when it changes often', () =>
   assert.ok(growth < 1_500_000, `heap grew by ${growth} bytes`);
 });
 
-test('each keeps its rows when a render fails partway through', () => {
+test('each keeps its rows when a render fails partway through', async () => {
   const items = state([1, 2]);
   const label = state('a');
   let renders = 0;
@@ -400,7 +452,8 @@ test('each keeps its rows when a render fails partway through', () => {
   };
   div({ children: each(items, render) });
 
-  assert.throws(() => items.set([1, 2, 99]), /bad row/);
+  const errors = await reported(() => items.set([1, 2, 99]));
+  assert.match(String(errors[0]), /bad row/);
   items.set([1, 2]);
   reads = 0;
   label.set('b');
@@ -432,23 +485,7 @@ test('a live child built elsewhere pauses when the place it moved to is removed'
   assert.equal(reads, 1);
 });
 
-/** Collects errors sent to reportError (or console.error) while `fn` runs. */
-async function reported(fn) {
-  const errors = [];
-  const previous = globalThis.reportError;
-  const previousConsole = console.error;
-  globalThis.reportError = (error) => errors.push(error);
-  console.error = (error) => errors.push(error);
-  try {
-    await fn();
-  } finally {
-    globalThis.reportError = previous;
-    console.error = previousConsole;
-  }
-  return errors;
-}
-
-test('readers of a computed recover after it threw once', () => {
+test('readers that catch the error of a computed recover; a binding that does not is stopped', async () => {
   const text = state('{"a":1}');
   const parsed = computed(() => JSON.parse(text.get()).a);
   const seen = [];
@@ -461,11 +498,12 @@ test('readers of a computed recover after it threw once', () => {
   });
   const label = span({ children: () => String(parsed.get()) });
 
-  assert.throws(() => text.set('{bad'));
+  const errors = await reported(() => text.set('{bad'));
   text.set('{"a":9}');
 
   assert.deepEqual(seen, [1, 'error', 9]);
-  assert.equal(label.textContent, '9');
+  assert.equal(label.textContent, '1');
+  assert.equal(errors.length, 1);
 });
 
 test('a computed that throws without readers can be collected', async () => {
@@ -545,7 +583,7 @@ test('a live child that starts with a comment pauses with its host', async () =>
   assert.equal(reads, 1);
 });
 
-test('an effect that stops itself and then throws leaves nothing running', () => {
+test('an effect that stops itself and then throws leaves nothing running', async () => {
   const count = state(0);
   let inner = 0;
   let stop;
@@ -560,11 +598,12 @@ test('an effect that stops itself and then throws leaves nothing running', () =>
     }
   });
 
-  assert.throws(() => count.set(1), /after stop/);
+  const errors = await reported(() => count.set(1));
   count.set(2);
   count.set(3);
 
   assert.equal(inner, 1);
+  assert.equal(errors.length, 1);
 });
 
 test('a deep tree appended level by level is walked once', async () => {
@@ -595,7 +634,38 @@ test('a deep tree appended level by level is walked once', async () => {
   assert.ok(steps < 900, `walked ${steps} nodes for 300`);
 });
 
-test('a loop error does not hide the errors of other effects', async () => {
+test('a nested list built top-down is walked once', async () => {
+  const host = document.createElement('ul');
+  host.append(div({ children: state('live') }));
+  document.body.append(host);
+  await tick();
+  const createTreeWalker = document.createTreeWalker;
+  let steps = 0;
+  document.createTreeWalker = function (...args) {
+    const walker = createTreeWalker.apply(this, args);
+    const nextNode = walker.nextNode.bind(walker);
+    walker.nextNode = () => (steps++, nextNode());
+    return walker;
+  };
+  try {
+    let parent = host;
+    for (let i = 0; i < 300; i++) {
+      const item = document.createElement('li');
+      const list = document.createElement('ul');
+      item.append(list);
+      parent.append(item);
+      parent = list;
+    }
+    await tick();
+  } finally {
+    document.createTreeWalker = createTreeWalker;
+    host.remove();
+  }
+
+  assert.ok(steps < 1800, `walked ${steps} nodes for 600`);
+});
+
+test('a loop error and the errors of other effects are all reported', async () => {
   const count = state(0);
   effect(() => {
     if (count.get() > 0) throw new Error('first failed');
@@ -604,12 +674,14 @@ test('a loop error does not hide the errors of other effects', async () => {
     if (count.get() > 0) count.set(count.get() + 1);
   });
 
-  const errors = await reported(() => assert.throws(() => count.set(1), /first failed/));
+  const errors = await reported(() => count.set(1));
 
+  assert.equal(errors.length, 2);
+  assert.ok(errors.some((error) => /first failed/.test(String(error))));
   assert.ok(errors.some((error) => /ran more than 100 times/.test(String(error))));
 });
 
-test('fault injection: the app recovers after any one callback throws during updates', async () => {
+test('fault injection: a callback that throws during updates is reported once and the rest keeps working', async () => {
   const points = ['computed', 'effect', 'cleanup', 'inner-cleanup', 'binding', 'render', 'row-cleanup'];
   for (const point of points) {
     let armed = false;
@@ -626,6 +698,8 @@ test('fault injection: the app recovers after any one callback throws during upd
       effect(() => () => fail('inner-cleanup'));
       return () => fail('cleanup');
     });
+    const healthy = [];
+    effect(() => healthy.push(source.get()));
     const label = div({ children: () => (fail('binding'), String(derived.get())) });
     const items = computed(() => [source.get(), source.get() + 1]);
     const list = div({
@@ -639,44 +713,108 @@ test('fault injection: the app recovers after any one callback throws during upd
     await tick();
 
     armed = true;
-    await reported(() => {
-      for (const value of [1, 2]) {
-        try {
-          source.set(value);
-        } catch {
-          // the injected error, expected
-        }
-      }
-    });
+    const errors = await reported(() => source.set(1));
     armed = false;
     source.set(10);
 
-    assert.equal(log.at(-1), 20, `${point}: effect`);
-    assert.equal(label.textContent, '20', `${point}: binding`);
-    assert.equal(list.textContent, '1011', `${point}: list`);
+    // The computed is read by the effect and the binding, and each reader reports its own failure.
+    assert.equal(errors.length, point === 'computed' ? 2 : 1, `${point}: reported once per reader`);
+    assert.ok(errors.every((error) => String(error).includes(`injected ${point}`)), `${point}: the injected error`);
+    assert.deepEqual(healthy, [0, 1, 10], `${point}: an unrelated effect`);
+    // A failure stops only the effect it happened in; cleanups and row cleanups stop nothing.
+    const stops = { computed: ['effect', 'binding'], effect: ['effect'], binding: ['binding'], render: ['list'] }[point] ?? [];
+    assert.equal(log.at(-1), stops.includes('effect') ? 0 : 20, `${point}: effect`);
+    assert.equal(label.textContent, stops.includes('binding') ? '0' : '20', `${point}: binding`);
+    assert.equal(list.textContent, stops.includes('list') ? '01' : '1011', `${point}: list`);
     label.remove();
     list.remove();
   }
 });
 
-test('an effect that failed before reading a computed still follows it', () => {
-  const x = state(0);
-  const doubled = computed(() => x.get() * 2);
-  let fail = false;
-  const seen = [];
-  effect(() => {
-    if (fail) throw new Error('boom');
-    seen.push(doubled.get());
-  });
+test('fault injection: a callback that throws while things are created is reported once and leaks nothing', async () => {
+  const points = ['first-run', 'write-reader', 'cleanup', 'owned', 'binding'];
+  for (const point of points) {
+    const runs = {};
+    const step = (name) => {
+      runs[name] = (runs[name] ?? 0) + 1;
+      if (name === point) throw new Error(`injected ${name}`);
+    };
+    const source = state(0);
+    const flag = state(false);
+    const healthy = [];
+    let label;
 
-  fail = true;
-  assert.throws(() => x.set(1), /boom/);
-  fail = false;
-  x.set(2);
-  x.set(3);
+    const errors = await reported(() => {
+      effect(() => healthy.push(source.get()));
+      effect(() => {
+        source.get();
+        step('first-run');
+      });
+      effect(() => {
+        source.get();
+        if (flag.get()) step('write-reader');
+      });
+      effect(() => flag.set(true));
+      effect(() => () => step('cleanup'))();
+      effect(() => {
+        effect(() => {
+          source.get();
+          step('owned');
+        });
+      });
+      label = div({ children: () => (step('binding'), String(source.get())) });
+    });
+    const failedRuns = runs[point];
+    source.set(1);
+    source.set(2);
 
-  assert.deepEqual(seen, [0, 4, 6]);
+    assert.equal(errors.length, 1, `${point}: reported once`);
+    assert.match(String(errors[0]), new RegExp(`injected ${point}`), `${point}: the injected error`);
+    assert.deepEqual(healthy, [0, 1, 2], `${point}: an unrelated effect`);
+    assert.equal(runs[point], failedRuns, `${point}: the failed callback does not run again`);
+    assert.equal(label.tagName, 'DIV', `${point}: the element is built`);
+    if (point !== 'binding') assert.equal(label.textContent, '2', `${point}: binding`);
+  }
 });
+
+test('effect() returns its stop function even when the effects it starts fail', async () => {
+  const s = state(0);
+  effect(() => {
+    if (s.get() === 1) throw new Error('reader failed');
+  });
+  const own = state(0);
+  let runs = 0;
+  let stop;
+  const errors = await reported(() => {
+    stop = effect(() => {
+      runs++;
+      own.get();
+      s.set(1);
+    });
+  });
+  stop();
+  own.set(1);
+
+  assert.equal(errors.length, 1);
+  assert.equal(runs, 1);
+});
+
+test('a first run that writes and then throws still updates the readers of what it wrote', async () => {
+  const s = state(0);
+  const seen = [];
+  effect(() => seen.push(s.get()));
+
+  const errors = await reported(() =>
+    effect(() => {
+      s.set(1);
+      throw new Error('after write');
+    }),
+  );
+
+  assert.deepEqual(seen, [0, 1]);
+  assert.equal(errors.length, 1);
+});
+
 
 test('a computed that failed before reading another computed recovers', () => {
   const x = state(0);
@@ -712,25 +850,25 @@ test('a cleanup error is reported when the run itself throws', async () => {
     };
   });
 
-  const errors = await reported(() => assert.throws(() => count.set(1), /run failed/));
+  const errors = await reported(() => count.set(1));
 
+  assert.equal(errors.length, 2);
+  assert.ok(errors.some((error) => /run failed/.test(String(error))));
   assert.ok(errors.some((error) => /cleanup failed/.test(String(error))));
 });
 
 test('a failing stop does not hide the error of the first run', async () => {
   const errors = await reported(() =>
-    assert.throws(
-      () =>
-        effect(() => {
-          effect(() => () => {
-            throw new Error('inner cleanup');
-          });
-          throw new Error('outer');
-        }),
-      /outer/,
-    ),
+    effect(() => {
+      effect(() => () => {
+        throw new Error('inner cleanup');
+      });
+      throw new Error('outer');
+    }),
   );
 
+  assert.equal(errors.length, 2);
+  assert.ok(errors.some((error) => /outer/.test(String(error))));
   assert.ok(errors.some((error) => /inner cleanup/.test(String(error))));
 });
 
@@ -747,6 +885,26 @@ test('mutate notifies even when its function throws', () => {
   );
 
   assert.deepEqual(lengths, [0, 1]);
+});
+
+test('mutate throws the error of its own function when an effect also fails', async () => {
+  const list = state([]);
+  effect(() => {
+    if (list.get().length === 1) throw new Error('effect boom');
+  });
+
+  const errors = await reported(() =>
+    assert.throws(
+      () =>
+        list.mutate((items) => {
+          items.push(1);
+          throw new Error('fn boom');
+        }),
+      /fn boom/,
+    ),
+  );
+
+  assert.match(String(errors[0]), /effect boom/);
 });
 
 test('an effect that writes what it read during its first run keeps every cleanup', () => {
@@ -783,4 +941,149 @@ test('an update through many diamond-shaped dependencies stays linear', () => {
   assert.equal(runs, 75);
   assert.ok(performance.now() - started < 100);
   assert.equal(values.length, 2);
+});
+
+test('many writes in one update do not walk the readers of a computed again each time', () => {
+  const measure = (readers) => {
+    const source = state(0);
+    const shared = computed(() => source.get());
+    for (let i = 0; i < readers; i++) effect(() => shared.get());
+    const go = state(false);
+    effect(() => {
+      if (go.get()) for (let i = 1; i <= 10_000; i++) source.set(i);
+    });
+    const started = performance.now();
+    go.set(true);
+    return performance.now() - started;
+  };
+  measure(1000);
+  const few = measure(10);
+  const many = measure(1000);
+
+  assert.ok(many < few * 5 + 10, `1,000 readers took ${many.toFixed(1)} ms, 10 readers ${few.toFixed(1)} ms`);
+});
+
+function deferred() {
+  let resolve;
+  let reject;
+  const promise = new Promise((yes, no) => {
+    resolve = yes;
+    reject = no;
+  });
+  return { promise, resolve, reject };
+}
+
+/** A fetcher whose calls are recorded and settled by the test. */
+function manual() {
+  const calls = [];
+  const fetcher = (value, { signal }) => {
+    const call = { value, signal, ...deferred() };
+    calls.push(call);
+    return call.promise;
+  };
+  return { calls, fetcher };
+}
+
+test('resource loads when its source changes and ignores older responses', async () => {
+  const id = state(1);
+  const { calls, fetcher } = manual();
+  const user = resource(id, fetcher);
+
+  assert.equal(user.loading.get(), true);
+  id.set(2);
+  assert.equal(calls[0].signal.aborted, true);
+  calls[1].resolve('two');
+  await tick();
+  calls[0].resolve('one');
+  await tick();
+
+  assert.deepEqual(calls.map((call) => call.value), [1, 2]);
+  assert.equal(user.get(), 'two');
+  assert.equal(user.loading.get(), false);
+});
+
+test('resource does not load while its source is null, undefined or false', async () => {
+  const id = state(null);
+  const { calls, fetcher } = manual();
+  const user = resource(() => id.get(), fetcher);
+
+  assert.equal(calls.length, 0);
+  assert.equal(user.loading.get(), false);
+  id.set(false);
+  id.set(undefined);
+  id.set(3);
+
+  assert.deepEqual(calls.map((call) => call.value), [3]);
+});
+
+test('resource keeps the error of a failed load until the next load starts', async () => {
+  const { calls, fetcher } = manual();
+  const data = resource(fetcher);
+  calls[0].reject(new Error('offline'));
+  await tick();
+
+  assert.match(String(data.error.get()), /offline/);
+  assert.equal(data.loading.get(), false);
+  data.refetch();
+  assert.equal(data.error.get(), undefined);
+  assert.equal(data.loading.get(), true);
+  calls[1].resolve('ok');
+  await tick();
+
+  assert.equal(data.get(), 'ok');
+  assert.equal(calls[1].value, true);
+});
+
+test('resource turns a synchronous throw of its fetcher into the error', async () => {
+  const data = resource(() => {
+    throw new Error('sync');
+  });
+  await tick();
+
+  assert.match(String(data.error.get()), /sync/);
+  assert.equal(data.loading.get(), false);
+});
+
+test('resource keeps its value while reloading, and mutate sets it without loading', async () => {
+  const { calls, fetcher } = manual();
+  const data = resource(fetcher);
+  calls[0].resolve('first');
+  await tick();
+  data.refetch();
+
+  assert.equal(data.get(), 'first');
+  data.mutate('local');
+  assert.equal(data.get(), 'local');
+  assert.equal(calls.length, 2);
+});
+
+test('resource runs its fetcher untracked and aborts when its owner stops', async () => {
+  const other = state(0);
+  const { calls, fetcher } = manual();
+  let data;
+  const stop = effect(() => {
+    data = resource((value, info) => (other.get(), fetcher(value, info)));
+  });
+  other.set(1);
+  stop();
+  calls[0].resolve('late');
+  await tick();
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].signal.aborted, true);
+  assert.equal(data.get(), undefined);
+});
+
+test('a resource binds as a child', async () => {
+  const { calls, fetcher } = manual();
+  const data = resource(fetcher);
+  const label = span({ children: data });
+  const status = span({ children: () => (data.loading.get() ? 'loading' : 'done') });
+  assert.equal(status.textContent, 'loading');
+
+  calls[0].resolve('Ada');
+  await tick();
+
+  assert.equal(label.textContent, 'Ada');
+  assert.equal(status.textContent, 'done');
 });

@@ -36,13 +36,34 @@ document.body.append(
 | Function | What it does |
 | --- | --- |
 | `state(value)` | A value with `get()`, `set(value)`, `update(fn)` and `mutate(fn)`. `update` sets the value `fn` returns, `mutate` changes the value in place. Reading it inside an effect, a computed or a binding subscribes to it. Setting an equal value (`Object.is`) does nothing. |
-| `computed(fn)` | A value derived from other signals. It is calculated on first read and again on the next read after an input changed. It keeps its value while an effect or binding reads it, also when that reader reruns for another reason. If `fn` throws, the error is kept like a value and thrown on every read until an input changes; readers stay subscribed and recover then. While nothing reads it inside an effect or binding, it does not stay subscribed to its inputs and is recalculated on every read. |
+| `computed(fn)` | A value derived from other signals. It is calculated on first read and again on the next read after an input changed. It keeps its value while an effect or binding reads it, also when that reader reruns for another reason. If `fn` throws, the error is kept like a value and thrown on every read until an input changes; a reader that catches it stays subscribed and recovers then. While nothing reads it inside an effect or binding, it does not stay subscribed to its inputs and is recalculated on every read. |
 | `effect(fn)` | Runs `fn` now and whenever a signal it read changes. Returns a function that stops it. If `fn` returns a function, that function runs before the next run and when the effect stops. |
 | `untrack(fn)` | Runs `fn` without subscribing to the signals it reads. |
 | `read(value)` | Returns the current value of a signal, a getter function or a plain value. |
+| `resource(source, fetcher)` | Loads a value asynchronously, like Solid's `createResource`; see [Loading data](#loading-data). |
 | `each(items, render, key)` | Renders a list and reuses the nodes of items whose key is unchanged. `render` gets the item's index at the time its row is created. |
 
-Effects run synchronously when a signal is set. If an effect throws, the other effects of that update still run, and the first error is thrown from `set()`. If an effect's first run throws, the effect is stopped. A cleanup or an inner effect that throws does not stop the effect around it; its error is thrown after the run. An effect that runs more than 100 times in one update, usually because it sets a signal it reads, stops the update with an error.
+Setting a signal runs its effects before `set()` returns. A signal set while an effect runs, including its first run, is handled after that run has finished, so an effect is never re-entered.
+
+An effect or binding that throws is stopped, and its error is reported with `reportError` (`console.error` where that does not exist); the other effects keep running, and `set()` and `effect()` never throw because of an effect. A cleanup that throws is reported and does not stop its effect. An effect that runs more than 100 times in one update, usually because it sets a signal it reads, is reported and stopped the same way.
+
+## Loading data
+
+`resource(source, fetcher)` calls `fetcher` with the value of `source` and loads again whenever `source` changes; while `source` gives `null`, `undefined` or `false`, nothing is loaded. `resource(fetcher)` loads once. The fetcher runs untracked and gets an `AbortSignal` that aborts when a newer load starts or the effect or list row the resource was created in goes away; the result of an older load is ignored.
+
+The resource is a signal of the last loaded value, which it keeps while it reloads, with `loading` and `error` as signals, `refetch()` to load again and `mutate(value)` to set the value without loading. `error` is cleared when a new load starts.
+
+```js
+import { div } from 'fiorejs';
+import { resource, state } from '@fiorejs/signals';
+
+const userId = state(1);
+const user = resource(userId, (id, { signal }) => fetch(`/users/${id}`, { signal }).then((response) => response.json()));
+
+div({
+  children: () => (user.error.get() ? 'Could not load' : user.loading.get() ? 'Loading…' : user.get().name),
+});
+```
 
 ## Binding to the DOM
 
@@ -73,7 +94,7 @@ Price({ amount: () => total.get() * 1.081 });
 
 ## Lists
 
-`each` reuses the node of every item whose key it has seen before and only renders new items. Without a key, the item itself is the key; a key that appears more than once gets one row per occurrence. When the order changes, only the rows that are out of place are moved, so a focused input in an unmoved row keeps its focus; browsers with `moveBefore` keep it in moved rows too. If `render` throws, the list keeps the rows it had.
+`each` reuses the node of every item whose key it has seen before and only renders new items. Without a key, the item itself is the key; a key that appears more than once gets one row per occurrence. When the order changes, only the rows that are out of place are moved, so a focused input in an unmoved row keeps its focus; browsers with `moveBefore` keep it in moved rows too. If `render` throws, the error is reported and the list keeps the rows it had, but stops updating like any binding that throws.
 
 `each(...)` returns a getter, so put it directly into `children`. Inside a live child, call it: `() => (show.get() ? each(items, render)() : null)`; rows are then reused only while that live child does not rerun.
 
@@ -133,4 +154,4 @@ An element that is created but never inserted keeps its bindings for as long as 
 ## Limits
 
 - Functions passed as properties are treated as bindings, so a custom element property that expects a function has to be set in code.
-- There is no `batch()` yet: every `set()` runs its effects immediately.
+- There is no `batch()` yet: outside an effect, every `set()` runs its effects immediately.

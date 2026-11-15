@@ -3,8 +3,8 @@ import { use } from 'fiorejs';
 const SIGNAL = Symbol.for('fiorejs.signal');
 
 /**
- * @typedef {{ subs: Set<Computation>, release?(): void }} Source
- * @typedef {{ sources: Set<Source>, stale(visited: Set<Computation>): void }} Computation
+ * @typedef {{ subs: Set<Computation>, release?(): void, missed?: boolean }} Source
+ * @typedef {{ sources: Set<Source>, stale(): void }} Computation
  * @typedef {{ owned: (() => void)[] }} Owner
  */
 
@@ -12,7 +12,7 @@ const SIGNAL = Symbol.for('fiorejs.signal');
 let current = null;
 /** @type {Owner | null} */
 let owner = null;
-/** @type {Set<{ run(): void }>} */
+/** @type {Set<{ run(): void, stop(): void }>} */
 const pending = new Set();
 let flushing = false;
 
@@ -29,10 +29,8 @@ function track(source) {
 
 /** @param {Source} source */
 function notify(source) {
-  /** @type {Set<Computation>} Each computed passes a change on once per update, also in diamond-shaped graphs. */
-  const visited = new Set();
-  for (const sub of [...source.subs]) {
-    sub.stale(visited);
+  for (const sub of source.subs) {
+    sub.stale();
   }
   flush();
 }
@@ -44,57 +42,22 @@ function flush() {
   flushing = true;
   /** @type {Map<object, number>} */
   const runs = new Map();
-  /** @type {unknown[]} */
-  const errors = [];
   try {
     for (const effect of pending) {
       pending.delete(effect);
       const count = (runs.get(effect) ?? 0) + 1;
       runs.set(effect, count);
       if (count > MAX_RUNS) {
-        pending.clear();
-        errors.push(new Error(`An effect ran more than ${MAX_RUNS} times in one update; it probably sets a signal it reads.`));
-        break;
+        // Only the looping effect stops; the others still run.
+        report(new Error(`An effect ran more than ${MAX_RUNS} times in one update; it probably sets a signal it reads.`));
+        effect.stop();
+        continue;
       }
-      // One failing effect must not stop the others; the first error is rethrown afterwards.
-      try {
-        effect.run();
-      } catch (error) {
-        errors.push(error);
-      }
+      effect.run();
     }
   } finally {
     flushing = false;
   }
-  rethrow(errors);
-}
-
-/**
- * Throws the first error and reports the others, so none of them is lost.
- * @param {unknown[]} errors
- */
-function rethrow(errors) {
-  if (errors.length > 0) {
-    errors.slice(1).forEach(report);
-    throw errors[0];
-  }
-}
-
-/**
- * Calls every function even when some of them throw, then rethrows the first error.
- * @param {Iterable<() => void>} fns
- */
-function runAll(fns) {
-  /** @type {unknown[]} */
-  const errors = [];
-  for (const fn of fns) {
-    try {
-      fn();
-    } catch (error) {
-      errors.push(error);
-    }
-  }
-  rethrow(errors);
 }
 
 /**
@@ -161,9 +124,14 @@ function runTracked(computation, nextOwner, fn) {
         [...previous].filter((source) => !computation.sources.has(source)),
       );
     } else {
-      // A run that threw may have stopped before reading its sources; it keeps following them, so the next
-      // change runs it again.
-      previous.forEach((source) => computation.sources.add(source));
+      // A run that threw may have stopped before reading its sources; it keeps following them, and a computed among
+      // them that is still dirty passes its next change on, so the next change runs it again.
+      for (const source of previous) {
+        if (!computation.sources.has(source)) {
+          computation.sources.add(source);
+          source.missed = true;
+        }
+      }
     }
   }
 }
@@ -229,16 +197,15 @@ export function computed(fn) {
   const node = {
     subs: new Set(),
     sources: new Set(),
-    stale(visited) {
-      if (visited.has(node)) {
+    stale() {
+      // Already dirty means the readers heard of the change, unless one of them failed before reading it again.
+      if (dirty && !node.missed) {
         return;
       }
-      visited.add(node);
-      // Passed on even when already dirty: a reader whose last run failed before reading this computed still
-      // follows it and must hear about the change.
+      node.missed = false;
       dirty = true;
-      for (const sub of [...node.subs]) {
-        sub.stale(visited);
+      for (const sub of node.subs) {
+        sub.stale();
       }
     },
     release,
@@ -278,7 +245,7 @@ export function computed(fn) {
 /**
  * Runs `fn` now and again whenever a signal it read changes; returns a function that stops it.
  * `fn` may return a cleanup function, called before the next run and when stopped.
- * If the first run throws, the effect is stopped and the error is thrown.
+ * If a run throws, the error is reported and the effect is stopped.
  * @param {() => void | (() => void)} fn
  * @returns {() => void}
  */
@@ -288,7 +255,7 @@ export function effect(fn) {
   let stopped = false;
   /** @type {Owner} */
   const scope = { owned: [] };
-  /** @type {Computation & { run(): void }} */
+  /** @type {Computation & { run(): void, stop(): void }} */
   const node = {
     sources: new Set(),
     stale: () => pending.add(node),
@@ -296,48 +263,42 @@ export function effect(fn) {
       if (stopped) {
         return;
       }
-      /** @type {unknown[]} The run's own error first, then errors from the cleanup and stop, which are reported. */
-      const errors = [];
-      // A cleanup or an owned effect that throws must not keep this effect from running.
-      try {
-        reset();
-      } catch (error) {
-        errors.push(error);
-      }
+      reset();
       try {
         const result = runTracked(node, scope, fn);
         cleanup = typeof result === 'function' ? result : undefined;
       } catch (error) {
-        errors.unshift(error);
+        report(error);
+        stopped = true;
       }
-      // Stopped during its own run, also when it then threw: undo what the run set up after the stop.
+      // Stopped by its error or during its own run: undo what the run set up.
       if (stopped) {
-        try {
-          stop();
-        } catch (error) {
-          errors.push(error);
-        }
+        stop();
       }
-      rethrow(errors);
     },
+    stop,
   };
 
-  /** Stops the effects created by the last run and calls its cleanup, keeping the subscriptions. */
+  /**
+   * Stops the effects created by the last run and calls its cleanup, keeping the subscriptions. A cleanup that
+   * throws is reported and does not keep this effect from running.
+   */
   function reset() {
-    const owned = scope.owned.splice(0);
+    scope.owned.splice(0).forEach((stopOwned) => stopOwned());
     const done = cleanup;
     cleanup = undefined;
-    runAll(done ? [...owned, done] : owned);
+    try {
+      done?.();
+    } catch (error) {
+      report(error);
+    }
   }
 
   function stop() {
     stopped = true;
     pending.delete(node);
-    try {
-      reset();
-    } finally {
-      untrackSources(node);
-    }
+    reset();
+    untrackSources(node);
   }
 
   owner?.owned.push(stop);
@@ -347,13 +308,6 @@ export function effect(fn) {
   flushing = true;
   try {
     node.run();
-  } catch (error) {
-    try {
-      stop();
-    } catch (stopError) {
-      report(stopError);
-    }
-    throw error;
   } finally {
     if (outermost) {
       flushing = false;
@@ -397,6 +351,81 @@ export function read(value) {
 }
 
 /**
+ * Loads a value with `fetcher`, and again whenever `source` changes, like Solid's createResource. While `source`
+ * gives null, undefined or false nothing is loaded. `fetcher` gets the source value and an AbortSignal that aborts
+ * when a newer load starts or the resource is stopped with its owner; the result of an older load is ignored.
+ * @param {unknown} source a signal or getter, or the fetcher when there is no source
+ * @param {(value: any, info: { signal: AbortSignal }) => unknown} [fetcher]
+ */
+export function resource(source, fetcher) {
+  if (!fetcher) {
+    fetcher = /** @type {(value: any, info: { signal: AbortSignal }) => unknown} */ (source);
+    source = () => true;
+  }
+  const load = fetcher;
+  const value = state(/** @type {unknown} */ (undefined));
+  const loading = state(false);
+  const error = state(/** @type {unknown} */ (undefined));
+  /** @type {unknown} */
+  let input;
+  /** @type {AbortController | undefined} */
+  let controller;
+
+  function start() {
+    controller?.abort();
+    const own = new AbortController();
+    controller = own;
+    loading.set(true);
+    error.set(undefined);
+    // Called inside the promise, so a synchronous throw from the fetcher becomes the error too.
+    new Promise((resolve) => resolve(untrack(() => load(input, { signal: own.signal })))).then(
+      (result) => {
+        if (controller === own) {
+          value.set(result);
+          loading.set(false);
+        }
+      },
+      (reason) => {
+        if (controller === own) {
+          error.set(reason);
+          loading.set(false);
+        }
+      },
+    );
+  }
+
+  const active = () => input != null && input !== false;
+
+  effect(() => {
+    input = read(/** @type {import('./signals.d.ts').Reactive<unknown>} */ (source));
+    if (!active()) {
+      loading.set(false);
+      return;
+    }
+    start();
+    return () => {
+      controller?.abort();
+      controller = undefined;
+    };
+  });
+
+  return {
+    [SIGNAL]: true,
+    get: value.get,
+    loading: { [SIGNAL]: true, get: loading.get },
+    error: { [SIGNAL]: true, get: error.get },
+    /** Loads again with the last source value. */
+    refetch() {
+      if (active()) {
+        start();
+      }
+    },
+    /** Sets the value without loading, for example after an optimistic change. */
+    mutate: value.set,
+  };
+}
+
+/**
  * @typedef {{ node: Node, stop: () => void }} Row
  */
 
@@ -415,7 +444,7 @@ export function each(items, render, key = (item) => item) {
   owner?.owned.push(() => {
     const old = rows;
     rows = new Map();
-    runAll([...old.values()].flat().map((row) => row.stop));
+    [...old.values()].flat().forEach((row) => row.stop());
   });
 
   return () => {
@@ -448,25 +477,16 @@ export function each(items, render, key = (item) => item) {
       });
     } catch (error) {
       // The old rows stay as they were; only the rows made in this failed pass are stopped.
-      try {
-        runAll(created.map((row) => row.stop));
-      } catch {
-        // The render error is the one worth reporting.
-      }
+      created.forEach((row) => row.stop());
       throw error;
     }
 
     const kept = new Set([...next.values()].flat());
     const old = rows;
     rows = next;
-    // A dropped row that fails to stop is reported, so the list still shows its new rows.
     for (const row of [...old.values()].flat()) {
       if (!kept.has(row)) {
-        try {
-          row.stop();
-        } catch (error) {
-          report(error);
-        }
+        row.stop();
       }
     }
     return nodes;
@@ -480,15 +500,11 @@ export function each(items, render, key = (item) => item) {
 function createRow(render) {
   /** @type {Owner} */
   const scope = { owned: [] };
-  const stop = () => runAll(scope.owned.splice(0));
+  const stop = () => scope.owned.splice(0).forEach((stopOwned) => stopOwned());
   try {
     return { node: runIn(null, scope, render), stop };
   } catch (error) {
-    try {
-      stop();
-    } catch {
-      // The render error is the one worth reporting.
-    }
+    stop();
     throw error;
   }
 }
@@ -531,12 +547,19 @@ function observe() {
 }
 
 /**
- * Drops nodes whose parent is in the same batch, because walking the parent covers them; a deep tree appended level
- * by level is then walked once instead of once per level.
+ * Drops nodes with an ancestor in the same batch, because walking the ancestor covers them; a deep tree appended
+ * level by level is then walked once instead of once per level.
  * @param {Set<Node>} nodes
  */
 function roots(nodes) {
-  return [...nodes].filter((node) => !node.parentNode || !nodes.has(node.parentNode));
+  return [...nodes].filter((node) => {
+    for (let parent = node.parentNode; parent; parent = parent.parentNode) {
+      if (nodes.has(parent)) {
+        return false;
+      }
+    }
+    return true;
+  });
 }
 
 /**

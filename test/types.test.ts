@@ -1,5 +1,8 @@
 import { div, input, li, ul } from 'fiorejs';
-import { computed, each, read, state, type Reactive } from '@fiorejs/signals';
+import { computed, each, read, resource, state, type Reactive } from '@fiorejs/signals';
+// @ts-expect-error the brand is not exported
+import { SIGNAL } from '@fiorejs/signals';
+void SIGNAL;
 
 const name = state('Ada');
 
@@ -28,3 +31,15 @@ const doubled: number = read(computed(() => 2));
 void doubled;
 
 ul({ children: each(state(['a', 'b']), (item) => li({ children: item })) });
+
+const user = resource(name, async (value, { signal }) => ({ value, aborted: signal.aborted }));
+const loaded: { value: string; aborted: boolean } | undefined = user.get();
+const busy: boolean = user.loading.get();
+void loaded;
+void busy;
+user.refetch();
+user.mutate({ value: 'x', aborted: false });
+div({ children: () => user.get()?.value ?? 'loading' });
+const plain = resource(() => 42);
+const answer: number | undefined = plain.get();
+void answer;

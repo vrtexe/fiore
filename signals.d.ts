@@ -32,6 +32,28 @@ export function each<T, N extends Node = Node>(
   key?: (item: T) => unknown,
 ): () => N[];
 
+export interface Resource<T> extends Signal<T | undefined> {
+  /** True while a load is running. */
+  readonly loading: Signal<boolean>;
+  /** The error of the last load, cleared when a new load starts. */
+  readonly error: Signal<unknown>;
+  /** Loads again with the last source value. */
+  refetch(): void;
+  /** Sets the value without loading. */
+  mutate(value: T): void;
+}
+
+export interface ResourceInfo {
+  /** Aborts when a newer load starts or the resource is stopped. */
+  signal: AbortSignal;
+}
+
+export function resource<T>(fetcher: (value: true, info: ResourceInfo) => T | Promise<T>): Resource<T>;
+export function resource<S, T>(
+  source: Signal<S | null | undefined | false> | (() => S | null | undefined | false),
+  fetcher: (value: S, info: ResourceInfo) => T | Promise<T>,
+): Resource<T>;
+
 export const plugin: Plugin;
 
 declare module 'fiorejs/type/base.dom.d.ts' {
@@ -40,3 +62,5 @@ declare module 'fiorejs/type/base.dom.d.ts' {
     getter: () => T;
   }
 }
+
+export {};
