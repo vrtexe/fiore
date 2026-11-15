@@ -26,6 +26,10 @@ export function effect(fn: () => void | (() => void)): () => void;
 export function untrack<T>(fn: () => T): T;
 export function isSignal(value: unknown): value is Signal<unknown>;
 export function read<T>(value: Reactive<T>): T;
+/** A class list for `className` or the `class` attribute: strings are always on, object keys while their value is truthy. */
+export function classList(
+  entries: string | Record<string, Reactive<unknown>> | readonly (string | Record<string, Reactive<unknown>>)[],
+): () => string;
 export function each<T, N extends Node = Node>(
   items: Reactive<readonly T[]>,
   render: (item: T, index: number) => N,

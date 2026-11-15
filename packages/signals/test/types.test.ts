@@ -1,5 +1,5 @@
 import { div, input, li, ul } from 'fiorejs';
-import { computed, each, read, resource, state, type Reactive } from '@fiorejs/signals';
+import { classList, computed, each, read, resource, state, type Reactive } from '@fiorejs/signals';
 // @ts-expect-error the brand is not exported
 import { SIGNAL } from '@fiorejs/signals';
 void SIGNAL;
@@ -8,7 +8,7 @@ const name = state('Ada');
 
 input({ props: { value: name } });
 div({
-  attributes: { title: () => name.get() },
+  attrs: { title: () => name.get() },
   children: [name, () => (name.get().length > 3 ? 'long' : 'short')],
 });
 
@@ -43,3 +43,5 @@ div({ children: () => user.get()?.value ?? 'loading' });
 const plain = resource(() => 42);
 const answer: number | undefined = plain.get();
 void answer;
+
+div.props({ className: classList(['card', { active: name, disabled: () => false }]) }).of();

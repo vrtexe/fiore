@@ -138,7 +138,7 @@ export function jsx(type, props) {
   const definition =
     type.includes('-') && typeof customElements !== 'undefined' ? customElements.get(type) : undefined;
   /** @type {Record<string, any>} */
-  const data = { props: {}, attributes: {}, event: {}, children: flatten(children) };
+  const data = { props: {}, attrs: {}, on: {}, children: flatten(children) };
 
   for (const [name, value] of Object.entries(rest)) {
     // A key inside a spread object is ignored like a key written on the element.
@@ -147,22 +147,22 @@ export function jsx(type, props) {
     }
     if (HANDLER.test(name)) {
       if (value != null) {
-        data.event[name.slice(2).toLowerCase()] = value;
+        data.on[name.slice(2).toLowerCase()] = value;
       }
     } else if (value === null) {
       // null removes the attribute instead of writing "null" into a property.
-      data.attributes[name] = null;
+      data.attrs[name] = null;
     } else if (name === 'style' && typeof value === 'object') {
       data.props.style = value;
     } else if (!isSvg && isProperty(type, name, value, definition)) {
       data.props[name] = value;
     } else {
-      data.attributes[name] = value;
+      data.attrs[name] = value;
     }
   }
 
   // @ts-expect-error tag is checked by the JSX types
-  return isSvg ? svgElement(type, data) : element(type, data);
+  return isSvg ? svgElement(type)(data) : element(type)(data);
 }
 
 /**
@@ -172,7 +172,7 @@ export function jsx(type, props) {
 export function Fragment({ children }) {
   // A range moves the nodes in one step; spreading them as arguments overflows for very long lists.
   const range = document.createRange();
-  range.selectNodeContents(element('div', { children: flatten(children) }));
+  range.selectNodeContents(element('div')(flatten(children)));
   return range.extractContents();
 }
 

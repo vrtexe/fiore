@@ -351,6 +351,20 @@ export function read(value) {
 }
 
 /**
+ * A getter for `className` or the `class` attribute that lists classes by condition: strings are always on, and the keys
+ * of an object are on while their value, a boolean, signal or getter, is truthy.
+ * @param {string | Record<string, unknown> | readonly (string | Record<string, unknown>)[]} entries
+ * @returns {() => string}
+ */
+export function classList(entries) {
+  const list = Array.isArray(entries) ? entries : [entries];
+  return () =>
+    list
+      .flatMap((entry) => (typeof entry === 'string' ? [entry] : Object.keys(entry).filter((name) => read(entry[name]))))
+      .join(' ');
+}
+
+/**
  * Loads a value with `fetcher`, and again whenever `source` changes, like Solid's createResource. While `source`
  * gives null, undefined or false nothing is loaded. `fetcher` gets the source value and an AbortSignal that aborts
  * when a newer load starts or the resource is stopped with its owner; the result of an older load is ignored.

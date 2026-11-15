@@ -10,7 +10,7 @@ Object.assign(globalThis, {
 });
 
 const { button, div, span, input } = await import('fiorejs');
-const { state, computed, effect, untrack, read, each, resource } = await import('@fiorejs/signals');
+const { state, computed, effect, untrack, read, each, resource, classList } = await import('@fiorejs/signals');
 
 const tick = () => new Promise((resolve) => setTimeout(resolve));
 
@@ -117,7 +117,7 @@ test('read accepts plain values, signals and getters', () => {
 test('signals and getters bind to properties, attributes and children', () => {
   const name = state('Ada');
   const onclick = () => 'clicked';
-  const field = input({ props: { value: name, onclick }, attributes: { title: () => `Name: ${name.get()}` } });
+  const field = input({ props: { value: name, onclick }, attrs: { title: () => `Name: ${name.get()}` } });
   const label = div({ children: ['Hello ', name] });
 
   name.set('Grace');
@@ -464,7 +464,7 @@ test('each keeps its rows when a render fails partway through', async () => {
 
 test('a function in an on* attribute or prop is never called as a binding, in any case', () => {
   let calls = 0;
-  button({ attributes: { OnClick: () => calls++ }, props: { ONCLICK: () => calls++ } });
+  button({ attrs: { OnClick: () => calls++ }, props: { ONCLICK: () => calls++ } });
 
   assert.equal(calls, 0);
 });
@@ -1086,4 +1086,19 @@ test('a resource binds as a child', async () => {
 
   assert.equal(label.textContent, 'Ada');
   assert.equal(status.textContent, 'done');
+});
+
+test('classList keeps strings on and toggles object keys by booleans, signals and getters', () => {
+  const active = state(false);
+  const enabled = state(true);
+  const card = div({
+    props: { className: classList(['card', { active, disabled: () => !enabled.get(), shadow: true, hidden: false }]) },
+  });
+  const shape = div({ attrs: { class: classList({ hot: active }) } });
+
+  assert.equal(card.className, 'card shadow');
+  active.set(true);
+  enabled.set(false);
+  assert.equal(card.className, 'card active disabled shadow');
+  assert.equal(shape.getAttribute('class'), 'hot');
 });
