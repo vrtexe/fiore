@@ -1,563 +1,569 @@
+/** @typedef {import('./types/base.dom.d.ts').Plugin} Plugin */
+/** @typedef {import('./types/base.dom.d.ts').BindContext} BindContext */
 /**
- * @param {ElementData<'a'>} data
+ * @template T
+ * @typedef {import('./types/base.dom.d.ts').Live<T>} Live
+ */
+/**
+ * @param {ElementData<'a'>} [data]
  * @returns {HTMLElementTagNameMap['a']}
  */
-export function a(data: ElementData<"a">): HTMLElementTagNameMap["a"];
+export function a(data?: ElementData<"a">): HTMLElementTagNameMap["a"];
 /**
- * @param {ElementData<'abbr'>} data
+ * @param {ElementData<'abbr'>} [data]
  * @returns {HTMLElementTagNameMap['abbr']}
  */
-export function abbr(data: ElementData<"abbr">): HTMLElementTagNameMap["abbr"];
+export function abbr(data?: ElementData<"abbr">): HTMLElementTagNameMap["abbr"];
 /**
- * @param {ElementData<'address'>} data
+ * @param {ElementData<'address'>} [data]
  * @returns {HTMLElementTagNameMap['address']}
  */
-export function address(data: ElementData<"address">): HTMLElementTagNameMap["address"];
+export function address(data?: ElementData<"address">): HTMLElementTagNameMap["address"];
 /**
- * @param {ElementData<'area'>} data
+ * @param {ElementData<'area'>} [data]
  * @returns {HTMLElementTagNameMap['area']}
  */
-export function area(data: ElementData<"area">): HTMLElementTagNameMap["area"];
+export function area(data?: ElementData<"area">): HTMLElementTagNameMap["area"];
 /**
- * @param {ElementData<'article'>} data
+ * @param {ElementData<'article'>} [data]
  * @returns {HTMLElementTagNameMap['article']}
  */
-export function article(data: ElementData<"article">): HTMLElementTagNameMap["article"];
+export function article(data?: ElementData<"article">): HTMLElementTagNameMap["article"];
 /**
- * @param {ElementData<'aside'>} data
+ * @param {ElementData<'aside'>} [data]
  * @returns {HTMLElementTagNameMap['aside']}
  */
-export function aside(data: ElementData<"aside">): HTMLElementTagNameMap["aside"];
+export function aside(data?: ElementData<"aside">): HTMLElementTagNameMap["aside"];
 /**
- * @param {ElementData<'audio'>} data
+ * @param {ElementData<'audio'>} [data]
  * @returns {HTMLElementTagNameMap['audio']}
  */
-export function audio(data: ElementData<"audio">): HTMLElementTagNameMap["audio"];
+export function audio(data?: ElementData<"audio">): HTMLElementTagNameMap["audio"];
 /**
- * @param {ElementData<'b'>} data
+ * @param {ElementData<'b'>} [data]
  * @returns {HTMLElementTagNameMap['b']}
  */
-export function b(data: ElementData<"b">): HTMLElementTagNameMap["b"];
+export function b(data?: ElementData<"b">): HTMLElementTagNameMap["b"];
 /**
- * @param {ElementData<'base'>} data
+ * @param {ElementData<'base'>} [data]
  * @returns {HTMLElementTagNameMap['base']}
  */
-export function base(data: ElementData<"base">): HTMLElementTagNameMap["base"];
+export function base(data?: ElementData<"base">): HTMLElementTagNameMap["base"];
 /**
- * @param {ElementData<'bdi'>} data
+ * @param {ElementData<'bdi'>} [data]
  * @returns {HTMLElementTagNameMap['bdi']}
  */
-export function bdi(data: ElementData<"bdi">): HTMLElementTagNameMap["bdi"];
+export function bdi(data?: ElementData<"bdi">): HTMLElementTagNameMap["bdi"];
 /**
- * @param {ElementData<'bdo'>} data
+ * @param {ElementData<'bdo'>} [data]
  * @returns {HTMLElementTagNameMap['bdo']}
  */
-export function bdo(data: ElementData<"bdo">): HTMLElementTagNameMap["bdo"];
+export function bdo(data?: ElementData<"bdo">): HTMLElementTagNameMap["bdo"];
 /**
- * @param {ElementData<'blockquote'>} data
+ * @param {ElementData<'blockquote'>} [data]
  * @returns {HTMLElementTagNameMap['blockquote']}
  */
-export function blockquote(data: ElementData<"blockquote">): HTMLElementTagNameMap["blockquote"];
+export function blockquote(data?: ElementData<"blockquote">): HTMLElementTagNameMap["blockquote"];
 /**
- * @param {ElementData<'body'>} data
+ * @param {ElementData<'body'>} [data]
  * @returns {HTMLElementTagNameMap['body']}
  */
-export function body(data: ElementData<"body">): HTMLElementTagNameMap["body"];
+export function body(data?: ElementData<"body">): HTMLElementTagNameMap["body"];
 /**
- * @param {ElementData<'br'>} data
+ * @param {ElementData<'br'>} [data]
  * @returns {HTMLElementTagNameMap['br']}
  */
-export function br(data: ElementData<"br">): HTMLElementTagNameMap["br"];
+export function br(data?: ElementData<"br">): HTMLElementTagNameMap["br"];
 /**
- * @param {ElementData<'button'>} data
+ * @param {ElementData<'button'>} [data]
  * @returns {HTMLElementTagNameMap['button']}
  */
-export function button(data: ElementData<"button">): HTMLElementTagNameMap["button"];
+export function button(data?: ElementData<"button">): HTMLElementTagNameMap["button"];
 /**
- * @param {ElementData<'canvas'>} data
+ * @param {ElementData<'canvas'>} [data]
  * @returns {HTMLElementTagNameMap['canvas']}
  */
-export function canvas(data: ElementData<"canvas">): HTMLElementTagNameMap["canvas"];
+export function canvas(data?: ElementData<"canvas">): HTMLElementTagNameMap["canvas"];
 /**
- * @param {ElementData<'caption'>} data
+ * @param {ElementData<'caption'>} [data]
  * @returns {HTMLElementTagNameMap['caption']}
  */
-export function caption(data: ElementData<"caption">): HTMLElementTagNameMap["caption"];
+export function caption(data?: ElementData<"caption">): HTMLElementTagNameMap["caption"];
 /**
- * @param {ElementData<'cite'>} data
+ * @param {ElementData<'cite'>} [data]
  * @returns {HTMLElementTagNameMap['cite']}
  */
-export function cite(data: ElementData<"cite">): HTMLElementTagNameMap["cite"];
+export function cite(data?: ElementData<"cite">): HTMLElementTagNameMap["cite"];
 /**
- * @param {ElementData<'code'>} data
+ * @param {ElementData<'code'>} [data]
  * @returns {HTMLElementTagNameMap['code']}
  */
-export function code(data: ElementData<"code">): HTMLElementTagNameMap["code"];
+export function code(data?: ElementData<"code">): HTMLElementTagNameMap["code"];
 /**
- * @param {ElementData<'col'>} data
+ * @param {ElementData<'col'>} [data]
  * @returns {HTMLElementTagNameMap['col']}
  */
-export function col(data: ElementData<"col">): HTMLElementTagNameMap["col"];
+export function col(data?: ElementData<"col">): HTMLElementTagNameMap["col"];
 /**
- * @param {ElementData<'colgroup'>} data
+ * @param {ElementData<'colgroup'>} [data]
  * @returns {HTMLElementTagNameMap['colgroup']}
  */
-export function colgroup(data: ElementData<"colgroup">): HTMLElementTagNameMap["colgroup"];
+export function colgroup(data?: ElementData<"colgroup">): HTMLElementTagNameMap["colgroup"];
 /**
- * @param {ElementData<'data'>} data
+ * @param {ElementData<'data'>} [data]
  * @returns {HTMLElementTagNameMap['data']}
  */
-export function data(data: ElementData<"data">): HTMLElementTagNameMap["data"];
+export function data(data?: ElementData<"data">): HTMLElementTagNameMap["data"];
 /**
- * @param {ElementData<'datalist'>} data
+ * @param {ElementData<'datalist'>} [data]
  * @returns {HTMLElementTagNameMap['datalist']}
  */
-export function datalist(data: ElementData<"datalist">): HTMLElementTagNameMap["datalist"];
+export function datalist(data?: ElementData<"datalist">): HTMLElementTagNameMap["datalist"];
 /**
- * @param {ElementData<'dd'>} data
+ * @param {ElementData<'dd'>} [data]
  * @returns {HTMLElementTagNameMap['dd']}
  */
-export function dd(data: ElementData<"dd">): HTMLElementTagNameMap["dd"];
+export function dd(data?: ElementData<"dd">): HTMLElementTagNameMap["dd"];
 /**
- * @param {ElementData<'del'>} data
+ * @param {ElementData<'del'>} [data]
  * @returns {HTMLElementTagNameMap['del']}
  */
-export function del(data: ElementData<"del">): HTMLElementTagNameMap["del"];
+export function del(data?: ElementData<"del">): HTMLElementTagNameMap["del"];
 /**
- * @param {ElementData<'details'>} data
+ * @param {ElementData<'details'>} [data]
  * @returns {HTMLElementTagNameMap['details']}
  */
-export function details(data: ElementData<"details">): HTMLElementTagNameMap["details"];
+export function details(data?: ElementData<"details">): HTMLElementTagNameMap["details"];
 /**
- * @param {ElementData<'dfn'>} data
+ * @param {ElementData<'dfn'>} [data]
  * @returns {HTMLElementTagNameMap['dfn']}
  */
-export function dfn(data: ElementData<"dfn">): HTMLElementTagNameMap["dfn"];
+export function dfn(data?: ElementData<"dfn">): HTMLElementTagNameMap["dfn"];
 /**
- * @param {ElementData<'dialog'>} data
+ * @param {ElementData<'dialog'>} [data]
  * @returns {HTMLElementTagNameMap['dialog']}
  */
-export function dialog(data: ElementData<"dialog">): HTMLElementTagNameMap["dialog"];
+export function dialog(data?: ElementData<"dialog">): HTMLElementTagNameMap["dialog"];
 /**
- * @param {ElementData<'div'>} data
+ * @param {ElementData<'div'>} [data]
  * @returns {HTMLElementTagNameMap['div']}
  */
-export function div(data: ElementData<"div">): HTMLElementTagNameMap["div"];
+export function div(data?: ElementData<"div">): HTMLElementTagNameMap["div"];
 /**
- * @param {ElementData<'dl'>} data
+ * @param {ElementData<'dl'>} [data]
  * @returns {HTMLElementTagNameMap['dl']}
  */
-export function dl(data: ElementData<"dl">): HTMLElementTagNameMap["dl"];
+export function dl(data?: ElementData<"dl">): HTMLElementTagNameMap["dl"];
 /**
- * @param {ElementData<'dt'>} data
+ * @param {ElementData<'dt'>} [data]
  * @returns {HTMLElementTagNameMap['dt']}
  */
-export function dt(data: ElementData<"dt">): HTMLElementTagNameMap["dt"];
+export function dt(data?: ElementData<"dt">): HTMLElementTagNameMap["dt"];
 /**
- * @param {ElementData<'em'>} data
+ * @param {ElementData<'em'>} [data]
  * @returns {HTMLElementTagNameMap['em']}
  */
-export function em(data: ElementData<"em">): HTMLElementTagNameMap["em"];
+export function em(data?: ElementData<"em">): HTMLElementTagNameMap["em"];
 /**
- * @param {ElementData<'embed'>} data
+ * @param {ElementData<'embed'>} [data]
  * @returns {HTMLElementTagNameMap['embed']}
  */
-export function embed(data: ElementData<"embed">): HTMLElementTagNameMap["embed"];
+export function embed(data?: ElementData<"embed">): HTMLElementTagNameMap["embed"];
 /**
- * @param {ElementData<'fieldset'>} data
+ * @param {ElementData<'fieldset'>} [data]
  * @returns {HTMLElementTagNameMap['fieldset']}
  */
-export function fieldset(data: ElementData<"fieldset">): HTMLElementTagNameMap["fieldset"];
+export function fieldset(data?: ElementData<"fieldset">): HTMLElementTagNameMap["fieldset"];
 /**
- * @param {ElementData<'figcaption'>} data
+ * @param {ElementData<'figcaption'>} [data]
  * @returns {HTMLElementTagNameMap['figcaption']}
  */
-export function figcaption(data: ElementData<"figcaption">): HTMLElementTagNameMap["figcaption"];
+export function figcaption(data?: ElementData<"figcaption">): HTMLElementTagNameMap["figcaption"];
 /**
- * @param {ElementData<'figure'>} data
+ * @param {ElementData<'figure'>} [data]
  * @returns {HTMLElementTagNameMap['figure']}
  */
-export function figure(data: ElementData<"figure">): HTMLElementTagNameMap["figure"];
+export function figure(data?: ElementData<"figure">): HTMLElementTagNameMap["figure"];
 /**
- * @param {ElementData<'footer'>} data
+ * @param {ElementData<'footer'>} [data]
  * @returns {HTMLElementTagNameMap['footer']}
  */
-export function footer(data: ElementData<"footer">): HTMLElementTagNameMap["footer"];
+export function footer(data?: ElementData<"footer">): HTMLElementTagNameMap["footer"];
 /**
- * @param {ElementData<'form'>} data
+ * @param {ElementData<'form'>} [data]
  * @returns {HTMLElementTagNameMap['form']}
  */
-export function form(data: ElementData<"form">): HTMLElementTagNameMap["form"];
+export function form(data?: ElementData<"form">): HTMLElementTagNameMap["form"];
 /**
- * @param {ElementData<'h1'>} data
+ * @param {ElementData<'h1'>} [data]
  * @returns {HTMLElementTagNameMap['h1']}
  */
-export function h1(data: ElementData<"h1">): HTMLElementTagNameMap["h1"];
+export function h1(data?: ElementData<"h1">): HTMLElementTagNameMap["h1"];
 /**
- * @param {ElementData<'h2'>} data
+ * @param {ElementData<'h2'>} [data]
  * @returns {HTMLElementTagNameMap['h2']}
  */
-export function h2(data: ElementData<"h2">): HTMLElementTagNameMap["h2"];
+export function h2(data?: ElementData<"h2">): HTMLElementTagNameMap["h2"];
 /**
- * @param {ElementData<'h3'>} data
+ * @param {ElementData<'h3'>} [data]
  * @returns {HTMLElementTagNameMap['h3']}
  */
-export function h3(data: ElementData<"h3">): HTMLElementTagNameMap["h3"];
+export function h3(data?: ElementData<"h3">): HTMLElementTagNameMap["h3"];
 /**
- * @param {ElementData<'h4'>} data
+ * @param {ElementData<'h4'>} [data]
  * @returns {HTMLElementTagNameMap['h4']}
  */
-export function h4(data: ElementData<"h4">): HTMLElementTagNameMap["h4"];
+export function h4(data?: ElementData<"h4">): HTMLElementTagNameMap["h4"];
 /**
- * @param {ElementData<'h5'>} data
+ * @param {ElementData<'h5'>} [data]
  * @returns {HTMLElementTagNameMap['h5']}
  */
-export function h5(data: ElementData<"h5">): HTMLElementTagNameMap["h5"];
+export function h5(data?: ElementData<"h5">): HTMLElementTagNameMap["h5"];
 /**
- * @param {ElementData<'h6'>} data
+ * @param {ElementData<'h6'>} [data]
  * @returns {HTMLElementTagNameMap['h6']}
  */
-export function h6(data: ElementData<"h6">): HTMLElementTagNameMap["h6"];
+export function h6(data?: ElementData<"h6">): HTMLElementTagNameMap["h6"];
 /**
- * @param {ElementData<'head'>} data
+ * @param {ElementData<'head'>} [data]
  * @returns {HTMLElementTagNameMap['head']}
  */
-export function head(data: ElementData<"head">): HTMLElementTagNameMap["head"];
+export function head(data?: ElementData<"head">): HTMLElementTagNameMap["head"];
 /**
- * @param {ElementData<'header'>} data
+ * @param {ElementData<'header'>} [data]
  * @returns {HTMLElementTagNameMap['header']}
  */
-export function header(data: ElementData<"header">): HTMLElementTagNameMap["header"];
+export function header(data?: ElementData<"header">): HTMLElementTagNameMap["header"];
 /**
- * @param {ElementData<'hgroup'>} data
+ * @param {ElementData<'hgroup'>} [data]
  * @returns {HTMLElementTagNameMap['hgroup']}
  */
-export function hgroup(data: ElementData<"hgroup">): HTMLElementTagNameMap["hgroup"];
+export function hgroup(data?: ElementData<"hgroup">): HTMLElementTagNameMap["hgroup"];
 /**
- * @param {ElementData<'hr'>} data
+ * @param {ElementData<'hr'>} [data]
  * @returns {HTMLElementTagNameMap['hr']}
  */
-export function hr(data: ElementData<"hr">): HTMLElementTagNameMap["hr"];
+export function hr(data?: ElementData<"hr">): HTMLElementTagNameMap["hr"];
 /**
- * @param {ElementData<'html'>} data
+ * @param {ElementData<'html'>} [data]
  * @returns {HTMLElementTagNameMap['html']}
  */
-export function html(data: ElementData<"html">): HTMLElementTagNameMap["html"];
+export function html(data?: ElementData<"html">): HTMLElementTagNameMap["html"];
 /**
- * @param {ElementData<'i'>} data
+ * @param {ElementData<'i'>} [data]
  * @returns {HTMLElementTagNameMap['i']}
  */
-export function i(data: ElementData<"i">): HTMLElementTagNameMap["i"];
+export function i(data?: ElementData<"i">): HTMLElementTagNameMap["i"];
 /**
- * @param {ElementData<'iframe'>} data
+ * @param {ElementData<'iframe'>} [data]
  * @returns {HTMLElementTagNameMap['iframe']}
  */
-export function iframe(data: ElementData<"iframe">): HTMLElementTagNameMap["iframe"];
+export function iframe(data?: ElementData<"iframe">): HTMLElementTagNameMap["iframe"];
 /**
- * @param {ElementData<'img'>} data
+ * @param {ElementData<'img'>} [data]
  * @returns {HTMLElementTagNameMap['img']}
  */
-export function img(data: ElementData<"img">): HTMLElementTagNameMap["img"];
+export function img(data?: ElementData<"img">): HTMLElementTagNameMap["img"];
 /**
- * @param {ElementData<'input'>} data
+ * @param {ElementData<'input'>} [data]
  * @returns {HTMLElementTagNameMap['input']}
  */
-export function input(data: ElementData<"input">): HTMLElementTagNameMap["input"];
+export function input(data?: ElementData<"input">): HTMLElementTagNameMap["input"];
 /**
- * @param {ElementData<'ins'>} data
+ * @param {ElementData<'ins'>} [data]
  * @returns {HTMLElementTagNameMap['ins']}
  */
-export function ins(data: ElementData<"ins">): HTMLElementTagNameMap["ins"];
+export function ins(data?: ElementData<"ins">): HTMLElementTagNameMap["ins"];
 /**
- * @param {ElementData<'kbd'>} data
+ * @param {ElementData<'kbd'>} [data]
  * @returns {HTMLElementTagNameMap['kbd']}
  */
-export function kbd(data: ElementData<"kbd">): HTMLElementTagNameMap["kbd"];
+export function kbd(data?: ElementData<"kbd">): HTMLElementTagNameMap["kbd"];
 /**
- * @param {ElementData<'label'>} data
+ * @param {ElementData<'label'>} [data]
  * @returns {HTMLElementTagNameMap['label']}
  */
-export function label(data: ElementData<"label">): HTMLElementTagNameMap["label"];
+export function label(data?: ElementData<"label">): HTMLElementTagNameMap["label"];
 /**
- * @param {ElementData<'legend'>} data
+ * @param {ElementData<'legend'>} [data]
  * @returns {HTMLElementTagNameMap['legend']}
  */
-export function legend(data: ElementData<"legend">): HTMLElementTagNameMap["legend"];
+export function legend(data?: ElementData<"legend">): HTMLElementTagNameMap["legend"];
 /**
- * @param {ElementData<'li'>} data
+ * @param {ElementData<'li'>} [data]
  * @returns {HTMLElementTagNameMap['li']}
  */
-export function li(data: ElementData<"li">): HTMLElementTagNameMap["li"];
+export function li(data?: ElementData<"li">): HTMLElementTagNameMap["li"];
 /**
- * @param {ElementData<'link'>} data
+ * @param {ElementData<'link'>} [data]
  * @returns {HTMLElementTagNameMap['link']}
  */
-export function link(data: ElementData<"link">): HTMLElementTagNameMap["link"];
+export function link(data?: ElementData<"link">): HTMLElementTagNameMap["link"];
 /**
- * @param {ElementData<'main'>} data
+ * @param {ElementData<'main'>} [data]
  * @returns {HTMLElementTagNameMap['main']}
  */
-export function main(data: ElementData<"main">): HTMLElementTagNameMap["main"];
+export function main(data?: ElementData<"main">): HTMLElementTagNameMap["main"];
 /**
- * @param {ElementData<'map'>} data
+ * @param {ElementData<'map'>} [data]
  * @returns {HTMLElementTagNameMap['map']}
  */
-export function map(data: ElementData<"map">): HTMLElementTagNameMap["map"];
+export function map(data?: ElementData<"map">): HTMLElementTagNameMap["map"];
 /**
- * @param {ElementData<'mark'>} data
+ * @param {ElementData<'mark'>} [data]
  * @returns {HTMLElementTagNameMap['mark']}
  */
-export function mark(data: ElementData<"mark">): HTMLElementTagNameMap["mark"];
+export function mark(data?: ElementData<"mark">): HTMLElementTagNameMap["mark"];
 /**
- * @param {ElementData<'menu'>} data
+ * @param {ElementData<'menu'>} [data]
  * @returns {HTMLElementTagNameMap['menu']}
  */
-export function menu(data: ElementData<"menu">): HTMLElementTagNameMap["menu"];
+export function menu(data?: ElementData<"menu">): HTMLElementTagNameMap["menu"];
 /**
- * @param {ElementData<'meta'>} data
+ * @param {ElementData<'meta'>} [data]
  * @returns {HTMLElementTagNameMap['meta']}
  */
-export function meta(data: ElementData<"meta">): HTMLElementTagNameMap["meta"];
+export function meta(data?: ElementData<"meta">): HTMLElementTagNameMap["meta"];
 /**
- * @param {ElementData<'meter'>} data
+ * @param {ElementData<'meter'>} [data]
  * @returns {HTMLElementTagNameMap['meter']}
  */
-export function meter(data: ElementData<"meter">): HTMLElementTagNameMap["meter"];
+export function meter(data?: ElementData<"meter">): HTMLElementTagNameMap["meter"];
 /**
- * @param {ElementData<'nav'>} data
+ * @param {ElementData<'nav'>} [data]
  * @returns {HTMLElementTagNameMap['nav']}
  */
-export function nav(data: ElementData<"nav">): HTMLElementTagNameMap["nav"];
+export function nav(data?: ElementData<"nav">): HTMLElementTagNameMap["nav"];
 /**
- * @param {ElementData<'noscript'>} data
+ * @param {ElementData<'noscript'>} [data]
  * @returns {HTMLElementTagNameMap['noscript']}
  */
-export function noscript(data: ElementData<"noscript">): HTMLElementTagNameMap["noscript"];
+export function noscript(data?: ElementData<"noscript">): HTMLElementTagNameMap["noscript"];
 /**
- * @param {ElementData<'object'>} data
+ * @param {ElementData<'object'>} [data]
  * @returns {HTMLElementTagNameMap['object']}
  */
-export function object(data: ElementData<"object">): HTMLElementTagNameMap["object"];
+export function object(data?: ElementData<"object">): HTMLElementTagNameMap["object"];
 /**
- * @param {ElementData<'ol'>} data
+ * @param {ElementData<'ol'>} [data]
  * @returns {HTMLElementTagNameMap['ol']}
  */
-export function ol(data: ElementData<"ol">): HTMLElementTagNameMap["ol"];
+export function ol(data?: ElementData<"ol">): HTMLElementTagNameMap["ol"];
 /**
- * @param {ElementData<'optgroup'>} data
+ * @param {ElementData<'optgroup'>} [data]
  * @returns {HTMLElementTagNameMap['optgroup']}
  */
-export function optgroup(data: ElementData<"optgroup">): HTMLElementTagNameMap["optgroup"];
+export function optgroup(data?: ElementData<"optgroup">): HTMLElementTagNameMap["optgroup"];
 /**
- * @param {ElementData<'option'>} data
+ * @param {ElementData<'option'>} [data]
  * @returns {HTMLElementTagNameMap['option']}
  */
-export function option(data: ElementData<"option">): HTMLElementTagNameMap["option"];
+export function option(data?: ElementData<"option">): HTMLElementTagNameMap["option"];
 /**
- * @param {ElementData<'output'>} data
+ * @param {ElementData<'output'>} [data]
  * @returns {HTMLElementTagNameMap['output']}
  */
-export function output(data: ElementData<"output">): HTMLElementTagNameMap["output"];
+export function output(data?: ElementData<"output">): HTMLElementTagNameMap["output"];
 /**
- * @param {ElementData<'p'>} data
+ * @param {ElementData<'p'>} [data]
  * @returns {HTMLElementTagNameMap['p']}
  */
-export function p(data: ElementData<"p">): HTMLElementTagNameMap["p"];
+export function p(data?: ElementData<"p">): HTMLElementTagNameMap["p"];
 /**
- * @param {ElementData<'picture'>} data
+ * @param {ElementData<'picture'>} [data]
  * @returns {HTMLElementTagNameMap['picture']}
  */
-export function picture(data: ElementData<"picture">): HTMLElementTagNameMap["picture"];
+export function picture(data?: ElementData<"picture">): HTMLElementTagNameMap["picture"];
 /**
- * @param {ElementData<'pre'>} data
+ * @param {ElementData<'pre'>} [data]
  * @returns {HTMLElementTagNameMap['pre']}
  */
-export function pre(data: ElementData<"pre">): HTMLElementTagNameMap["pre"];
+export function pre(data?: ElementData<"pre">): HTMLElementTagNameMap["pre"];
 /**
- * @param {ElementData<'progress'>} data
+ * @param {ElementData<'progress'>} [data]
  * @returns {HTMLElementTagNameMap['progress']}
  */
-export function progress(data: ElementData<"progress">): HTMLElementTagNameMap["progress"];
+export function progress(data?: ElementData<"progress">): HTMLElementTagNameMap["progress"];
 /**
- * @param {ElementData<'q'>} data
+ * @param {ElementData<'q'>} [data]
  * @returns {HTMLElementTagNameMap['q']}
  */
-export function q(data: ElementData<"q">): HTMLElementTagNameMap["q"];
+export function q(data?: ElementData<"q">): HTMLElementTagNameMap["q"];
 /**
- * @param {ElementData<'rp'>} data
+ * @param {ElementData<'rp'>} [data]
  * @returns {HTMLElementTagNameMap['rp']}
  */
-export function rp(data: ElementData<"rp">): HTMLElementTagNameMap["rp"];
+export function rp(data?: ElementData<"rp">): HTMLElementTagNameMap["rp"];
 /**
- * @param {ElementData<'rt'>} data
+ * @param {ElementData<'rt'>} [data]
  * @returns {HTMLElementTagNameMap['rt']}
  */
-export function rt(data: ElementData<"rt">): HTMLElementTagNameMap["rt"];
+export function rt(data?: ElementData<"rt">): HTMLElementTagNameMap["rt"];
 /**
- * @param {ElementData<'ruby'>} data
+ * @param {ElementData<'ruby'>} [data]
  * @returns {HTMLElementTagNameMap['ruby']}
  */
-export function ruby(data: ElementData<"ruby">): HTMLElementTagNameMap["ruby"];
+export function ruby(data?: ElementData<"ruby">): HTMLElementTagNameMap["ruby"];
 /**
- * @param {ElementData<'s'>} data
+ * @param {ElementData<'s'>} [data]
  * @returns {HTMLElementTagNameMap['s']}
  */
-export function s(data: ElementData<"s">): HTMLElementTagNameMap["s"];
+export function s(data?: ElementData<"s">): HTMLElementTagNameMap["s"];
 /**
- * @param {ElementData<'samp'>} data
+ * @param {ElementData<'samp'>} [data]
  * @returns {HTMLElementTagNameMap['samp']}
  */
-export function samp(data: ElementData<"samp">): HTMLElementTagNameMap["samp"];
+export function samp(data?: ElementData<"samp">): HTMLElementTagNameMap["samp"];
 /**
- * @param {ElementData<'script'>} data
+ * @param {ElementData<'script'>} [data]
  * @returns {HTMLElementTagNameMap['script']}
  */
-export function script(data: ElementData<"script">): HTMLElementTagNameMap["script"];
+export function script(data?: ElementData<"script">): HTMLElementTagNameMap["script"];
 /**
- * @param {ElementData<'search'>} data
+ * @param {ElementData<'search'>} [data]
  * @returns {HTMLElementTagNameMap['search']}
  */
-export function search(data: ElementData<"search">): HTMLElementTagNameMap["search"];
+export function search(data?: ElementData<"search">): HTMLElementTagNameMap["search"];
 /**
- * @param {ElementData<'section'>} data
+ * @param {ElementData<'section'>} [data]
  * @returns {HTMLElementTagNameMap['section']}
  */
-export function section(data: ElementData<"section">): HTMLElementTagNameMap["section"];
+export function section(data?: ElementData<"section">): HTMLElementTagNameMap["section"];
 /**
- * @param {ElementData<'select'>} data
+ * @param {ElementData<'select'>} [data]
  * @returns {HTMLElementTagNameMap['select']}
  */
-export function select(data: ElementData<"select">): HTMLElementTagNameMap["select"];
+export function select(data?: ElementData<"select">): HTMLElementTagNameMap["select"];
 /**
- * @param {ElementData<'slot'>} data
+ * @param {ElementData<'slot'>} [data]
  * @returns {HTMLElementTagNameMap['slot']}
  */
-export function slot(data: ElementData<"slot">): HTMLElementTagNameMap["slot"];
+export function slot(data?: ElementData<"slot">): HTMLElementTagNameMap["slot"];
 /**
- * @param {ElementData<'small'>} data
+ * @param {ElementData<'small'>} [data]
  * @returns {HTMLElementTagNameMap['small']}
  */
-export function small(data: ElementData<"small">): HTMLElementTagNameMap["small"];
+export function small(data?: ElementData<"small">): HTMLElementTagNameMap["small"];
 /**
- * @param {ElementData<'source'>} data
+ * @param {ElementData<'source'>} [data]
  * @returns {HTMLElementTagNameMap['source']}
  */
-export function source(data: ElementData<"source">): HTMLElementTagNameMap["source"];
+export function source(data?: ElementData<"source">): HTMLElementTagNameMap["source"];
 /**
- * @param {ElementData<'span'>} data
+ * @param {ElementData<'span'>} [data]
  * @returns {HTMLElementTagNameMap['span']}
  */
-export function span(data: ElementData<"span">): HTMLElementTagNameMap["span"];
+export function span(data?: ElementData<"span">): HTMLElementTagNameMap["span"];
 /**
- * @param {ElementData<'strong'>} data
+ * @param {ElementData<'strong'>} [data]
  * @returns {HTMLElementTagNameMap['strong']}
  */
-export function strong(data: ElementData<"strong">): HTMLElementTagNameMap["strong"];
+export function strong(data?: ElementData<"strong">): HTMLElementTagNameMap["strong"];
 /**
- * @param {ElementData<'style'>} data
+ * @param {ElementData<'style'>} [data]
  * @returns {HTMLElementTagNameMap['style']}
  */
-export function style(data: ElementData<"style">): HTMLElementTagNameMap["style"];
+export function style(data?: ElementData<"style">): HTMLElementTagNameMap["style"];
 /**
- * @param {ElementData<'sub'>} data
+ * @param {ElementData<'sub'>} [data]
  * @returns {HTMLElementTagNameMap['sub']}
  */
-export function sub(data: ElementData<"sub">): HTMLElementTagNameMap["sub"];
+export function sub(data?: ElementData<"sub">): HTMLElementTagNameMap["sub"];
 /**
- * @param {ElementData<'summary'>} data
+ * @param {ElementData<'summary'>} [data]
  * @returns {HTMLElementTagNameMap['summary']}
  */
-export function summary(data: ElementData<"summary">): HTMLElementTagNameMap["summary"];
+export function summary(data?: ElementData<"summary">): HTMLElementTagNameMap["summary"];
 /**
- * @param {ElementData<'sup'>} data
+ * @param {ElementData<'sup'>} [data]
  * @returns {HTMLElementTagNameMap['sup']}
  */
-export function sup(data: ElementData<"sup">): HTMLElementTagNameMap["sup"];
+export function sup(data?: ElementData<"sup">): HTMLElementTagNameMap["sup"];
 /**
- * @param {ElementData<'table'>} data
+ * @param {ElementData<'table'>} [data]
  * @returns {HTMLElementTagNameMap['table']}
  */
-export function table(data: ElementData<"table">): HTMLElementTagNameMap["table"];
+export function table(data?: ElementData<"table">): HTMLElementTagNameMap["table"];
 /**
- * @param {ElementData<'tbody'>} data
+ * @param {ElementData<'tbody'>} [data]
  * @returns {HTMLElementTagNameMap['tbody']}
  */
-export function tbody(data: ElementData<"tbody">): HTMLElementTagNameMap["tbody"];
+export function tbody(data?: ElementData<"tbody">): HTMLElementTagNameMap["tbody"];
 /**
- * @param {ElementData<'td'>} data
+ * @param {ElementData<'td'>} [data]
  * @returns {HTMLElementTagNameMap['td']}
  */
-export function td(data: ElementData<"td">): HTMLElementTagNameMap["td"];
+export function td(data?: ElementData<"td">): HTMLElementTagNameMap["td"];
 /**
- * @param {ElementData<'template'>} data
+ * @param {ElementData<'template'>} [data]
  * @returns {HTMLElementTagNameMap['template']}
  */
-export function template(data: ElementData<"template">): HTMLElementTagNameMap["template"];
+export function template(data?: ElementData<"template">): HTMLElementTagNameMap["template"];
 /**
- * @param {ElementData<'textarea'>} data
+ * @param {ElementData<'textarea'>} [data]
  * @returns {HTMLElementTagNameMap['textarea']}
  */
-export function textarea(data: ElementData<"textarea">): HTMLElementTagNameMap["textarea"];
+export function textarea(data?: ElementData<"textarea">): HTMLElementTagNameMap["textarea"];
 /**
- * @param {ElementData<'tfoot'>} data
+ * @param {ElementData<'tfoot'>} [data]
  * @returns {HTMLElementTagNameMap['tfoot']}
  */
-export function tfoot(data: ElementData<"tfoot">): HTMLElementTagNameMap["tfoot"];
+export function tfoot(data?: ElementData<"tfoot">): HTMLElementTagNameMap["tfoot"];
 /**
- * @param {ElementData<'th'>} data
+ * @param {ElementData<'th'>} [data]
  * @returns {HTMLElementTagNameMap['th']}
  */
-export function th(data: ElementData<"th">): HTMLElementTagNameMap["th"];
+export function th(data?: ElementData<"th">): HTMLElementTagNameMap["th"];
 /**
- * @param {ElementData<'thead'>} data
+ * @param {ElementData<'thead'>} [data]
  * @returns {HTMLElementTagNameMap['thead']}
  */
-export function thead(data: ElementData<"thead">): HTMLElementTagNameMap["thead"];
+export function thead(data?: ElementData<"thead">): HTMLElementTagNameMap["thead"];
 /**
- * @param {ElementData<'time'>} data
+ * @param {ElementData<'time'>} [data]
  * @returns {HTMLElementTagNameMap['time']}
  */
-export function time(data: ElementData<"time">): HTMLElementTagNameMap["time"];
+export function time(data?: ElementData<"time">): HTMLElementTagNameMap["time"];
 /**
- * @param {ElementData<'title'>} data
+ * @param {ElementData<'title'>} [data]
  * @returns {HTMLElementTagNameMap['title']}
  */
-export function title(data: ElementData<"title">): HTMLElementTagNameMap["title"];
+export function title(data?: ElementData<"title">): HTMLElementTagNameMap["title"];
 /**
- * @param {ElementData<'tr'>} data
+ * @param {ElementData<'tr'>} [data]
  * @returns {HTMLElementTagNameMap['tr']}
  */
-export function tr(data: ElementData<"tr">): HTMLElementTagNameMap["tr"];
+export function tr(data?: ElementData<"tr">): HTMLElementTagNameMap["tr"];
 /**
- * @param {ElementData<'track'>} data
+ * @param {ElementData<'track'>} [data]
  * @returns {HTMLElementTagNameMap['track']}
  */
-export function track(data: ElementData<"track">): HTMLElementTagNameMap["track"];
+export function track(data?: ElementData<"track">): HTMLElementTagNameMap["track"];
 /**
- * @param {ElementData<'u'>} data
+ * @param {ElementData<'u'>} [data]
  * @returns {HTMLElementTagNameMap['u']}
  */
-export function u(data: ElementData<"u">): HTMLElementTagNameMap["u"];
+export function u(data?: ElementData<"u">): HTMLElementTagNameMap["u"];
 /**
- * @param {ElementData<'ul'>} data
+ * @param {ElementData<'ul'>} [data]
  * @returns {HTMLElementTagNameMap['ul']}
  */
-export function ul(data: ElementData<"ul">): HTMLElementTagNameMap["ul"];
+export function ul(data?: ElementData<"ul">): HTMLElementTagNameMap["ul"];
 /**
- * @param {ElementData<'var'>} data
+ * @param {ElementData<'var'>} [data]
  * @returns {HTMLElementTagNameMap['var']}
  */
-export function var_(data: ElementData<"var">): HTMLElementTagNameMap["var"];
+export function var_(data?: ElementData<"var">): HTMLElementTagNameMap["var"];
 /**
- * @param {ElementData<'video'>} data
+ * @param {ElementData<'video'>} [data]
  * @returns {HTMLElementTagNameMap['video']}
  */
-export function video(data: ElementData<"video">): HTMLElementTagNameMap["video"];
+export function video(data?: ElementData<"video">): HTMLElementTagNameMap["video"];
 /**
- * @param {ElementData<'wbr'>} data
+ * @param {ElementData<'wbr'>} [data]
  * @returns {HTMLElementTagNameMap['wbr']}
  */
-export function wbr(data: ElementData<"wbr">): HTMLElementTagNameMap["wbr"];
+export function wbr(data?: ElementData<"wbr">): HTMLElementTagNameMap["wbr"];
 export { element };
 export { use } from "./core/plugins.js";
 declare const _default: Readonly<{
@@ -676,5 +682,8 @@ declare const _default: Readonly<{
     wbr: typeof wbr;
 }>;
 export default _default;
+export type Plugin = import("./types/base.dom.d.ts").Plugin;
+export type BindContext = import("./types/base.dom.d.ts").BindContext;
+export type Live<T> = import("./types/base.dom.d.ts").Live<T>;
 import type { ElementData } from './types/html.dom.js';
 import { element } from './core/html.js';

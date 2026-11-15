@@ -48,7 +48,7 @@ export type Plugin = {
 
 export type PickWritable<T> = Pick<T, WritableKeys<T>>;
 
-type Child = BaseElement | string;
+type Child = Node | string | number;
 
 /** A promise child is shown once it resolves; until then its place stays empty. */
 export type Children =

@@ -5,7 +5,9 @@ document.getElementById('app')?.appendChild(
     attributes: {
       class: 'test-class',
       'aria-label': 'Custom Control',
-      onclick: (e) => {
+    },
+    event: {
+      click: (e) => {
         e.stopPropagation();
         console.log('Abort event triggered!', e);
       },

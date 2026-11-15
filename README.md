@@ -9,12 +9,13 @@ Create HTML, SVG and MathML elements in JavaScript with one function per tag.
 
 ## Why this library
 
-- **Native elements, not wrappers.** `element()` calls `document.createElement(tag)` and returns that node, so there is nothing to unwrap before it goes into the DOM (`lib/core/html.js:17`, `lib/core/html.js:24`).
-- **Four inputs in a fixed order.** `props`, `attributes`, `children` and `event` are applied in that order to every element (`lib/core/html.js:19-22`).
-- **Nested props are assigned in place.** Objects such as `style` are walked with a queue and merged with `Object.assign`, so `style: { height: '100vh' }` reaches the element's style object (`lib/core/base.js:16-35`).
-- **Children accept a node, a string or an array.** `replaceChildren` spreads arrays and passes anything else straight through (`lib/core/base.js:62-73`).
-- **Listeners take options.** An event value can be a function, or an object with `handler` and `options` for `addEventListener` (`lib/core/base.js:115-127`).
-- **Typed per tag.** `element()` is generic over `HTMLElementTagNameMap` and returns the mapped element type, and the same pattern covers SVG and MathML (`lib/core/html.d.ts:8`, `lib/core/svg.d.ts:8`, `lib/core/math.d.ts:8`).
+- **Native elements, not wrappers.** Every function calls `document.createElement` (or `createElementNS` for SVG and MathML) and returns that node, so there is nothing to unwrap before it goes into the DOM.
+- **Four inputs in a fixed order.** `props`, `attributes`, `children` and `event` are applied in that order to every element.
+- **Nested props are merged in place.** A plain object such as `style` or `dataset` is merged into the element's existing object, so `style: { height: '100vh' }` sets one style property. Only the object's own keys are copied.
+- **Children accept nodes, strings, numbers, arrays and promises.** `null`, `undefined`, `true` and `false` are skipped, so `user.isAdmin && badge()` works.
+- **Listeners take options.** An event value can be a function, or an object with `handler` and `options` for `addEventListener`.
+- **Typed per tag.** `element()` and every tag function return the exact element type, such as `HTMLInputElement`, and the same holds for SVG and MathML.
+- **No dependencies, no build step needed.** The package is plain ES modules with TypeScript declarations.
 
 ## Install
 
@@ -24,117 +25,53 @@ npm install -D fiorejs
 
 > Fiore was published as `html-dom-js` up to version 1.1.2. The API is unchanged: replace `html-dom-js` with `fiorejs` in your dependencies and imports.
 
-## Description
-
-A simple library for creating `html` elements in javascript, uses javascript to initialize the properties of elements and no state handling or reactive object are created.
-
 ## Usage
 
 ```js
-import { div, button, label, input } from 'fiorejs';
+import { button, div, input, label } from 'fiorejs';
 
-document.body.appendChild(
+document.body.append(
   div({
-    attributes: {
-      class: 'test-class',
-      'aria-label': 'Custom Control',
-      onclick: (e) => {
-        e.stopPropagation();
-        console.log('Abort event triggered!', e);
-      },
-    },
-    props: {
-      title: 'Title',
-      className: 'custom-class',
-      style: {
-        height: '100vh',
-        margin: '0',
-        background: 'white',
-        padding: '5px',
-      },
-    },
+    props: { className: 'card', style: { padding: '16px' } },
+    attributes: { 'aria-label': 'Sign up' },
     children: [
-      label({
-        props: {
-          htmlFor: 'test',
-        },
-        children: 'Test Label',
-      }),
-      input({
-        props: {
-          type: 'text',
-          placeholder: 'Enter text',
-          required: true,
-        },
-      }),
-      div({ children: 'Custom Control' }),
+      label({ props: { htmlFor: 'email' }, children: 'Email' }),
+      input({ props: { id: 'email', type: 'email', placeholder: 'you@example.com', required: true } }),
       button({
-        props: { className: 'example-class' },
-        event: {
-          click: (e) => {
-            e.stopPropagation();
-            console.log('Button clicked!', e);
-          },
-          dblclick: (e) => {
-            e.stopPropagation();
-            console.log('Button double-clicked!', e);
-          },
-        },
-        children: 'Click',
+        props: { type: 'button' },
+        event: { click: (event) => console.log('clicked', event.currentTarget) },
+        children: 'Sign up',
       }),
     ],
   }),
 );
 ```
 
-A default import is also supported.
+Every tag has its own function, and `element(tag, data)` creates any element by name. Each function takes one optional object:
+
+- `props`: JavaScript properties of the element, such as `className`, `value` or `style`. `undefined` leaves a property unchanged.
+- `attributes`: attributes set with [`setAttribute`](https://developer.mozilla.org/en-US/docs/Web/API/Element/setAttribute).
+- `children`: a node, a string, a number, a promise, or an array of these.
+- `event`: listeners, attached last. Use this for handlers rather than `on*` props or attributes.
+
+Props are applied before children, so a property that depends on the children, such as the `value` of a `select`, has to be set after the element is built:
 
 ```js
-import html from '../index.js';
-
-document.body.appendChild(
-  html.div({
-    children: 'Testing',
-  }),
-);
+const size = select({ children: [option({ children: 'S' }), option({ children: 'M' })] });
+size.value = 'M';
 ```
 
-## Documentation
-
-Every tag has its own method defined, the general `element` function can be used to create any element.
-Example:
+Import styles:
 
 ```js
-import { element } from 'fiorejs';
-
-document.body.appendChild(
-  element('div', {
-    props: { className: 'test' },
-  }),
-);
+import { element, div } from 'fiorejs';
+import html from 'fiorejs/html';
+import svg from 'fiorejs/svg';
+import math from 'fiorejs/math';
+import { html, svg, math } from 'fiorejs/global';
 ```
 
-Some properties can be defined in multiple ways, the main options are applied in order:
-
-- `props` - Javascript properties of the html element
-- `attributes` - Attributes that can be set on the html element ([setAttribute](https://developer.mozilla.org/en-US/docs/Web/API/Element/setAttribute))
-- `children` - The content of the element, can be a string, a single child or an array of children.
-- `event` - The event listeners are attached last.
-
-```js
-import { element } from 'fiorejs';
-
-document.body.appendChild(
-  element('div', {
-    props: { className: 'test', onclick: () => {} },
-    attributes: { class: 'test', onclick: 'method()' },
-    event: {
-      onclick: (e) => console.log('Clicked', e),
-    },
-    children: 'Content',
-  }),
-);
-```
+The [MDN](https://developer.mozilla.org/en-US/docs/Web/API) documentation of each element applies to its props and attributes. TypeScript declarations are included.
 
 ### Events
 
@@ -186,7 +123,9 @@ section({ children: [h2({ children: 'Profile' }), User(1)] });
 
 ### Attribute values
 
-`null`, `undefined` and `false` leave an attribute out. Every other value, including `0` and `''`, is set as a string. Attributes with a hyphen such as `aria-expanded` and `data-open` keep `false` as the string `"false"`.
+`null`, `undefined` and `false` leave an attribute out. Every other value, including `0` and `''`, is set as a string. `aria-*` and `data-*` attributes, and the enumerated attributes `contenteditable`, `draggable` and `spellcheck`, keep `false` as the string `"false"`.
+
+Versions before 1.2.0 skipped every falsy value, including `0` and `''`. Use `null` or `false` to leave an attribute out.
 
 ### Plugins (experimental)
 
@@ -206,9 +145,19 @@ use({
 });
 ```
 
-`context.kind` is `'property'`, `'attribute'` or `'child'`, with `context.name` for properties and attributes, and `context.element` is the element being built. Listeners in `event` are never offered to plugins. Registering a plugin with a name that is already registered replaces the earlier plugin, so a plugin module that runs again, for example after a hot reload, does not register twice. The plugin API can still change in a minor version.
+`context.kind` is `'property'`, `'attribute'` or `'child'`, with `context.name` for properties and attributes, and `context.element` is the element being built. Listeners in `event` and attributes whose name starts with `on` are never offered to plugins. A child that a plugin binds without calling `apply` yet keeps an empty place until it does. Registering a plugin with a name that is already registered replaces the earlier plugin, so a plugin module that runs again, for example after a hot reload, does not register twice. The plugin API can still change in a minor version.
 
 Plugins are asked in turn, and the first one that returns `true` handles the value. Set `order: 'pre'` to be asked before other plugins, or `order: 'post'` to be asked only after all others; plugins in the same group are asked in the order they were registered.
+
+The `Plugin`, `BindContext` and `Live` types are exported from `fiorejs`. To tell TypeScript which live values a plugin accepts, extend `LiveValues`; props, attributes and children then accept those values:
+
+```ts
+declare module 'fiorejs/type/base.dom.d.ts' {
+  interface LiveValues<T> {
+    observable: MyObservable<T>;
+  }
+}
+```
 
 A plugin package usually calls `use()` in its own module. A module runs once per page however often it is imported, so the plugin is registered once.
 
@@ -234,19 +183,6 @@ Without a bundler, use an import map so every module resolves `fiorejs` to the s
 ```
 
 Plugin packages should import fiorejs by its package name, never by a URL or relative path, so the import map applies to them too.
-
-Import styles:
-
-```js
-import { element } from 'fiorejs';
-import { element } from 'fiorejs/html';
-import h from 'fiorejs/html';
-import svg from 'fiorejs/svg';
-import { svg, html } from 'fiorejs/global';
-```
-
-> The mdn javascript/html documentation applies here
-> Typescript support and declaration files are included
 
 ## Releases
 

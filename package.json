@@ -55,8 +55,8 @@
     "lib"
   ],
   "scripts": {
-    "start": "npx http-server . --port 3100",
-    "test": "node --test test/core.test.js",
+    "start": "npx http-server@14.1.1 . -a 127.0.0.1 -p 3100",
+    "test": "node --test test/core.test.js test/no-plugin.test.js",
     "clean-types": "node ./clean-types.js",
     "generate-types": "npm run clean-types && npx -p typescript@5.9 tsc -p tsconfig.json"
   },
@@ -68,7 +68,7 @@
     "type": "git",
     "url": "git+https://github.com/vrtexe/fiore.git"
   },
-  "packageManager": "^npm@11.6.0",
+  "packageManager": "npm@11.6.0",
   "devDependencies": {
     "jsdom": "^31.0.1"
   }

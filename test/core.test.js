@@ -6,6 +6,8 @@ const { window } = new JSDOM();
 Object.assign(globalThis, { document: window.document, Node: window.Node });
 
 const { div, input, element, use } = await import('../lib/html.js');
+const { default: math } = await import('../lib/math.js');
+const { default: svg } = await import('../lib/svg.js');
 
 /** Minimal signal used to exercise the plugin hook. */
 function signal(value) {
@@ -162,4 +164,126 @@ test('loading a second copy of fiorejs logs a warning', async (t) => {
 
   assert.equal(warn.mock.callCount(), 1);
   assert.match(warn.mock.calls[0].arguments[0], /fiorejs is loaded twice/);
+});
+
+test('JSON __proto__ keys and inherited keys never reach Object.prototype or the element', () => {
+  div({ props: { dataset: JSON.parse('{"__proto__":{"__proto__":{"polluted":"yes"}}}') } });
+  div({ props: { style: JSON.parse('{"__proto__":{"polluted":"yes"}}') } });
+  assert.equal({}.polluted, undefined);
+
+  Object.prototype.id = 'inherited';
+  try {
+    assert.equal(div({ props: { className: 'card' }, attributes: { role: 'note' } }).id, '');
+  } finally {
+    delete Object.prototype.id;
+  }
+});
+
+test('props are not merged into the document or the window', () => {
+  const title = document.title;
+  try {
+    div({ props: JSON.parse('{"ownerDocument":{"title":"pwned"}}') });
+  } catch {
+    // assigning a read-only property throws, which is fine
+  }
+  assert.equal(document.title, title);
+});
+
+test('MathML elements are created in the MathML namespace', () => {
+  assert.equal(math.mi({ children: 'x' }).namespaceURI, 'http://www.w3.org/1998/Math/MathML');
+});
+
+test('reordering a bound list moves only the nodes that changed place', () => {
+  const nodes = Array.from({ length: 100 }, (_, i) => {
+    const item = document.createElement('i');
+    item.textContent = String(i);
+    return item;
+  });
+  const rows = signal(nodes);
+  const el = div({ children: rows });
+  let moves = 0;
+  const insertBefore = Node.prototype.insertBefore;
+  Node.prototype.insertBefore = function (...args) {
+    moves++;
+    return insertBefore.apply(this, args);
+  };
+  try {
+    const swapped = [...nodes];
+    [swapped[1], swapped[98]] = [swapped[98], swapped[1]];
+    rows.set(swapped);
+    assert.ok(moves <= 2, `swap made ${moves} moves`);
+    assert.deepEqual([...el.children], swapped);
+
+    moves = 0;
+    const rotated = [swapped[99], ...swapped.slice(0, 99)];
+    rows.set(rotated);
+    assert.equal(moves, 1);
+    assert.deepEqual([...el.children], rotated);
+  } finally {
+    Node.prototype.insertBefore = insertBefore;
+  }
+});
+
+test('children skip false, true and null, and keep 0', () => {
+  assert.equal(div({ children: [false, 'a', true, null, 0] }).innerHTML, 'a0');
+  assert.equal(div({ children: false }).innerHTML, '');
+});
+
+test('textContent and innerHTML props are kept when there are no children', () => {
+  assert.equal(div({ props: { textContent: 'hi' } }).textContent, 'hi');
+  assert.equal(div({ props: { innerHTML: '<b>x</b>' } }).innerHTML, '<b>x</b>');
+});
+
+test('on* attributes are never offered to plugins', () => {
+  const offered = [];
+  use({ name: 'recorder', order: 'pre', bind: (value, apply, context) => void offered.push(context.name) });
+  div({ attributes: { onclick: 'go()', title: 't' } });
+  use({ name: 'recorder', bind: () => false });
+
+  assert.deepEqual(offered, ['title']);
+});
+
+test('a plugin that binds a child without applying it yet still gets a place', () => {
+  const later = { isLater: true };
+  let applyLater;
+  use({ name: 'later', bind: (value, apply) => value === later && ((applyLater = apply), true) });
+  const el = div({ children: [later, 'b'] });
+
+  applyLater('hello');
+
+  assert.equal(el.innerHTML, 'hellob');
+});
+
+test('a text node passed in by the caller is not overwritten', () => {
+  const mine = document.createTextNode('mine');
+  const content = signal(mine);
+  const el = div({ children: content });
+
+  content.set('changed');
+
+  assert.equal(mine.data, 'mine');
+  assert.equal(el.textContent, 'changed');
+});
+
+test('an error while inserting a resolved promise child is logged', async (t) => {
+  const error = t.mock.method(console, 'error', () => {});
+  div({ children: Promise.resolve({ nodeType: 1 }) });
+  await new Promise((resolve) => setTimeout(resolve));
+
+  assert.equal(error.mock.callCount(), 1);
+});
+
+test('false keeps the attribute only for aria-*, data-* and enumerated attributes', () => {
+  const el = div({ attributes: { 'aria-expanded': false, 'data-open': false, draggable: false, 'http-equiv': false } });
+  const shape = svg.circle({ attributes: { 'stroke-dasharray': false } });
+
+  assert.equal(el.getAttribute('aria-expanded'), 'false');
+  assert.equal(el.getAttribute('data-open'), 'false');
+  assert.equal(el.getAttribute('draggable'), 'false');
+  assert.equal(el.hasAttribute('http-equiv'), false);
+  assert.equal(shape.hasAttribute('stroke-dasharray'), false);
+});
+
+test('undefined props leave the property unchanged', () => {
+  assert.equal(div({ props: { title: undefined } }).title, '');
 });
