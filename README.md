@@ -155,3 +155,4 @@ An element that is created but never inserted keeps its bindings for as long as 
 
 - Functions passed as properties are treated as bindings, so a custom element property that expects a function has to be set in code.
 - There is no `batch()` yet: outside an effect, every `set()` runs its effects immediately.
+- `refetch()` on a resource whose effect or list row has gone away still starts a load; call it only while the resource is in use.
