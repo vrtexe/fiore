@@ -97,38 +97,3 @@ export type TagData<T extends BaseElement, A, On> = {
   on?: On | undefined | null;
   children?: Children | undefined | null;
 };
-
-/**
- * Records settings without touching the DOM. Every method returns a new builder, so one builder can serve as a
- * template; `create()` creates the element and applies props, attributes, children, late props, listeners and the
- * `also` callbacks in that order, whatever the order of the calls.
- */
-export interface Builder<T extends BaseElement, A, On> {
-  /** DOM properties. Repeated calls combine them; later keys win, so a later `style` object replaces an earlier one. */
-  props(map: ElementProps<T>): this;
-  /** Attributes. Repeated calls merge: later keys win and `null` removes an earlier value. */
-  attrs(map: LiveAttributes<A>): this;
-  /** Event listeners, as `{ click: fn }` or `{ click: { handler, options } }`. Repeated calls add listeners. */
-  on(map: On): this;
-  /** Applies a modifier to this builder, for reusable settings or a condition: `.with((b) => (on ? b.attrs(…) : b))`. */
-  with(fn: (builder: this) => this): this;
-  /** Calls `fn` with the created element, after the listeners; it is not connected to the document yet. */
-  also(fn: (element: T) => void): this;
-  /** Creates the element with these children (a node, a string, a number, or an array of these) and returns it. */
-  create(children?: Children): T;
-}
-
-/** A tag function: call it with a data object or children, or start a builder with one of its methods. */
-export interface Tag<T extends BaseElement, A, On> {
-  /** A plain object is the data object; anything else is children. */
-  (data?: TagData<T, A, On> | Children): T;
-  props(map: ElementProps<T>): Builder<T, A, On>;
-  attrs(map: LiveAttributes<A>): Builder<T, A, On>;
-  on(map: On): Builder<T, A, On>;
-  with(fn: (builder: Builder<T, A, On>) => Builder<T, A, On>): Builder<T, A, On>;
-  also(fn: (element: T) => void): Builder<T, A, On>;
-  create(children?: Children): T;
-}
-
-/** A reusable builder function that works on every builder of type `B`, for example every HTML element. */
-export type Modifier<B extends Builder<any, any, any>> = <X extends B>(builder: X) => X;

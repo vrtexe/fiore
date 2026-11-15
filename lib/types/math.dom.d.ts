@@ -1,5 +1,6 @@
 import type { HTMLElementsAttributesMap } from './attributes.d.ts';
-import type { CustomEventData, Tag, TagData } from './base.dom.d.ts';
+import type { CustomEventData, TagData } from './base.dom.d.ts';
+import type { Tag } from '../core/builder.js';
 
 export type MathDomEventListener<
   T extends MathMLElement,

@@ -1,5 +1,6 @@
 import type { HTMLAttributes, HTMLElementsAttributesMap } from './attributes.d.ts';
-import type { BaseElement, Builder, CustomEventData, Modifier, Tag, TagData } from './base.dom.d.ts';
+import type { BaseElement, CustomEventData, TagData } from './base.dom.d.ts';
+import type { Builder, Tag } from '../core/builder.js';
 
 export type HTMLEventMapOf<T extends HTMLElement> = T extends HTMLBodyElement
   ? HTMLBodyElementEventMap
@@ -26,7 +27,7 @@ export type HTMLTag<T extends keyof HTMLElementTagNameMap> = Tag<
 export type HTMLBuilder<T extends HTMLElement = HTMLElement> = Builder<T, HTMLAttributes<T>, ElementEventData<T>>;
 
 /** A reusable modifier for every HTML tag: `const card: HTMLModifier = (b) => b.props({ className: 'card' })`. */
-export type HTMLModifier = Modifier<HTMLBuilder>;
+export type HTMLModifier = (builder: HTMLBuilder) => HTMLBuilder;
 
 export type DomEventListener<
   T extends BaseElement,
