@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Board</title>
+    <!-- Serve the repository root, for example with `npx http-server`, and open /demo/board.html. -->
+    <script type="importmap">
+      { "imports": { "fiorejs": "/node_modules/fiorejs/lib/html.js" } }
+    </script>
+    <style>
+      body { font: 14px system-ui, sans-serif; margin: 2rem; }
+      .columns { display: flex; gap: 1rem; margin: 1rem 0; }
+      .column { border: 1px solid #999; border-radius: 6px; padding: 0.5rem; width: 10rem; min-height: 8rem; }
+      .card { background: #eef; border-radius: 4px; margin: 0.25rem 0; padding: 0.25rem 0.5rem; }
+      #status.ok { color: green; }
+      #status.broken { color: crimson; font-weight: bold; }
+    </style>
+  </head>
+  <body>
+    <script type="module">
+      import { div, h2, button, p, li } from 'fiorejs';
+      import { state, effect } from '../signals.js';
+
+      const cards = Array.from({ length: 6 }, (_, i) => div({ props: { className: 'card', textContent: `card ${i + 1}` } }));
+      const columns = { A: state([cards[0], cards[1], cards[2]]), B: state([cards[3]]), C: state([cards[4], cards[5]]) };
+      const log = state([]);
+
+      // Moves a card the way a board does: the target column is updated before the source column.
+      function move(card, from, to) {
+        columns[to].set([...columns[to].get(), card]);
+        columns[from].set(columns[from].get().filter((c) => c !== card));
+        log.set([...log.get(), `${card.textContent}: ${from} → ${to}`]);
+      }
+
+      function randomMove() {
+        const names = Object.keys(columns).filter((name) => columns[name].get().length > 0);
+        const from = names[Math.floor(Math.random() * names.length)];
+        const to = Object.keys(columns).filter((name) => name !== from)[Math.floor(Math.random() * 2)];
+        const list = columns[from].get();
+        move(list[Math.floor(Math.random() * list.length)], from, to);
+      }
+
+      const status = p({ attributes: { id: 'status' } });
+      const view = div({ attributes: { class: 'columns' } , children: Object.keys(columns).map((name) =>
+        div({ attributes: { class: 'column', 'data-column': name }, children: [h2({ children: [name] }), () => columns[name].get()] }),
+      ) });
+
+      // The page checks itself after every change: each column must show exactly the cards of its state, in order.
+      effect(() => {
+        const broken = Object.entries(columns).filter(([name, list]) => {
+          const shown = [...view.querySelector(`[data-column="${name}"]`).querySelectorAll('.card')];
+          const expected = list.get();
+          return shown.length !== expected.length || shown.some((card, i) => card !== expected[i]);
+        });
+        status.textContent = broken.length ? `BROKEN: ${broken.map(([name]) => name).join(', ')}` : 'OK: every column matches its state';
+        status.className = broken.length ? 'broken' : 'ok';
+      });
+
+      document.body.append(
+        h2({ children: ['Bound columns sharing card nodes'] }),
+        div({ children: [
+          button({ attributes: { id: 'only' }, children: ['Move the only card of B to A'], event: { click: () => columns.B.get()[0] && move(columns.B.get()[0], 'B', 'A') } }),
+          ' ',
+          button({ attributes: { id: 'random' }, children: ['20 random moves'], event: { click: () => { for (let i = 0; i < 20; i++) randomMove(); } } }),
+        ] }),
+        view,
+        status,
+        div({ children: [() => log.get().slice(-8).map((line) => li({ children: [line] }))] }),
+      );
+    </script>
+  </body>
+</html>

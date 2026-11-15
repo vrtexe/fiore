@@ -1,0 +1,48 @@
+{
+  "name": "@fiorejs/signals",
+  "version": "0.1.0",
+  "description": "Signals for fiorejs. Bind state to properties, attributes and children, and only the bound DOM spot updates.",
+  "license": "MIT",
+  "author": "vrtexe",
+  "type": "module",
+  "keywords": [
+    "fiore",
+    "fiorejs",
+    "signals",
+    "reactivity",
+    "state",
+    "dom"
+  ],
+  "exports": {
+    ".": {
+      "types": "./signals.d.ts",
+      "default": "./signals.js"
+    }
+  },
+  "files": [
+    "signals.js",
+    "signals.d.ts"
+  ],
+  "scripts": {
+    "test": "tsc -p test && node --expose-gc --test test/signals.test.js"
+  },
+  "peerDependencies": {
+    "fiorejs": "^1.2.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://github.com/vrtexe/fiore-signals#readme",
+  "bugs": {
+    "url": "https://github.com/vrtexe/fiore-signals/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vrtexe/fiore-signals.git"
+  },
+  "devDependencies": {
+    "fiorejs": "file:../html-dom-js",
+    "jsdom": "^31.0.1",
+    "typescript": "~5.9"
+  }
+}
