@@ -239,13 +239,17 @@ test('key is accepted and ignored, also after a spread', () => {
   assert.equal(item.hasAttribute('key'), false);
 });
 
-test('event handler names are recognised in any case', () => {
+test('event handler names are recognised in any case and listen to the lowercased event', () => {
   let clicks = 0;
-  const el = jsx('button', { ONCLICK: () => clicks++ }) as HTMLButtonElement;
-  el.dispatchEvent(new window.Event('CLICK'));
+  const upper = jsx('button', { ONCLICK: () => clicks++ }) as HTMLButtonElement;
+  const camel = (<button onClick={(event) => event.currentTarget && clicks++} />) as HTMLButtonElement;
+  upper.dispatchEvent(new window.Event('click'));
+  camel.dispatchEvent(new window.Event('click'));
+  camel.dispatchEvent(new window.Event('Click'));
 
-  assert.equal(clicks, 1);
-  assert.equal(el.hasAttribute('onclick'), false);
+  assert.equal(clicks, 2);
+  assert.equal(upper.hasAttribute('onclick'), false);
+  assert.equal(camel.hasAttribute('onClick'), false);
 });
 
 test('select value is applied after its options', () => {

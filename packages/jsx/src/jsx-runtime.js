@@ -147,7 +147,7 @@ export function jsx(type, props) {
     }
     if (HANDLER.test(name)) {
       if (value != null) {
-        data.event[name.slice(2)] = value;
+        data.event[name.slice(2).toLowerCase()] = value;
       }
     } else if (value === null) {
       // null removes the attribute instead of writing "null" into a property.

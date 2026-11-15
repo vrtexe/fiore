@@ -52,7 +52,7 @@ Each JSX prop goes to one of the fiorejs inputs:
 
 | Prop | Applied as | Example |
 | --- | --- | --- |
-| `on` + event name, in any case | event listener | `onclick`, `onkeydown`, `oncart-add` |
+| `on` + event name, in any case; the event name is lowercased | event listener | `onclick` and `onClick` listen to `click`; `oncart-add` to `cart-add` |
 | `null` | removes the attribute | `title={null}` |
 | `style` with an object | style properties | `style={{ height: '10px' }}` |
 | a camel-case name the element has a writable property for | property | `className`, `textContent`, `htmlFor`, `selectedIndex` |

@@ -16,7 +16,7 @@ type Listener<T extends Element, E> =
     };
 
 type EventProps<T extends Element, M> = {
-  [K in keyof M & string as `on${K}`]?: Listener<T, M[K]> | undefined | null;
+  [K in keyof M & string as `on${K}` | `on${Capitalize<K>}`]?: Listener<T, M[K]> | undefined | null;
 };
 
 type CommonProps<T extends Element> = {
