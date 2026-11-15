@@ -120,7 +120,7 @@ import { each, state } from '@fiorejs/signals';
 
 const todos = state([{ id: 1, text: 'Write docs' }]);
 
-ul(each(todos, (todo) => li(todo.text), (todo) => todo.id));
+ul(each(todos, (todo) => li.create(todo.text), (todo) => todo.id));
 
 todos.set([...todos.get(), { id: 2, text: 'Publish' }]);
 ```

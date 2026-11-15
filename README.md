@@ -48,7 +48,7 @@ Every tag is a function with builder methods:
 
 | Method | Takes | Repeated calls |
 | --- | --- | --- |
-| `props(map)` | JavaScript properties of the element, such as `className`, `value` or `style`. `undefined` leaves the element's property unchanged, but a later `undefined` replaces an earlier value of the same builder. | Combine: later keys win, so a later `style` object replaces an earlier one. |
+| `props(map)` | JavaScript properties of the element, such as `className`, `value` or `style`. `undefined` leaves the element's property unchanged, but a later `undefined` replaces an earlier value of the same builder. | Combine: later keys win, so a later `style` object replaces an earlier one. A nested object such as `style` is merged into the element after the other keys of its map. |
 | `attrs(map)` | Attributes, set with [`setAttribute`](https://developer.mozilla.org/en-US/docs/Web/API/Element/setAttribute). Inline event handlers such as `onclick`, in any case, are ignored, so no handler string is ever run; other names that start with `on`, such as `online`, are set. | Merge: later keys win, and `null` removes an earlier value. |
 | `on(map)` | Listeners: `{ click: fn }` or `{ click: { handler, options } }`. | Add listeners; they never replace each other. |
 | `with(fn)` | A function that gets the builder and returns a builder. | Each call applies its function. |
@@ -57,7 +57,7 @@ Every tag is a function with builder methods:
 
 Children are nodes, strings, numbers or an array of these; an array is one level deep, and a nested array is not flattened. `null`, `undefined`, `true` and `false` are skipped, so `user.isAdmin && badge()` works.
 
-Each method returns a new builder and leaves the old one unchanged, and the maps are copied when you call the method. A builder can therefore serve as a template:
+Each method returns a new builder and leaves the old one unchanged, and the top level of each map is copied when you call the method; nested objects such as `style` are used as they are when the element is created. A builder can therefore serve as a template:
 
 ```js
 const card = div.props({ className: 'card' }).on({ click: select });

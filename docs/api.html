@@ -987,8 +987,9 @@ svg.circle.<span class="fn">attrs</span>({ r<span class="punc">:</span> <span cl
           <h2>Builder</h2>
           <p>
             Every tag carries builder methods. Each method returns a new builder and leaves the old
-            one unchanged, and the maps are copied when you call the method. <code>.create()</code>
-            creates the element and returns it.
+            one unchanged, and the top level of each map is copied when you call the method; nested
+            objects such as <code>style</code> are used as they are when the element is created.
+            <code>.create()</code> creates the element and returns it.
           </p>
           <div class="table-wrap">
             <table>
@@ -1055,7 +1056,7 @@ div.<span class="fn">with</span>(shadow).<span class="fn">with</span>((b) <span 
 
 div.<span class="fn">with</span>(card).<span class="fn">create</span>(); <span class="punc">// HTMLDivElement</span>
 button.<span class="fn">with</span>(card).<span class="fn">props</span>({ type<span class="punc">:</span> <span class="str">'submit'</span> }).<span class="fn">create</span>(<span class="str">'Save'</span>); <span class="punc">// HTMLButtonElement</span></code></pre>
-          <p>Source: <a class="text-link" href="https://github.com/vrtexe/fiore/blob/main/lib/core/tag.js">lib/core/tag.js</a></p>
+          <p>Source: <a class="text-link" href="https://github.com/vrtexe/fiore/blob/main/lib/core/builder.js">lib/core/builder.js</a></p>
         </section>
 
         <section id="props">
@@ -1080,7 +1081,8 @@ button.<span class="fn">with</span>(card).<span class="fn">props</span>({ type<s
             any other value is assigned whole. Only own keys are copied, and <code>__proto__</code>, <code>constructor</code>
             and <code>prototype</code> are skipped. <code>undefined</code> leaves a property unchanged.
             Repeated <code>props</code> calls on a builder combine: later keys win, so a later
-            <code>style</code> object replaces an earlier one.
+            <code>style</code> object replaces an earlier one. A nested object such as <code>style</code>
+            is merged into the element after the other keys of its map.
           </p>
           <p>
             Read-only DOM properties are excluded by the type. To set a read-only value, use a
