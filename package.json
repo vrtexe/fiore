@@ -24,7 +24,7 @@
     "signals.d.ts"
   ],
   "scripts": {
-    "test": "tsc -p test && node --test test/signals.test.js"
+    "test": "tsc -p test && node --expose-gc --test test/signals.test.js"
   },
   "peerDependencies": {
     "fiorejs": "^1.2.0"

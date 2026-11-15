@@ -36,13 +36,13 @@ document.body.append(
 | Function | What it does |
 | --- | --- |
 | `state(value)` | A value with `get()`, `set(value)`, `update(fn)` and `mutate(fn)`. `update` sets the value `fn` returns, `mutate` changes the value in place. Reading it inside an effect, a computed or a binding subscribes to it. Setting an equal value (`Object.is`) does nothing. |
-| `computed(fn)` | A value derived from other signals. It is calculated on first read and again on the next read after an input changed. |
+| `computed(fn)` | A value derived from other signals. It is calculated on first read and again on the next read after an input changed. While nothing reads it inside an effect or binding, it does not stay subscribed to its inputs and is recalculated on every read. |
 | `effect(fn)` | Runs `fn` now and whenever a signal it read changes. Returns a function that stops it. If `fn` returns a function, that function runs before the next run and when the effect stops. |
 | `untrack(fn)` | Runs `fn` without subscribing to the signals it reads. |
 | `read(value)` | Returns the current value of a signal, a getter function or a plain value. |
-| `each(items, render, key)` | Renders a list and reuses the nodes of items whose key is unchanged. |
+| `each(items, render, key)` | Renders a list and reuses the nodes of items whose key is unchanged. `render` gets the item's index at the time its row is created. |
 
-Effects run synchronously when a signal is set.
+Effects run synchronously when a signal is set. If an effect throws, the other effects of that update still run, and the first error is thrown from `set()`. An effect that runs more than 100 times in one update, usually because it sets a signal it reads, stops the update with an error.
 
 ## Binding to the DOM
 
@@ -73,7 +73,7 @@ Price({ amount: () => total.get() * 1.081 });
 
 ## Lists
 
-`each` reuses the node of every item whose key it has seen before and only renders new items. Without a key, the item itself is the key.
+`each` reuses the node of every item whose key it has seen before and only renders new items. Without a key, the item itself is the key; a key that appears more than once gets one row per occurrence. When the order changes, only the rows that are out of place are moved, so a focused input in an unmoved row keeps its focus.
 
 ```js
 import { ul, li } from 'fiorejs';
@@ -86,7 +86,7 @@ ul({ children: each(todos, (todo) => li({ children: todo.text }), (todo) => todo
 todos.set([...todos.get(), { id: 2, text: 'Publish' }]);
 ```
 
-Lists of a few thousand rows are fine: in Chromium, 1,000 rows with three bound inputs each render in about 40 ms including layout, and a change to one row or to the list takes under a millisecond. For much longer lists the number of DOM nodes becomes the limit, so paginate or render only the visible rows.
+Lists of a few thousand rows are fine: in Chromium, 1,000 rows with three bound inputs each render in about 40 ms including layout, a change to one row takes well under a millisecond, and adding, removing or swapping rows moves only the rows involved. For much longer lists the number of DOM nodes becomes the limit, so paginate or render only the visible rows.
 
 ## Arrays and objects
 
@@ -119,11 +119,13 @@ export const user = state(null);
 
 Bindings are stopped automatically:
 
-- when a live child replaces its content, the bindings inside the old content stop
-- when `each` drops an item, the bindings inside its row stop
-- when an element that was in the document is removed, its bindings stop, detected with a `MutationObserver`
+- when a live child replaces its content, the bindings inside the old content stop for good
+- when `each` drops an item, or the effect around the list reruns, the bindings inside its rows stop for good
+- when an element is removed from the document, its bindings pause; if it is inserted again, they resume with the current values
 
-An element that is created but never inserted keeps its bindings for as long as its signals live.
+Removal and insertion are detected with a `MutationObserver` on the document, so elements inside a shadow root are not paused.
+
+An element that is created but never inserted keeps its bindings for as long as its signals live. Bindings are held weakly, so once the element and its signals are no longer referenced, everything can be garbage-collected.
 
 ## Limits
 

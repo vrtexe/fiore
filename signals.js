@@ -3,7 +3,7 @@ import { use } from 'fiorejs';
 const SIGNAL = Symbol.for('fiorejs.signal');
 
 /**
- * @typedef {{ subs: Set<Computation> }} Source
+ * @typedef {{ subs: Set<Computation>, release?(): void }} Source
  * @typedef {{ sources: Set<Source>, stale(): void }} Computation
  * @typedef {{ owned: (() => void)[] }} Owner
  */
@@ -15,6 +15,9 @@ let owner = null;
 /** @type {Set<{ run(): void }>} */
 const pending = new Set();
 let flushing = false;
+
+/** How often one effect may run in a single update before it counts as a loop. */
+const MAX_RUNS = 100;
 
 /** @param {Source} source */
 function track(source) {
@@ -37,13 +40,31 @@ function flush() {
     return;
   }
   flushing = true;
+  /** @type {Map<object, number>} */
+  const runs = new Map();
+  /** @type {unknown[]} */
+  const errors = [];
   try {
     for (const effect of pending) {
       pending.delete(effect);
-      effect.run();
+      const count = (runs.get(effect) ?? 0) + 1;
+      runs.set(effect, count);
+      if (count > MAX_RUNS) {
+        pending.clear();
+        throw new Error(`An effect ran more than ${MAX_RUNS} times in one update; it probably sets a signal it reads.`);
+      }
+      // One failing effect must not stop the others; the first error is rethrown afterwards.
+      try {
+        effect.run();
+      } catch (error) {
+        errors.push(error);
+      }
     }
   } finally {
     flushing = false;
+  }
+  if (errors.length > 0) {
+    throw errors[0];
   }
 }
 
@@ -51,6 +72,9 @@ function flush() {
 function untrackSources(computation) {
   for (const source of computation.sources) {
     source.subs.delete(computation);
+    if (source.subs.size === 0) {
+      source.release?.();
+    }
   }
   computation.sources.clear();
 }
@@ -137,7 +161,15 @@ export function computed(fn) {
         }
       }
     },
+    release,
   };
+
+  // Without readers a computed lets go of its sources, so it can be collected and is not visited on every set.
+  function release() {
+    untrackSources(node);
+    dirty = true;
+  }
+
   return {
     [SIGNAL]: true,
     get() {
@@ -147,6 +179,9 @@ export function computed(fn) {
         dirty = false;
       }
       track(node);
+      if (node.subs.size === 0) {
+        release();
+      }
       return value;
     },
   };
@@ -175,6 +210,10 @@ export function effect(fn) {
       reset();
       const result = runIn(node, scope, fn);
       cleanup = typeof result === 'function' ? result : undefined;
+      // Stopped during its own run: undo what the run set up after the stop.
+      if (stopped) {
+        reset();
+      }
     },
   };
 
@@ -228,74 +267,114 @@ export function read(value) {
 }
 
 /**
- * Renders a list and reuses the nodes of items whose key is unchanged.
+ * Renders a list and reuses the nodes of items whose key is unchanged. `index` is the item's index when its row
+ * was created; a reused row keeps it.
  * @template T
  * @param {import('./signals.d.ts').Reactive<readonly T[]>} items
  * @param {(item: T, index: number) => Node} render
  * @param {(item: T) => unknown} [key]
  */
 export function each(items, render, key = (item) => item) {
-  /** @type {Map<unknown, { node: Node, stop: () => void }>} */
+  /** @typedef {{ node: Node, stop: () => void }} Row */
+  /** @type {Map<unknown, Row[]>} Rows by key; a repeated key keeps one row per occurrence. */
   let rows = new Map();
+
+  const stopAll = () => {
+    for (const list of rows.values()) {
+      list.forEach((row) => row.stop());
+    }
+    rows = new Map();
+  };
+  owner?.owned.push(stopAll);
 
   return () => {
     /** @type {typeof rows} */
     const next = new Map();
     const nodes = read(items).map((item, index) => {
       const id = key(item);
-      let row = rows.get(id);
-      if (!row) {
-        /** @type {Owner} */
-        const scope = { owned: [] };
-        const node = runIn(null, scope, () => render(item, index));
-        row = { node, stop: () => scope.owned.splice(0).forEach((stop) => stop()) };
+      const row = rows.get(id)?.shift() ?? createRow(() => render(item, index));
+      const list = next.get(id);
+      if (list) {
+        list.push(row);
+      } else {
+        next.set(id, [row]);
       }
-      next.set(id, row);
       return row.node;
     });
 
-    for (const [id, row] of rows) {
-      if (!next.has(id)) {
-        row.stop();
-      }
-    }
+    stopAll();
     rows = next;
     return nodes;
   };
 }
 
-/** @type {Map<Element, { seen: boolean, stops: (() => void)[] }>} */
-const bound = new Map();
-/** @type {MutationObserver | undefined} */
-let observer;
-
-function sweep() {
-  for (const [element, entry] of bound) {
-    if (element.isConnected) {
-      entry.seen = true;
-    } else if (entry.seen) {
-      entry.stops.forEach((stop) => stop());
-      bound.delete(element);
-    }
-  }
-  if (bound.size === 0) {
-    observer?.disconnect();
-    observer = undefined;
-  }
+/**
+ * @param {() => Node} render
+ * @returns {{ node: Node, stop: () => void }}
+ */
+function createRow(render) {
+  /** @type {Owner} */
+  const scope = { owned: [] };
+  const node = runIn(null, scope, render);
+  return { node, stop: () => scope.owned.splice(0).forEach((stop) => stop()) };
 }
 
 /**
- * Stops the bindings of an element once it has been in the document and is removed.
- * @param {Element} element
- * @param {() => void} stop
+ * @typedef {{ start: () => () => void, stop?: () => void, disposed?: boolean }} Binding
  */
-function trackRemoval(element, stop) {
-  const entry = bound.get(element) ?? { seen: element.isConnected, stops: [] };
-  entry.stops.push(stop);
-  bound.set(element, entry);
-  if (!observer) {
-    observer = new MutationObserver(sweep);
-    observer.observe(document, { childList: true, subtree: true });
+
+/** @type {WeakMap<Element, Binding[]>} Bindings by element, held weakly so a dropped element can be collected. */
+const bindings = new WeakMap();
+let observing = false;
+
+/** Pauses the bindings of elements that leave the document and resumes them when they come back. */
+function observe() {
+  if (observing || typeof MutationObserver === 'undefined') {
+    return;
+  }
+  observing = true;
+  new MutationObserver((records) => {
+    for (const record of records) {
+      record.removedNodes.forEach((node) => visit(node, pause));
+      record.addedNodes.forEach((node) => visit(node, resume));
+    }
+  }).observe(document, { childList: true, subtree: true });
+}
+
+/**
+ * Calls `fn` for an element node and every element below it.
+ * @param {Node} node
+ * @param {(element: Element) => void} fn
+ */
+function visit(node, fn) {
+  if (node.nodeType !== Node.ELEMENT_NODE) {
+    return;
+  }
+  const element = /** @type {Element} */ (node);
+  fn(element);
+  element.querySelectorAll('*').forEach(fn);
+}
+
+/** @param {Element} element */
+function pause(element) {
+  if (element.isConnected) {
+    return;
+  }
+  for (const binding of bindings.get(element) ?? []) {
+    binding.stop?.();
+    binding.stop = undefined;
+  }
+}
+
+/** @param {Element} element */
+function resume(element) {
+  if (!element.isConnected) {
+    return;
+  }
+  for (const binding of bindings.get(element) ?? []) {
+    if (!binding.stop && !binding.disposed) {
+      binding.stop = binding.start();
+    }
   }
 }
 
@@ -308,7 +387,24 @@ export const plugin = {
       return false;
     }
     const getter = isSignal(value) ? () => value.get() : /** @type {() => unknown} */ (value);
-    trackRemoval(context.element, effect(() => apply(getter())));
+
+    /** @type {Binding} */
+    const binding = { start: () => runIn(null, null, () => effect(() => apply(getter()))) };
+    binding.stop = binding.start();
+    // The surrounding effect or list row stops the binding for good when it reruns or is removed.
+    owner?.owned.push(() => {
+      binding.disposed = true;
+      binding.stop?.();
+      binding.stop = undefined;
+    });
+
+    const list = bindings.get(context.element);
+    if (list) {
+      list.push(binding);
+    } else {
+      bindings.set(context.element, [binding]);
+    }
+    observe();
     return true;
   },
 };

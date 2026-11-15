@@ -164,3 +164,128 @@ test('elements that were never inserted keep their bindings', async () => {
 
   assert.equal(el.textContent, '2');
 });
+
+const collected = async (ref) => {
+  for (let i = 0; i < 10 && ref.deref(); i++) {
+    await tick();
+    globalThis.gc();
+  }
+  return ref.deref() === undefined;
+};
+
+test('an element inserted and removed in the same task stops updating', async () => {
+  const count = state(1);
+  let reads = 0;
+  const el = div({ children: () => (reads++, count.get()) });
+  document.body.append(el);
+  el.remove();
+  await tick();
+
+  count.set(2);
+
+  assert.equal(reads, 1);
+  assert.equal(el.textContent, '1');
+});
+
+test('an element that is removed and inserted again resumes its bindings', async () => {
+  const count = state(1);
+  const el = div({ children: count });
+  document.body.append(el);
+  await tick();
+  el.remove();
+  await tick();
+  count.set(2);
+  assert.equal(el.textContent, '1');
+
+  document.body.append(el);
+  await tick();
+  assert.equal(el.textContent, '2');
+  count.set(3);
+  assert.equal(el.textContent, '3');
+  el.remove();
+});
+
+test('a dropped element that was never inserted can be collected', async () => {
+  let count = state(1);
+  let el = div({ children: count });
+  const ref = new WeakRef(el);
+  el = undefined;
+  count = undefined;
+
+  assert.equal(await collected(ref), true);
+});
+
+test('a computed without readers lets go of its sources', async () => {
+  const source = state(1);
+  let derived = computed(() => ({ buffer: new Uint8Array(1024), value: source.get() }));
+  const ref = new WeakRef(derived);
+  const stop = effect(() => derived.get());
+  stop();
+  derived = undefined;
+
+  assert.equal(await collected(ref), true);
+});
+
+test('each renders repeated keys once per occurrence', () => {
+  const items = state(['a', 'a']);
+  const list = div({ children: each(items, (item) => span({ children: item })) });
+
+  items.set(['a', 'a', 'b']);
+
+  assert.equal(list.children.length, 3);
+  assert.equal(list.textContent, 'aab');
+});
+
+test('each stops its rows when the surrounding effect replaces them', () => {
+  const show = state(true);
+  const label = state('row');
+  const items = state([1]);
+  const panel = div({
+    children: () => (show.get() ? div({ children: each(items, (item) => span({ children: () => `${label.get()} ${item}` })) }) : 'hidden'),
+  });
+  const row = panel.querySelector('span');
+
+  show.set(false);
+  label.set('changed');
+
+  assert.equal(row.textContent, 'row 1');
+});
+
+test('an effect that throws does not stop the other effects', () => {
+  const count = state(1);
+  const seen = [];
+  effect(() => {
+    if (count.get() === 2) throw new Error('first failed');
+  });
+  effect(() => seen.push(count.get()));
+
+  assert.throws(() => count.set(2), /first failed/);
+  assert.deepEqual(seen, [1, 2]);
+});
+
+test('an effect that keeps setting what it reads is stopped with an error', () => {
+  const count = state(0);
+  effect(() => {
+    if (count.get() > 0) count.set(count.get() + 1);
+  });
+
+  assert.throws(() => count.set(1), /ran more than 100 times/);
+});
+
+test('an effect stopped during its own run is cleaned up', () => {
+  const count = state(1);
+  let runs = 0;
+  let cleanups = 0;
+  let stop;
+  stop = effect(() => {
+    runs++;
+    if (count.get() === 2) stop();
+    return () => cleanups++;
+  });
+
+  count.set(2);
+  count.set(3);
+
+  assert.equal(runs, 2);
+  assert.equal(cleanups, 2);
+});
