@@ -217,7 +217,11 @@ test('very deep children do not overflow the stack', () => {
 test('live getters follow the attribute rules for plain string and numeric properties', () => {
   use({
     name: 'test-getters',
-    bind: (value, apply) => typeof value === 'function' && (apply(value()), true),
+    bind: (value, apply) => {
+      if (typeof value === 'function') return apply(value()), true;
+      if (value && typeof value === 'object' && 'get' in value) return apply((value as { get(): unknown }).get()), true;
+      return false;
+    },
   });
   try {
     const box = (<div title={() => null} id={() => 'main'} />) as HTMLDivElement;
@@ -228,6 +232,15 @@ test('live getters follow the attribute rules for plain string and numeric prope
     assert.equal(box.id, 'main');
     assert.equal(image.getAttribute('width'), '50%');
     assert.equal(field.value, 'typed');
+
+    const signal = <T,>(value: T) => ({ get: () => value }) as unknown as () => T;
+    const tip = (<div title={signal(null)} />) as HTMLDivElement;
+    const sized = (<img width={signal('50%')} />) as HTMLImageElement;
+    const choice = (<option text={() => 'Label'} />) as HTMLOptionElement;
+    assert.equal(tip.hasAttribute('title'), false);
+    assert.equal(sized.getAttribute('width'), '50%');
+    assert.equal(choice.textContent, 'Label');
+    assert.equal(choice.hasAttribute('text'), false);
   } finally {
     use({ name: 'test-getters', bind: () => false });
   }

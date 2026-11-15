@@ -63,7 +63,7 @@ A string for a numeric property, such as `width="50%"` on an `img`, is set as an
 
 ### Live values
 
-With a plugin such as [@fiorejs/signals](https://github.com/vrtexe/fiore-signals), a prop can be a signal or a getter function. A getter follows the same rules as a plain value for built-in elements: on a lower-case string or numeric property such as `title`, `id` or `width` it is set as an attribute, so a `null` result removes it and `"50%"` keeps its meaning; `value` and camel-case properties such as `textContent` stay properties. On a custom element every function is a getter, so pass a callback as `() => callback` or assign it in code.
+With a plugin such as [@fiorejs/signals](https://github.com/vrtexe/fiore-signals), a prop can be a signal or a getter function. A signal or getter follows the same rules as a plain value for built-in elements: on a lower-case string or numeric property that has an attribute of the same name, such as `title`, `id` or `width`, it is set as that attribute, so a `null` result removes it and `"50%"` keeps its meaning. `value`, camel-case properties such as `textContent`, and properties without such an attribute, such as `volume` or an option's `text`, stay properties. On a custom element every function is a getter, so pass a callback as `() => callback` or assign it in code.
 
 Everything after `on` is used as the event name, exactly as written, so custom events work the same way as built-in ones: `oncart-add` listens to `cart-add`. A listener can also be an object with `handler` and `options`, which go to `addEventListener`:
 

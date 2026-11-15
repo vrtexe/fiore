@@ -14,13 +14,14 @@ const HANDLER = /^on/i;
 /** @type {Map<string, Element>} One probe element per built-in tag, to look up its properties. */
 const probes = new Map();
 
-/** What a built-in element's property is: not writable, writable, a number or a string. */
-const NONE = 0;
-const OTHER = 1;
+/** Flags describing a built-in element's property. */
+const WRITABLE = 1;
 const NUMBER = 2;
-const STRING = 3;
+const STRING = 4;
+/** Writing the property sets the attribute of the same name, so the attribute can carry the value instead. */
+const REFLECTS = 8;
 
-/** @type {Map<string, number>} The kind of each built-in property, by tag and name. */
+/** @type {Map<string, number>} The flags of each built-in property, by tag and name. */
 const kinds = new Map();
 
 /**
@@ -36,14 +37,24 @@ function kindOf(tag, name) {
       probe = document.createElement(tag);
       probes.set(tag, probe);
     }
-    const current = /** @type {any} */ (probe)[name];
-    kind = !hasSetter(Object.getPrototypeOf(probe), name)
-      ? NONE
-      : typeof current === 'number'
-        ? NUMBER
-        : typeof current === 'string'
-          ? STRING
-          : OTHER;
+    kind = 0;
+    if (hasSetter(Object.getPrototypeOf(probe), name)) {
+      const target = /** @type {any} */ (probe);
+      const current = target[name];
+      kind = WRITABLE | (typeof current === 'number' ? NUMBER : typeof current === 'string' ? STRING : 0);
+      if (kind & (NUMBER | STRING)) {
+        // A throwaway element per tag, so writing its own value back has no effect outside.
+        try {
+          target[name] = current;
+          if (probe.hasAttribute(name)) {
+            kind |= REFLECTS;
+          }
+          probe.removeAttribute(name);
+        } catch {
+          // A setter that refuses its own value does not reflect.
+        }
+      }
+    }
     kinds.set(key, kind);
   }
   return kind;
@@ -51,10 +62,12 @@ function kindOf(tag, name) {
 
 /**
  * Decides whether a prop is set as a property rather than an attribute.
- * Built-in elements use their writable properties, except that a string for a numeric property, and a live getter
- * for a lower-case string or numeric property other than value, go to the attribute, so null removes it and
- * width="50%" keeps its meaning. A custom element may be defined after its first use and keep class fields off its
- * prototype, so object and function values go to its properties too; it is never constructed to find out.
+ * Built-in elements use their writable properties. A string for a numeric property, and a live value (a signal or a
+ * getter) for a lower-case string or numeric property other than value, go to the attribute when the property
+ * reflects to an attribute of the same name, so null removes it and width="50%" keeps its meaning; properties
+ * without such an attribute, such as volume, stay properties. A custom element may be defined after its first use
+ * and keep class fields off its prototype, so object and function values go to its properties too; it is never
+ * constructed to find out.
  * @param {string} tag
  * @param {string} name
  * @param {unknown} value
@@ -69,14 +82,16 @@ function isProperty(tag, name, value, definition) {
   }
 
   const kind = kindOf(tag, name);
-  if (kind === NONE) {
+  if (!(kind & WRITABLE)) {
     return false;
   }
-  if (typeof value === 'function') {
-    const plain = (kind === NUMBER || kind === STRING) && name === name.toLowerCase() && name !== 'value';
-    return !plain;
+  if (!(kind & REFLECTS)) {
+    return true;
   }
-  return !(typeof value === 'string' && kind === NUMBER);
+  if (typeof value === 'function' || typeof value === 'object') {
+    return name !== name.toLowerCase() || name === 'value';
+  }
+  return !(typeof value === 'string' && kind & NUMBER);
 }
 
 /**
