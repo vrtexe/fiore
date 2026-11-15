@@ -51,7 +51,8 @@ function flush() {
       runs.set(effect, count);
       if (count > MAX_RUNS) {
         pending.clear();
-        throw new Error(`An effect ran more than ${MAX_RUNS} times in one update; it probably sets a signal it reads.`);
+        errors.push(new Error(`An effect ran more than ${MAX_RUNS} times in one update; it probably sets a signal it reads.`));
+        break;
       }
       // One failing effect must not stop the others; the first error is rethrown afterwards.
       try {
@@ -63,7 +64,16 @@ function flush() {
   } finally {
     flushing = false;
   }
+  rethrow(errors);
+}
+
+/**
+ * Throws the first error and reports the others, so none of them is lost.
+ * @param {unknown[]} errors
+ */
+function rethrow(errors) {
   if (errors.length > 0) {
+    errors.slice(1).forEach(report);
     throw errors[0];
   }
 }
@@ -82,9 +92,7 @@ function runAll(fns) {
       errors.push(error);
     }
   }
-  if (errors.length > 0) {
-    throw errors[0];
-  }
+  rethrow(errors);
 }
 
 /**
@@ -139,13 +147,22 @@ function runIn(computation, nextOwner, fn) {
 function runTracked(computation, nextOwner, fn) {
   const previous = computation.sources;
   computation.sources = new Set();
+  let completed = false;
   try {
-    return runIn(computation, nextOwner, fn);
+    const result = runIn(computation, nextOwner, fn);
+    completed = true;
+    return result;
   } finally {
-    unsubscribe(
-      computation,
-      [...previous].filter((source) => !computation.sources.has(source)),
-    );
+    if (completed) {
+      unsubscribe(
+        computation,
+        [...previous].filter((source) => !computation.sources.has(source)),
+      );
+    } else {
+      // A run that threw may have stopped before reading its sources; it keeps following them, so the next
+      // change runs it again.
+      previous.forEach((source) => computation.sources.add(source));
+    }
   }
 }
 
@@ -199,6 +216,8 @@ export function state(value) {
 export function computed(fn) {
   /** @type {T} */
   let value;
+  /** @type {{ error: unknown } | undefined} An error from the last calculation, cached like a value. */
+  let failure;
   let dirty = true;
   /** @type {Source & Computation} */
   const node = {
@@ -224,13 +243,22 @@ export function computed(fn) {
   return {
     [SIGNAL]: true,
     get() {
+      // The reader subscribes first, so it stays subscribed even when the calculation throws.
+      track(node);
       if (dirty) {
-        value = runTracked(node, null, fn);
+        try {
+          value = runTracked(node, null, fn);
+          failure = undefined;
+        } catch (error) {
+          failure = { error };
+        }
         dirty = false;
       }
-      track(node);
       if (node.subs.size === 0) {
         release();
+      }
+      if (failure) {
+        throw failure.error;
       }
       return value;
     },
@@ -266,11 +294,14 @@ export function effect(fn) {
       } catch (error) {
         failure = { error };
       }
-      const result = runTracked(node, scope, fn);
-      cleanup = typeof result === 'function' ? result : undefined;
-      // Stopped during its own run: undo what the run set up after the stop.
-      if (stopped) {
-        stop();
+      try {
+        const result = runTracked(node, scope, fn);
+        cleanup = typeof result === 'function' ? result : undefined;
+      } finally {
+        // Stopped during its own run, also when it then threw: undo what the run set up after the stop.
+        if (stopped) {
+          stop();
+        }
       }
       if (failure) {
         throw failure.error;
@@ -400,7 +431,16 @@ export function each(items, render, key = (item) => item) {
     const kept = new Set([...next.values()].flat());
     const old = rows;
     rows = next;
-    runAll([...old.values()].flat().filter((row) => !kept.has(row)).map((row) => row.stop));
+    // A dropped row that fails to stop is reported, so the list still shows its new rows.
+    for (const row of [...old.values()].flat()) {
+      if (!kept.has(row)) {
+        try {
+          row.stop();
+        } catch (error) {
+          report(error);
+        }
+      }
+    }
     return nodes;
   };
 }
@@ -449,11 +489,26 @@ function observe() {
   }
   observing = true;
   new MutationObserver((records) => {
+    /** @type {Set<Node>} */
+    const removed = new Set();
+    /** @type {Set<Node>} */
+    const added = new Set();
     for (const record of records) {
-      record.removedNodes.forEach((node) => visit(node, pause));
-      record.addedNodes.forEach((node) => visit(node, resume));
+      record.removedNodes.forEach((node) => removed.add(node));
+      record.addedNodes.forEach((node) => added.add(node));
     }
+    roots(removed).forEach((node) => visit(node, pause));
+    roots(added).forEach((node) => visit(node, resume));
   }).observe(document, { childList: true, subtree: true });
+}
+
+/**
+ * Drops nodes whose parent is in the same batch, because walking the parent covers them; a deep tree appended level
+ * by level is then walked once instead of once per level.
+ * @param {Set<Node>} nodes
+ */
+function roots(nodes) {
+  return [...nodes].filter((node) => !node.parentNode || !nodes.has(node.parentNode));
 }
 
 /**
@@ -463,9 +518,13 @@ function observe() {
  * @param {(binding: Binding) => void} fn
  */
 function visit(node, fn) {
-  const walker = document.createTreeWalker(node, 1 | 4 /* elements and text */);
+  const walker = document.createTreeWalker(node, 1 | 4 | 128 /* elements, text and comments */);
   for (let current = /** @type {Node | null} */ (node); current; current = walker.nextNode()) {
-    for (const binding of [...(bindings.get(current) ?? [])]) {
+    const set = bindings.get(current);
+    if (!set) {
+      continue;
+    }
+    for (const binding of [...set]) {
       try {
         fn(binding);
       } catch (error) {
@@ -487,8 +546,10 @@ function report(error) {
 /** @param {Binding} binding */
 function pause(binding) {
   if (!binding.anchor()?.isConnected) {
-    binding.stop?.();
+    // Cleared first, so a stop that throws still leaves the binding ready to resume.
+    const stop = binding.stop;
     binding.stop = undefined;
+    stop?.();
   }
 }
 

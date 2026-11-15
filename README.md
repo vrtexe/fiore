@@ -36,7 +36,7 @@ document.body.append(
 | Function | What it does |
 | --- | --- |
 | `state(value)` | A value with `get()`, `set(value)`, `update(fn)` and `mutate(fn)`. `update` sets the value `fn` returns, `mutate` changes the value in place. Reading it inside an effect, a computed or a binding subscribes to it. Setting an equal value (`Object.is`) does nothing. |
-| `computed(fn)` | A value derived from other signals. It is calculated on first read and again on the next read after an input changed. It keeps its value while an effect or binding reads it, also when that reader reruns for another reason. While nothing reads it inside an effect or binding, it does not stay subscribed to its inputs and is recalculated on every read. |
+| `computed(fn)` | A value derived from other signals. It is calculated on first read and again on the next read after an input changed. It keeps its value while an effect or binding reads it, also when that reader reruns for another reason. If `fn` throws, the error is kept like a value and thrown on every read until an input changes; readers stay subscribed and recover then. While nothing reads it inside an effect or binding, it does not stay subscribed to its inputs and is recalculated on every read. |
 | `effect(fn)` | Runs `fn` now and whenever a signal it read changes. Returns a function that stops it. If `fn` returns a function, that function runs before the next run and when the effect stops. |
 | `untrack(fn)` | Runs `fn` without subscribing to the signals it reads. |
 | `read(value)` | Returns the current value of a signal, a getter function or a plain value. |
@@ -51,7 +51,7 @@ A value is live when it is a signal or a function:
 - a signal binds to its current value: `children: count`, `props: { value: name }`
 - a function is called inside an effect and binds to its result: `attributes: { class: () => ... }`, `children: () => ...`
 
-Functions in `event`, and properties whose name starts with `on`, are listeners and never bindings. A live child can return text, a node, a list of nodes or nothing.
+Functions in `event`, and properties or attributes whose name starts with `on` in any case, are listeners and never bindings. A live child can return text, a node, a list of nodes or nothing.
 
 ## Components
 

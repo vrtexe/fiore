@@ -431,3 +431,230 @@ test('a live child built elsewhere pauses when the place it moved to is removed'
 
   assert.equal(reads, 1);
 });
+
+/** Collects errors sent to reportError (or console.error) while `fn` runs. */
+async function reported(fn) {
+  const errors = [];
+  const previous = globalThis.reportError;
+  const previousConsole = console.error;
+  globalThis.reportError = (error) => errors.push(error);
+  console.error = (error) => errors.push(error);
+  try {
+    await fn();
+  } finally {
+    globalThis.reportError = previous;
+    console.error = previousConsole;
+  }
+  return errors;
+}
+
+test('readers of a computed recover after it threw once', () => {
+  const text = state('{"a":1}');
+  const parsed = computed(() => JSON.parse(text.get()).a);
+  const seen = [];
+  effect(() => {
+    try {
+      seen.push(parsed.get());
+    } catch {
+      seen.push('error');
+    }
+  });
+  const label = span({ children: () => String(parsed.get()) });
+
+  assert.throws(() => text.set('{bad'));
+  text.set('{"a":9}');
+
+  assert.deepEqual(seen, [1, 'error', 9]);
+  assert.equal(label.textContent, '9');
+});
+
+test('a computed that throws without readers can be collected', async () => {
+  const source = state(1);
+  const make = () => {
+    const payload = { big: new Uint8Array(1024) };
+    const broken = computed(() => {
+      source.get();
+      if (payload) throw new Error('broken');
+    });
+    return { ref: new WeakRef(payload), broken };
+  };
+  let { ref, broken } = make();
+  assert.throws(() => broken.get());
+  broken = undefined;
+
+  assert.equal(await collected(ref), true);
+  source.set(2);
+});
+
+test('a binding whose cleanup throws while paused still resumes', async () => {
+  const price = state(10);
+  const panel = div({
+    children: () => {
+      effect(() => () => {
+        throw new Error('cleanup failed');
+      });
+      return `CHF ${price.get()}`;
+    },
+  });
+  document.body.append(panel);
+  await tick();
+
+  const errors = await reported(async () => {
+    panel.remove();
+    await tick();
+  });
+  price.set(99);
+  document.body.append(panel);
+  await tick();
+
+  assert.equal(errors.length, 1);
+  assert.equal(panel.textContent, 'CHF 99');
+  panel.remove();
+});
+
+test('each still shows its new rows when a dropped row fails to stop', async () => {
+  const items = state([1, 2]);
+  const list = div({
+    children: each(items, (item) => {
+      if (item === 2) {
+        effect(() => () => {
+          throw new Error('row cleanup failed');
+        });
+      }
+      return span({ children: String(item) });
+    }),
+  });
+
+  const errors = await reported(() => items.set([1, 3]));
+
+  assert.equal(list.textContent, '13');
+  assert.equal(errors.length, 1);
+});
+
+test('a live child that starts with a comment pauses with its host', async () => {
+  const count = state(1);
+  let reads = 0;
+  const host = div({ children: () => (reads++, [document.createComment('start'), `x${count.get()}`]) });
+  document.body.append(host);
+  await tick();
+
+  host.remove();
+  await tick();
+  count.set(2);
+
+  assert.equal(reads, 1);
+});
+
+test('an effect that stops itself and then throws leaves nothing running', () => {
+  const count = state(0);
+  let inner = 0;
+  let stop;
+  stop = effect(() => {
+    if (count.get() === 1) {
+      stop();
+      effect(() => {
+        inner++;
+        count.get();
+      });
+      throw new Error('after stop');
+    }
+  });
+
+  assert.throws(() => count.set(1), /after stop/);
+  count.set(2);
+  count.set(3);
+
+  assert.equal(inner, 1);
+});
+
+test('a deep tree appended level by level is walked once', async () => {
+  const host = div({ children: state('live') });
+  document.body.append(host);
+  await tick();
+  const createTreeWalker = document.createTreeWalker;
+  let steps = 0;
+  document.createTreeWalker = function (...args) {
+    const walker = createTreeWalker.apply(this, args);
+    const nextNode = walker.nextNode.bind(walker);
+    walker.nextNode = () => (steps++, nextNode());
+    return walker;
+  };
+  try {
+    let parent = host;
+    for (let i = 0; i < 300; i++) {
+      const child = document.createElement('div');
+      parent.append(child);
+      parent = child;
+    }
+    await tick();
+  } finally {
+    document.createTreeWalker = createTreeWalker;
+    host.remove();
+  }
+
+  assert.ok(steps < 900, `walked ${steps} nodes for 300`);
+});
+
+test('a loop error does not hide the errors of other effects', async () => {
+  const count = state(0);
+  effect(() => {
+    if (count.get() > 0) throw new Error('first failed');
+  });
+  effect(() => {
+    if (count.get() > 0) count.set(count.get() + 1);
+  });
+
+  const errors = await reported(() => assert.throws(() => count.set(1), /first failed/));
+
+  assert.ok(errors.some((error) => /ran more than 100 times/.test(String(error))));
+});
+
+test('fault injection: the app recovers after any one callback throws during updates', async () => {
+  const points = ['computed', 'effect', 'cleanup', 'inner-cleanup', 'binding', 'render', 'row-cleanup'];
+  for (const point of points) {
+    let armed = false;
+    const fail = (name) => {
+      if (armed && name === point) throw new Error(`injected ${name}`);
+    };
+
+    const source = state(0);
+    const derived = computed(() => (fail('computed'), source.get() * 2));
+    const log = [];
+    effect(() => {
+      fail('effect');
+      log.push(derived.get());
+      effect(() => () => fail('inner-cleanup'));
+      return () => fail('cleanup');
+    });
+    const label = div({ children: () => (fail('binding'), String(derived.get())) });
+    const items = computed(() => [source.get(), source.get() + 1]);
+    const list = div({
+      children: each(items, (item) => {
+        fail('render');
+        effect(() => () => fail('row-cleanup'));
+        return span({ children: String(item) });
+      }),
+    });
+    document.body.append(label, list);
+    await tick();
+
+    armed = true;
+    await reported(() => {
+      for (const value of [1, 2]) {
+        try {
+          source.set(value);
+        } catch {
+          // the injected error, expected
+        }
+      }
+    });
+    armed = false;
+    source.set(10);
+
+    assert.equal(log.at(-1), 20, `${point}: effect`);
+    assert.equal(label.textContent, '20', `${point}: binding`);
+    assert.equal(list.textContent, '1011', `${point}: list`);
+    label.remove();
+    list.remove();
+  }
+});
