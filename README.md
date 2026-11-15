@@ -178,9 +178,17 @@ Without a bundler, use an import map so every module resolves `fiorejs` to the s
 
 Plugin packages should import fiorejs by its package name, never by a URL or relative path, so the import map applies to them too.
 
+## Packages
+
+This repository also holds the packages that build on fiorejs, each in its own folder under `packages/`:
+
+- [`@fiorejs/signals`](packages/signals): signals that bind state to props, attributes and children.
+- [`@fiorejs/jsx`](packages/jsx): a JSX runtime that returns real DOM nodes.
+- [`@fiorejs/create`](packages/create): `npm create @fiorejs` scaffolds an app.
+
 ## Releases
 
-Release notes are on the [GitHub releases page](https://github.com/vrtexe/fiore/releases).
+Release notes are on the [GitHub releases page](https://github.com/vrtexe/fiore/releases). A release tagged `1.2.3` publishes fiorejs; a release tagged `<folder>@<version>`, such as `jsx@0.1.0`, publishes the package in that folder.
 
 ## License
 

@@ -1,9 +1,14 @@
 # Stages a release on npm with trusted publishing (OIDC), so no npm token is stored in this
-# repository. Set up the trust once, allowing staged publishing only (never --allow-publish):
+# repository. The release tag picks the package: "1.2.3" releases fiorejs from the root, and
+# "<folder>@<version>" releases the package in packages/<folder>, for example "jsx@0.1.0".
+# Set up the trust once per package, allowing staged publishing only (never --allow-publish):
 #   npm trust github fiorejs --file npm-publish.yml --repository vrtexe/fiore --environment npm --allow-stage-publish
+#   npm trust github @fiorejs/jsx --file npm-publish.yml --repository vrtexe/fiore --environment npm --allow-stage-publish
+#   npm trust github @fiorejs/signals --file npm-publish.yml --repository vrtexe/fiore --environment npm --allow-stage-publish
+#   npm trust github @fiorejs/create --file npm-publish.yml --repository vrtexe/fiore --environment npm --allow-stage-publish
 # Restrict the GitHub environment "npm" to release tags. A maintainer then approves the staged version
-# with 2FA on npmjs.com or with `npm stage approve <stage-id>`. The tests run in their own job without
-# the OIDC permission, before the version commit is pushed.
+# with 2FA on npmjs.com or with `npm stage approve <stage-id>`. The tests of every package run in their
+# own job without the OIDC permission, before the version commit is pushed.
 
 name: publish
 
@@ -12,7 +17,30 @@ on:
     types: [published]
 
 jobs:
+  target:
+    runs-on: ubuntu-latest
+    permissions: {}
+    outputs:
+      dir: ${{ steps.parse.outputs.dir }}
+      version: ${{ steps.parse.outputs.version }}
+    steps:
+      - id: parse
+        run: |
+          if [[ "$TAG" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "dir=." >> "$GITHUB_OUTPUT"
+            echo "version=$TAG" >> "$GITHUB_OUTPUT"
+          elif [[ "$TAG" =~ ^([a-z0-9-]+)@([0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?)$ ]]; then
+            echo "dir=packages/${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+            echo "version=${BASH_REMATCH[2]}" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::Release tag \"$TAG\" is neither <version> nor <package folder>@<version>"
+            exit 1
+          fi
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+
   test:
+    needs: target
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -25,11 +53,14 @@ jobs:
         with:
           node-version: 24
           package-manager-cache: false
+      - run: test -f "$DIR/package.json"
+        env:
+          DIR: ${{ needs.target.outputs.dir }}
       - run: npm ci --ignore-scripts
-      - run: npm test
+      - run: npm test --workspaces --include-workspace-root
 
   version:
-    needs: test
+    needs: [target, test]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -41,23 +72,32 @@ jobs:
         with:
           node-version: 24
           package-manager-cache: false
+      - working-directory: ${{ needs.target.outputs.dir }}
+        run: npm version "$APP_VERSION" --no-git-tag-version --allow-same-version --ignore-scripts --no-workspaces-update
+        env:
+          APP_VERSION: ${{ needs.target.outputs.version }}
+      - run: npm install --package-lock-only --ignore-scripts
       - run: |
-          npm version "$APP_VERSION" --no-git-tag-version --allow-same-version
+          NAME=$(node -p "require('./$DIR/package.json').name")
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add package.json package-lock.json
-          git diff --cached --quiet || git commit -m "Release version $APP_VERSION"
+          git add package-lock.json "$DIR/package.json"
+          git diff --cached --quiet || git commit -m "Release $NAME version $APP_VERSION"
           git push origin HEAD:main
         env:
-          APP_VERSION: ${{ github.event.release.tag_name }}
+          DIR: ${{ needs.target.outputs.dir }}
+          APP_VERSION: ${{ needs.target.outputs.version }}
 
   publish:
-    needs: version
+    needs: [target, version]
     runs-on: ubuntu-latest
     environment: npm
     permissions:
       contents: read
       id-token: write
+    defaults:
+      run:
+        working-directory: ${{ needs.target.outputs.dir }}
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
         with:
@@ -68,7 +108,7 @@ jobs:
           node-version: 24
           registry-url: https://registry.npmjs.org
           package-manager-cache: false
-      - run: npm version "$APP_VERSION" --no-git-tag-version --allow-same-version
+      - run: npm version "$APP_VERSION" --no-git-tag-version --allow-same-version --ignore-scripts --no-workspaces-update
         env:
-          APP_VERSION: ${{ github.event.release.tag_name }}
+          APP_VERSION: ${{ needs.target.outputs.version }}
       - run: npm stage publish
