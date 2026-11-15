@@ -1,23 +1,23 @@
 import { button, form, h1, header, input, label, li, main, p, small, span, ul } from 'fiorejs';
 
-const count = span.props({ className: 'count' }).of();
-const list = ul.props({ className: 'list' }).of();
+const count = span.props({ className: 'count' }).create();
+const list = ul.props({ className: 'list' }).create();
 const field = input
   .props({ name: 'todo', placeholder: 'What needs doing?', required: true })
   .attrs({ autocomplete: 'off' })
-  .of();
+  .create();
 
 function updateCount() {
   count.textContent = `${list.children.length} items`;
 }
 
 function TodoItem(text: string) {
-  const item: HTMLLIElement = li.props({ className: 'item' }).of([
-    label.of([
+  const item: HTMLLIElement = li.props({ className: 'item' }).create([
+    label.create([
       input
         .props({ type: 'checkbox' })
         .on({ change: (event) => item.classList.toggle('done', event.currentTarget.checked) })
-        .of(),
+        .create(),
       span(text),
     ]),
     button
@@ -29,7 +29,7 @@ function TodoItem(text: string) {
           updateCount();
         },
       })
-      .of('✕'),
+      .create('✕'),
   ]);
   return item;
 }
@@ -40,8 +40,8 @@ function add(text: string) {
 }
 
 document.body.append(
-  main.props({ className: 'app' }).of([
-    header.of([h1.of(['Fiore ', small('+ DOM')]), count]),
+  main.props({ className: 'app' }).create([
+    header.create([h1.create(['Fiore ', small('+ DOM')]), count]),
     form
       .props({ className: 'add' })
       .on({
@@ -52,11 +52,11 @@ document.body.append(
           field.focus();
         },
       })
-      .of([field, button.props({ type: 'submit' }).of('Add')]),
+      .create([field, button.props({ type: 'submit' }).create('Add')]),
     list,
     p
       .props({ className: 'hint' })
-      .of('No virtual DOM: every function returns a real element, and updates are plain DOM calls.'),
+      .create('No virtual DOM: every function returns a real element, and updates are plain DOM calls.'),
   ]),
 );
 

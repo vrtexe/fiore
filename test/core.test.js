@@ -571,7 +571,7 @@ test('the builder applies props, attrs, children, late props, listeners and call
         el.dispatchEvent(new window.Event('change'));
         seen.push([el.value, el.getAttribute('name'), el.className]);
       })
-      .of([option('S'), option('M')]);
+      .create([option('S'), option('M')]);
   const listen = { change: (event) => seen.push(['listener', event.currentTarget.value]) };
 
   build((tag) => tag.on(listen).attrs({ name: 'size' }).props({ value: 'M', className: 'pick' }));
@@ -593,7 +593,7 @@ test('repeated builder calls merge props and attrs, and add listeners and callba
     .on({ click: () => clicks.push(2) })
     .also(() => order.push('first'))
     .also(() => order.push('second'))
-    .of();
+    .create();
   el.dispatchEvent(new window.Event('click'));
 
   assert.equal(el.className, 'b');
@@ -611,34 +611,34 @@ test('builders are immutable templates and copy maps when they are called', () =
   style.color = 'blue';
   const marked = card.attrs({ 'data-marked': '' });
 
-  const plain = card.of('A');
-  const special = marked.of('B');
+  const plain = card.create('A');
+  const special = marked.create('B');
 
   assert.equal(plain.style.color, 'red');
   assert.equal(plain.hasAttribute('data-marked'), false);
   assert.equal(special.className, 'card');
   assert.equal(special.hasAttribute('data-marked'), true);
-  assert.equal(div.of().className, '', 'a tag method starts from an empty builder each time');
+  assert.equal(div.create().className, '', 'a tag method starts from an empty builder each time');
 });
 
-test('with applies a modifier, and of takes children like the data object', () => {
+test('with applies a modifier, and create takes children like the data object', () => {
   const card = (b) => b.props({ className: 'card' });
   const admin = (b) => (b.attrs({ 'data-admin': '' }));
-  const el = div.with(card).with((b) => (false ? admin(b) : b)).of([span('a'), false && 'x', null, 'b', 1]);
+  const el = div.with(card).with((b) => (false ? admin(b) : b)).create([span('a'), false && 'x', null, 'b', 1]);
 
   assert.equal(el.className, 'card');
   assert.equal(el.hasAttribute('data-admin'), false);
   assert.equal(el.textContent, 'ab1');
-  assert.equal(div.of(span('only')).textContent, 'only');
-  assert.equal(div.of('text').textContent, 'text');
-  assert.equal(div.of(null).childNodes.length, 0);
+  assert.equal(div.create(span('only')).textContent, 'only');
+  assert.equal(div.create('text').textContent, 'text');
+  assert.equal(div.create(null).childNodes.length, 0);
 });
 
 test('a live prop in a template binds once per created element', () => {
   const label = signal('one');
   const template = div.props({ title: label });
-  const first = template.of();
-  const second = template.of();
+  const first = template.create();
+  const second = template.create();
   label.set('two');
 
   assert.deepEqual([first.title, second.title], ['two', 'two']);
@@ -647,7 +647,7 @@ test('a live prop in a template binds once per created element', () => {
 test('element() returns the same tag for a name, in each namespace', () => {
   assert.equal(element('div'), element('div'));
   assert.equal(element('div'), div, 'the named export is the same tag');
-  assert.equal(element('div').props({ id: 'x' }).of().id, 'x');
+  assert.equal(element('div').props({ id: 'x' }).create().id, 'x');
   assert.equal(svg.element('circle')().namespaceURI, 'http://www.w3.org/2000/svg');
   assert.equal(math.element('mi')().namespaceURI, 'http://www.w3.org/1998/Math/MathML');
 });

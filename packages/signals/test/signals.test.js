@@ -1107,7 +1107,7 @@ test('signals bind through builder props and attrs, nested props and plain-call 
   const done = state(false);
   const color = state('red');
   const label = state('Ada');
-  const box = input.props({ type: 'checkbox', checked: done, style: { color } }).attrs({ title: label }).of();
+  const box = input.props({ type: 'checkbox', checked: done, style: { color } }).attrs({ title: label }).create();
   const text = span(label);
 
   done.set(true);
