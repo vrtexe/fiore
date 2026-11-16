@@ -65,6 +65,17 @@ class Signal {
   for(key = itemKey) {
     return new Keyed(this, key);
   }
+
+  /**
+   * Shows what `then` returns while the signal's value is truthy, and nothing otherwise; add `.else(fn)` for the other
+   * case. Only the shown branch is built.
+   * @template A
+   * @param {() => A} then
+   * @returns {When<A, null>}
+   */
+  if(then) {
+    return new When(this, then, () => null);
+  }
 }
 
 /**
@@ -686,6 +697,64 @@ class List {
           }
         }
         return nodes;
+      },
+      apply,
+      context,
+    );
+  }
+}
+
+/**
+ * A live value that shows one branch while a signal is truthy and the other otherwise. A branch is built once when it is
+ * shown, outside the binding's tracking, so it is rebuilt only when the truthiness flips; what it builds stops then.
+ * @template A, B
+ */
+class When {
+  /**
+   * @param {Signal<unknown>} source
+   * @param {() => A} then
+   * @param {() => B} otherwise
+   */
+  constructor(source, then, otherwise) {
+    this._source = source;
+    this._then = then;
+    this._otherwise = otherwise;
+  }
+
+  /**
+   * Shows what `otherwise` returns while the signal's value is falsy.
+   * @template C
+   * @param {() => C} otherwise
+   * @returns {When<A, C>}
+   */
+  else(otherwise) {
+    return new When(this._source, this._then, otherwise);
+  }
+
+  /**
+   * @param {(value: unknown) => void} apply
+   * @param {import('fiorejs/type/base.dom.d.ts').BindContext} context
+   */
+  [LIVE](apply, context) {
+    /** @type {boolean | undefined} */
+    let shown;
+    /** @type {A | B | undefined} */
+    let value;
+    /** @type {Owner} */
+    let scope = { owned: [] };
+    const stopBranch = () => scope.owned.splice(0).forEach((stopOwned) => stopOwned());
+    owner?.owned.push(stopBranch);
+
+    attach(
+      () => {
+        const visible = Boolean(this._source.get());
+        if (visible !== shown) {
+          stopBranch();
+          shown = visible;
+          scope = { owned: [] };
+          value = visible ? runIn(null, scope, this._then) : runIn(null, scope, this._otherwise);
+        }
+        return value;
       },
       apply,
       context,

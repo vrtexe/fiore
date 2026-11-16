@@ -13,6 +13,14 @@ export interface Signal<T> extends LiveValue<T> {
   map<U>(this: Signal<readonly U[]>, render: (item: U, index: number) => Node): LiveValue<Node[]>;
   /** Keys the rows of a list by `item.key`, or by what `key` returns. */
   for<U>(this: Signal<readonly U[]>, key?: (item: U) => unknown): Keyed<U>;
+  /** Shows what `then` returns while the value is truthy, and nothing otherwise; add `.else(fn)` for the other case. */
+  if<A>(then: () => A): When<A, null>;
+}
+
+/** A live value that shows one of two branches; only the shown branch is built. */
+export interface When<A, B> extends LiveValue<A | B> {
+  /** Shows what `otherwise` returns while the value is falsy. */
+  else<C>(otherwise: () => C): When<A, C>;
 }
 
 /** A signal of a list with its key, waiting for `map`. */

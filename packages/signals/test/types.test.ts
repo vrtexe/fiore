@@ -1,4 +1,4 @@
-import { div, input, li, ul } from 'fiorejs';
+import { div, input, li, span, ul } from 'fiorejs';
 import { classList, computed, read, resource, state, type Reactive } from '@fiorejs/signals';
 // @ts-expect-error the brand is not exported
 import { SIGNAL } from '@fiorejs/signals';
@@ -57,3 +57,6 @@ const answer: number | undefined = plain.get();
 void answer;
 
 div.props({ className: classList(['card', { active: name, disabled: () => false }]) }).create();
+
+div(state(true).if(() => span('a')).else(() => 'b'));
+div(['x', state(0).if(() => span('some'))]);

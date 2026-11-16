@@ -35,6 +35,7 @@ document.body.append(
 | `state(value)` | A value with `get()`, `set(value)`, `update(fn)` and `mutate(fn)`. `update` sets the value `fn` returns, `mutate` changes the value in place. Reading it inside an effect, a computed or a binding subscribes to it. Setting an equal value (`Object.is`) does nothing. |
 | `signal.computed(fn)` | A computed value derived from one signal's value: `count.computed((n) => n * 2)`. |
 | `signal.map(render)`, `signal.for(key).map(render)` | A list that reuses the rows of items it has seen; see [Lists](#lists). |
+| `signal.if(then).else(otherwise)` | Shows one of two branches by the signal's truthiness; see [Conditions](#conditions). |
 | `signal.with(fn)` | Passes the signal to `fn` and returns its result, for reusable steps such as `todos.with(byId)`. |
 | `computed(fn)` | A value derived from other signals. It is calculated on first read and again on the next read after an input changed. It keeps its value while an effect or binding reads it, also when that reader reruns for another reason. If `fn` throws, the error is kept like a value and thrown on every read until an input changes; a reader that catches it stays subscribed and recovers then. While nothing reads it inside an effect or binding, it does not stay subscribed to its inputs and is recalculated on every read. `fn` derives a value and must not set signals: `set`, `update` or `mutate` inside it throws. To correct a value, derive the corrected one (`computed(() => Math.min(page.get(), last.get()))`) or correct it where it is set. |
 | `effect(fn)` | Runs `fn` now and whenever a signal it read changes. Returns a function that stops it. If `fn` returns a function, that function runs before the next run and when the effect stops. |
@@ -106,6 +107,23 @@ Price({ amount: 12 });
 Price({ amount: total });
 Price({ amount: computed(() => total.get() * 1.081) });
 ```
+
+## Conditions
+
+A component runs once, so `open.get() ? a : b` in markup is read once and never switches. `signal.if(then)` is the live version: it shows what `then` returns while the signal's value is truthy, and nothing otherwise; `.else(otherwise)` adds the other branch.
+
+```js
+import { div, em } from 'fiorejs';
+import { state } from '@fiorejs/signals';
+
+const open = state(false);
+
+div(open.if(() => Details()).else(() => em('closed')));
+div(open.if(() => Details())); // nothing while closed
+div(count.computed((n) => n > 10).if(() => em('many')));
+```
+
+Both branches are functions, so only the shown branch is built. It is built once and rebuilt only when the truthiness flips, so `count.if(...)` does not rebuild when `count` goes from 1 to 2. When the branch changes, the bindings and effects the old branch created stop. For a condition other than truthiness, derive it first with `signal.computed(...)`.
 
 ## Lists
 
