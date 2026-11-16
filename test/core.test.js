@@ -519,6 +519,21 @@ test('a live child that no plugin binds is shown as text and leaves no markers',
   assert.equal(el.childNodes.length, 4);
 });
 
+test('an only live child reorders its nodes in place', () => {
+  const [a, b, c, d] = ['a', 'b', 'c', 'd'].map((tag) => document.createElement(tag));
+  const content = signal([a, b, c]);
+  const el = div({ children: content });
+
+  content.set([c, a]);
+  assert.deepEqual([...el.childNodes], [c, a]);
+
+  content.set([d, c, a, b]);
+  assert.deepEqual([...el.childNodes], [d, c, a, b]);
+
+  content.set([b, d, a]);
+  assert.deepEqual([...el.childNodes], [b, d, a]);
+});
+
 test('a live child taken out of its element ignores later updates', () => {
   const content = signal('a');
   const el = div({ children: ['<', content] });
