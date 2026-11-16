@@ -10,7 +10,7 @@ Object.assign(globalThis, {
 });
 
 const { button, div, span, input } = await import('fiorejs');
-const { state, computed, effect, untrack, read, each, resource, classList, isSignal } = await import('@fiorejs/signals');
+const { state, computed, effect, untrack, read, resource, classList, isSignal } = await import('@fiorejs/signals');
 
 const tick = () => new Promise((resolve) => setTimeout(resolve));
 
@@ -140,11 +140,11 @@ test('a getter child stops the bindings of what it replaced', () => {
   assert.equal(inner.textContent, '1');
 });
 
-test('each reuses rows by key and stops the bindings of removed rows', () => {
+test('map reuses rows by key and stops the bindings of removed rows', () => {
   const label = state('item');
   const items = state([{ id: 1 }, { id: 2 }, { id: 3 }]);
   const list = div({
-    children: each(items, (item) => span({ children: computed(() => `${label.get()} ${item.id}`) }), (item) => item.id),
+    children: items.for((item) => item.id).map((item) => span({ children: computed(() => `${label.get()} ${item.id}`) })),
   });
   const [one, two, three] = list.children;
 
@@ -241,9 +241,9 @@ test('a computed without readers lets go of its sources', async () => {
   assert.equal(await collected(ref), true);
 });
 
-test('each renders repeated keys once per occurrence', () => {
+test('map renders repeated keys once per occurrence', () => {
   const items = state(['a', 'a']);
-  const list = div({ children: each(items, (item) => span({ children: item })) });
+  const list = div({ children: items.map((item) => span({ children: item })) });
 
   items.set(['a', 'a', 'b']);
 
@@ -251,13 +251,13 @@ test('each renders repeated keys once per occurrence', () => {
   assert.equal(list.textContent, 'aab');
 });
 
-test('each stops its rows when the surrounding effect replaces them', () => {
+test('map stops its rows when the surrounding effect replaces them', () => {
   const show = state(true);
   const label = state('row');
   const items = state([1]);
   const panel = div({
     children: computed(() =>
-      show.get() ? div({ children: each(items, (item) => span({ children: computed(() => `${label.get()} ${item}`) })) }) : 'hidden',
+      show.get() ? div({ children: items.map((item) => span({ children: computed(() => `${label.get()} ${item}`) })) }) : 'hidden',
     ),
   });
   const row = panel.querySelector('span');
@@ -464,7 +464,7 @@ test('a live object prop does not pile up bindings when it changes often', () =>
   assert.ok(growth < 1_500_000, `heap grew by ${growth} bytes`);
 });
 
-test('each keeps its rows when a render fails partway through', async () => {
+test('map keeps its rows when a render fails partway through', async () => {
   const items = state([1, 2]);
   const label = state('a');
   let renders = 0;
@@ -474,7 +474,7 @@ test('each keeps its rows when a render fails partway through', async () => {
     if (item === 99) throw new Error('bad row');
     return span({ children: computed(() => (reads++, `${label.get()}${item}`)) });
   };
-  div({ children: each(items, render) });
+  div({ children: items.map(render) });
 
   const errors = await reported(() => items.set([1, 2, 99]));
   assert.match(String(errors[0]), /bad row/);
@@ -574,10 +574,10 @@ test('a binding whose cleanup throws while paused still resumes', async () => {
   panel.remove();
 });
 
-test('each still shows its new rows when a dropped row fails to stop', async () => {
+test('map still shows its new rows when a dropped row fails to stop', async () => {
   const items = state([1, 2]);
   const list = div({
-    children: each(items, (item) => {
+    children: items.map((item) => {
       if (item === 2) {
         effect(() => () => {
           throw new Error('row cleanup failed');
@@ -727,7 +727,7 @@ test('fault injection: a callback that throws during updates is reported once an
     const label = div({ children: computed(() => (fail('binding'), String(derived.get()))) });
     const items = computed(() => [source.get(), source.get() + 1]);
     const list = div({
-      children: each(items, (item) => {
+      children: items.map((item) => {
         fail('render');
         effect(() => () => fail('row-cleanup'));
         return span({ children: String(item) });
@@ -1162,4 +1162,86 @@ test('a bare function is not live', () => {
   count.set(2);
 
   assert.equal(el.textContent, String(getter));
+});
+
+test('map reuses the rows of items it has seen', () => {
+  const [a, b, c] = ['a', 'b', 'c'].map((text) => ({ text }));
+  const items = state([a, b]);
+  const list = div({ children: items.map((item) => span(item.text)) });
+  const [first, second] = list.children;
+
+  items.set([b, a, c]);
+
+  assert.deepEqual([...list.children].slice(0, 2), [second, first]);
+  assert.equal(list.children.length, 3);
+});
+
+test('for() keys rows by item.key by default and by a function when given', () => {
+  const items = state([{ key: 'a' }, { key: 'b' }]);
+  const list = div({ children: items.for().map((item) => span(item.key)) });
+  const [a, b] = list.children;
+  items.set([{ key: 'b' }, { key: 'a' }]);
+  assert.deepEqual([...list.children], [b, a]);
+
+  const rows = state([{ id: 1 }, { id: 2 }]);
+  const other = div({ children: rows.for((item) => item.id).map((item) => span(String(item.id))) });
+  const [one, two] = other.children;
+  rows.set([{ id: 2 }, { id: 1 }]);
+  assert.deepEqual([...other.children], [two, one]);
+});
+
+test('rows that render a fragment survive the next update', () => {
+  const items = state([1, 2]);
+  const list = div({
+    children: items.map((item) => {
+      const fragment = document.createDocumentFragment();
+      fragment.append(span(`${item}a`), span(`${item}b`));
+      return fragment;
+    }),
+  });
+  const before = [...list.children];
+
+  items.set([1, 2, 3]);
+
+  assert.equal(list.children.length, 6);
+  assert.deepEqual([...list.children].slice(0, 4), before);
+});
+
+test('one list bound in two places keeps separate rows', () => {
+  const items = state([1, 2]);
+  const rows = items.map((item) => span(String(item)));
+  const first = div(rows);
+  const second = div(rows);
+
+  items.set([1, 2, 3]);
+
+  assert.equal(first.textContent, '123');
+  assert.equal(second.textContent, '123');
+  assert.notEqual(first.children[0], second.children[0]);
+});
+
+test('for() without key fields matches rows by position and does not throw', () => {
+  const items = state([{ n: 1 }, { n: 2 }]);
+  const list = div({ children: items.for().map((item) => span(String(item.n))) });
+
+  assert.doesNotThrow(() => items.set([{ n: 3 }, { n: 4 }, { n: 5 }]));
+  assert.equal(list.children.length, 3);
+});
+
+test('computed(fn) on a signal derives from its value', () => {
+  const count = state(2);
+  const doubled = count.computed((value) => value * 2);
+  const seen = [];
+  effect(() => seen.push(doubled.get()));
+
+  count.set(3);
+
+  assert.deepEqual(seen, [4, 6]);
+});
+
+test('with(fn) passes the signal to fn and returns its result', () => {
+  const count = state(2);
+
+  assert.equal(count.with((signal) => signal), count);
+  assert.equal(count.with((signal) => signal.get() + 1), 3);
 });

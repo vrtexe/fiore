@@ -5,6 +5,20 @@ declare const SIGNAL: unique symbol;
 export interface Signal<T> extends LiveValue<T> {
   readonly [SIGNAL]: true;
   get(): T;
+  /** A computed value derived from this signal's value. */
+  computed<U>(fn: (value: T) => U): Computed<U>;
+  /** Passes the signal to `fn` and returns its result, for reusable steps. */
+  with<R>(fn: (signal: this) => R): R;
+  /** Renders a list and reuses the rows of items it has seen; the item itself is the key. */
+  map<U>(this: Signal<readonly U[]>, render: (item: U, index: number) => Node): LiveValue<Node[]>;
+  /** Keys the rows of a list by `item.key`, or by what `key` returns. */
+  for<U>(this: Signal<readonly U[]>, key?: (item: U) => unknown): Keyed<U>;
+}
+
+/** A signal of a list with its key, waiting for `map`. */
+export interface Keyed<T> {
+  /** Renders the list and reuses the rows of items whose key it has seen. */
+  map(render: (item: T, index: number) => Node): LiveValue<Node[]>;
 }
 
 export interface State<T> extends Signal<T> {
@@ -33,11 +47,6 @@ export function classList(
     | Record<string, Reactive<unknown> | (() => unknown)>
     | readonly (string | Record<string, Reactive<unknown> | (() => unknown)>)[],
 ): Computed<string>;
-export function each<T, N extends Node = Node>(
-  items: Reactive<readonly T[]> | (() => readonly T[]),
-  render: (item: T, index: number) => N,
-  key?: (item: T) => unknown,
-): LiveValue<N[]>;
 
 export interface Resource<T> extends Signal<T | undefined> {
   /** True while a load is running. */

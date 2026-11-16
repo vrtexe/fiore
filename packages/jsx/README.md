@@ -120,7 +120,7 @@ const input = (<input value="Ada" />) as HTMLInputElement;
 ## Limits
 
 - `a`, `script`, `style` and `title` always create HTML elements, also inside `<svg>`.
-- `key` is accepted and ignored, because nothing is diffed; to reuse rows in a list, key the list with `@fiorejs/signals`. A `key` after a spread (`<li {...props} key="a" />`) compiles to `createElement` from `@fiorejs/jsx`, which the package exports.
+- `key` is accepted and ignored, because nothing is diffed; to reuse rows in a list, key it with `@fiorejs/signals`: `todos.for((todo) => todo.id).map(render)`. A `key` after a spread (`<li {...props} key="a" />`) compiles to `createElement` from `@fiorejs/jsx`, which the package exports.
 - Do not spread objects whose keys come from users: a key such as `innerHTML` or `srcdoc` sets that property or attribute.
 - Every prop that starts with `on` is treated as a listener, so a custom element property such as `online` has to be set in code.
 

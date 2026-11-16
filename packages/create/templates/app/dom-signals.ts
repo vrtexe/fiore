@@ -1,5 +1,5 @@
 import { button, form, h1, header, input, label, li, main, p, small, span, ul } from 'fiorejs';
-import { classList, computed, each, state, type State } from '@fiorejs/signals';
+import { classList, computed, state, type State } from '@fiorejs/signals';
 
 type Todo = { id: number; text: string; done: State<boolean> };
 
@@ -41,7 +41,7 @@ document.body.append(
   main.props({ className: 'app' }).create([
     header.create([
       h1.create(['Fiore ', small('+ signals')]),
-      span.props({ className: 'count' }).create(computed(() => `${left.get()} left`)),
+      span.props({ className: 'count' }).create(left.computed((count) => `${count} left`)),
     ]),
     form
       .props({ className: 'add' })
@@ -54,7 +54,7 @@ document.body.append(
         },
       })
       .create([field, button.props({ type: 'submit' }).create('Add')]),
-    ul.props({ className: 'list' }).create(each(todos, TodoItem, (todo) => todo.id)),
+    ul.props({ className: 'list' }).create(todos.for((todo) => todo.id).map(TodoItem)),
     p
       .props({ className: 'hint' })
       .create('Only the parts that read a signal update when it changes; there is no virtual DOM.'),

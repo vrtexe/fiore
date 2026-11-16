@@ -26,6 +26,41 @@ class Signal {
   [LIVE](apply, context) {
     bind(() => this.get(), apply, context);
   }
+
+  /**
+   * A computed value derived from this signal's value.
+   * @template U
+   * @param {(value: T) => U} fn
+   */
+  computed(fn) {
+    return computed(() => fn(this.get()));
+  }
+
+  /**
+   * Passes the signal to `fn` and returns its result, for reusable steps.
+   * @template R
+   * @param {(signal: this) => R} fn
+   * @returns {R}
+   */
+  with(fn) {
+    return fn(this);
+  }
+
+  /**
+   * Renders a list and reuses the rows of items it has seen; the item itself is the key.
+   * @param {(item: any, index: number) => Node} render
+   */
+  map(render) {
+    return new List(this, render, (item) => item);
+  }
+
+  /**
+   * Keys the rows of a list by `item.key`, or by what `key` returns.
+   * @param {(item: any) => unknown} [key]
+   */
+  for(key = (item) => item.key) {
+    return new Keyed(this, key);
+  }
 }
 
 /**
@@ -512,78 +547,110 @@ export function resource(source, fetcher) {
 }
 
 /**
- * @typedef {{ node: Node, stop: () => void }} Row
+ * @typedef {{ nodes: Node[], stop: () => void }} Row
  */
+
+/** A signal of a list with its key, waiting for `map`. */
+class Keyed {
+  /**
+   * @param {Signal<readonly unknown[]>} source
+   * @param {(item: any) => unknown} key
+   */
+  constructor(source, key) {
+    this._source = source;
+    this._key = key;
+  }
+
+  /**
+   * Renders the list and reuses the rows of items whose key it has seen.
+   * @param {(item: any, index: number) => Node} render
+   */
+  map(render) {
+    return new List(this._source, render, this._key);
+  }
+}
 
 /**
- * Renders a list and reuses the nodes of items whose key is unchanged. `index` is the item's index when its row
- * was created; a reused row keeps it.
- * @template T
- * @param {import('./signals.d.ts').Reactive<readonly T[]>} items
- * @param {(item: T, index: number) => Node} render
- * @param {(item: T) => unknown} [key]
+ * A live list: every binding keeps its own rows by key and only renders new items. `index` is the item's index when its
+ * row was created; a reused row keeps it.
  */
-export function each(items, render, key = (item) => item) {
-  /** @type {Map<unknown, Row[]>} Rows by key; a repeated key keeps one row per occurrence. */
-  let rows = new Map();
+class List {
+  /**
+   * @param {Signal<readonly unknown[]>} source
+   * @param {(item: any, index: number) => Node} render
+   * @param {(item: any) => unknown} key
+   */
+  constructor(source, render, key) {
+    this._source = source;
+    this._render = render;
+    this._key = key;
+  }
 
-  owner?.owned.push(() => {
-    const old = rows;
-    rows = new Map();
-    [...old.values()].flat().forEach((row) => row.stop());
-  });
+  /**
+   * @param {(value: unknown) => void} apply
+   * @param {import('fiorejs/type/base.dom.d.ts').BindContext} context
+   */
+  [LIVE](apply, context) {
+    /** @type {Map<unknown, Row[]>} Rows by key; a repeated key keeps one row per occurrence. */
+    let rows = new Map();
 
-  const pass = () => {
-    /** @type {Map<unknown, Row[]>} */
-    const next = new Map();
-    /** @type {Map<unknown, number>} */
-    const taken = new Map();
-    /** @type {Row[]} */
-    const created = [];
-    /** @type {Node[]} */
-    let nodes;
-    try {
-      nodes = read(items).map((item, index) => {
-        const id = key(item);
-        const used = taken.get(id) ?? 0;
-        let row = rows.get(id)?.[used];
-        if (row) {
-          taken.set(id, used + 1);
-        } else {
-          row = createRow(() => render(item, index));
-          created.push(row);
+    owner?.owned.push(() => {
+      const old = rows;
+      rows = new Map();
+      [...old.values()].flat().forEach((row) => row.stop());
+    });
+
+    bind(
+      () => {
+        /** @type {Map<unknown, Row[]>} */
+        const next = new Map();
+        /** @type {Map<unknown, number>} */
+        const taken = new Map();
+        /** @type {Row[]} */
+        const created = [];
+        /** @type {Node[]} */
+        const nodes = [];
+        try {
+          this._source.get().forEach((item, index) => {
+            const id = this._key(item);
+            const used = taken.get(id) ?? 0;
+            let row = rows.get(id)?.[used];
+            if (row) {
+              taken.set(id, used + 1);
+            } else {
+              row = createRow(() => this._render(item, index));
+              created.push(row);
+            }
+            const list = next.get(id);
+            if (list) {
+              list.push(row);
+            } else {
+              next.set(id, [row]);
+            }
+            for (const node of row.nodes) {
+              nodes.push(node);
+            }
+          });
+        } catch (error) {
+          // The old rows stay as they were; only the rows made in this failed pass are stopped.
+          created.forEach((row) => row.stop());
+          throw error;
         }
-        const list = next.get(id);
-        if (list) {
-          list.push(row);
-        } else {
-          next.set(id, [row]);
-        }
-        return row.node;
-      });
-    } catch (error) {
-      // The old rows stay as they were; only the rows made in this failed pass are stopped.
-      created.forEach((row) => row.stop());
-      throw error;
-    }
 
-    const kept = new Set([...next.values()].flat());
-    const old = rows;
-    rows = next;
-    for (const row of [...old.values()].flat()) {
-      if (!kept.has(row)) {
-        row.stop();
-      }
-    }
-    return nodes;
-  };
-  return {
-    /**
-     * @param {(value: unknown) => void} apply
-     * @param {import('fiorejs/type/base.dom.d.ts').BindContext} context
-     */
-    [LIVE]: (apply, context) => bind(pass, apply, context),
-  };
+        const kept = new Set([...next.values()].flat());
+        const old = rows;
+        rows = next;
+        for (const row of [...old.values()].flat()) {
+          if (!kept.has(row)) {
+            row.stop();
+          }
+        }
+        return nodes;
+      },
+      apply,
+      context,
+    );
+  }
 }
 
 /**
@@ -595,7 +662,9 @@ function createRow(render) {
   const scope = { owned: [] };
   const stop = () => scope.owned.splice(0).forEach((stopOwned) => stopOwned());
   try {
-    return { node: runIn(null, scope, render), stop };
+    const node = runIn(null, scope, render);
+    // A fragment empties when it is inserted, so the row keeps the nodes it held.
+    return { nodes: node.nodeType === Node.DOCUMENT_FRAGMENT_NODE ? [...node.childNodes] : [node], stop };
   } catch (error) {
     stop();
     throw error;
