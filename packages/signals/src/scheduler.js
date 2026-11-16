@@ -20,10 +20,12 @@ let flushing = false;
 /** Numbers flushes, so an effect can count its runs per flush. */
 let flushes = 0;
 
-/** @type {{ error: unknown } | undefined} The first error of the running flush. */
+/** @typedef {{ error: unknown }} Failure */
+/** @type {Failure|undefined} The first error of the running flush. */
 let failure;
 
-/** @type {{ resolve(): void, reject(error: unknown): void }[]} The tick() promises waiting for the flush. */
+/**  @typedef {{ resolve(): void, reject(error: unknown): void }} Waiter*/
+/** @type {Waiter[]} The tick() promises waiting for the flush. */
 let waiters = [];
 
 /** How often one effect may run in a single flush before it counts as a loop. */
@@ -121,7 +123,9 @@ function settle(queued) {
         }
         if (++node.runs > MAX_RUNS) {
           // Only the looping effect stops; the others still run.
-          fail(new Error(`An effect ran more than ${MAX_RUNS} times in one flush; it probably sets a signal it reads.`));
+          fail(
+            new Error(`An effect ran more than ${MAX_RUNS} times in one flush; it probably sets a signal it reads.`),
+          );
           node.stop();
           continue;
         }
@@ -170,7 +174,7 @@ export function fail(error) {
 
 /** @param {unknown} error */
 export function report(error) {
-  if (typeof globalThis.reportError === 'function') {
+  if (typeof globalThis.reportError === "function") {
     globalThis.reportError(error);
   } else {
     console.error(error);

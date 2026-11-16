@@ -1,13 +1,13 @@
-import { LIVE } from 'fiorejs';
-import { current, notify, owner, runTracked, track, untrackSources } from './tracking.js';
-import { Keyed, List, itemKey } from './list.js';
-import { When } from './when.js';
-import { attach } from './dom.js';
+import { LIVE } from "fiorejs";
+import { current, notify, owner, runTracked, track, untrackSources } from "./tracking.js";
+import { Keyed, List, itemKey } from "./list.js";
+import { When } from "./when.js";
+import { attach } from "./dom.js";
 
 /** @typedef {import('./tracking.js').Source} Source */
 /** @typedef {import('./tracking.js').Computation} Computation */
 
-export const SIGNAL = Symbol.for('fiorejs.signal');
+export const SIGNAL = Symbol.for("fiorejs.signal");
 
 /**
  * The base of every signal. Signals inherit their brand, so a signal is not a plain object: fiorejs reads plain objects
@@ -22,7 +22,7 @@ export class Signal {
 
   /** @returns {T} */
   get() {
-    throw new TypeError('get() is implemented by State, Computed and Resource');
+    throw new TypeError("get() is implemented by State, Computed and Resource");
   }
 
   /**
@@ -101,7 +101,7 @@ export class Signal {
 /** A computed derives a value; a write from its run would loop through its own inputs, so it throws instead. */
 function forbidInComputed() {
   if (current instanceof Computed) {
-    throw new Error('A computed cannot set a signal; derive the value, or set it in an effect or an event handler.');
+    throw new Error("A computed cannot set a signal; derive the value, or set it in an effect or an event handler.");
   }
 }
 
@@ -182,7 +182,9 @@ export class Computed extends Signal {
   constructor(fn) {
     super();
     this._fn = fn;
-    /** @type {{ value: T } | { error: unknown } | undefined} The last result, an error cached like a value. */
+    /** @typedef {{ value: T }} ComputedValue */
+    /** @typedef {{ error: unknown }} ComputedError */
+    /** @type {ComputedValue | ComputedError | undefined} The last result, an error cached like a value. */
     this._result = undefined;
     /** @type {Set<Computation>} */
     this.subs = new Set();
@@ -197,7 +199,7 @@ export class Computed extends Signal {
     this._changed = false;
     /** Counts recalculations that gave a different value or error, so readers can skip a run when nothing changed. */
     this.version = 0;
-    /** @type {{ value: T } | { error: unknown } | undefined} The last result, kept to compare with the next one. */
+    /** @type {ComputedValue | ComputedError | undefined} The last result, kept to compare with the next one. */
     this._previous = undefined;
   }
 
@@ -254,7 +256,7 @@ export class Computed extends Signal {
     }
     // An effect remembers the version it read, so it can skip a later run if this value did not change.
     current?.saw?.(this);
-    if ('error' in result) {
+    if ("error" in result) {
       throw result.error;
     }
     return result.value;
@@ -270,7 +272,9 @@ function sameResult(previous, next) {
   if (!previous) {
     return false;
   }
-  return 'value' in previous ? 'value' in next && Object.is(previous.value, next.value) : 'error' in next && Object.is(previous.error, next.error);
+  return "value" in previous
+    ? "value" in next && Object.is(previous.value, next.value)
+    : "error" in next && Object.is(previous.error, next.error);
 }
 
 /**
