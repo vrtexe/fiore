@@ -10,7 +10,7 @@ Object.assign(globalThis, {
 });
 
 const { button, div, span, input } = await import('fiorejs');
-const { state, computed, effect, untrack, read, each, resource, classList } = await import('@fiorejs/signals');
+const { state, computed, effect, untrack, read, each, resource, classList, isSignal } = await import('@fiorejs/signals');
 
 const tick = () => new Promise((resolve) => setTimeout(resolve));
 
@@ -50,8 +50,7 @@ test('effects rerun when what they read changes, and stop cleanly', () => {
 
 test('update sets the value its function returns', () => {
   const count = state(1);
-  const { update } = count;
-  update((value) => value + 1);
+  count.update((value) => value + 1);
 
   assert.equal(count.get(), 2);
 });
@@ -1141,4 +1140,14 @@ test('signals bind through builder props and attrs, nested props and plain-call 
   assert.equal(box.style.color, 'blue');
   assert.equal(box.getAttribute('title'), 'Grace');
   assert.equal(text.textContent, 'Grace');
+});
+
+test('signals are class instances that share their methods', () => {
+  const a = state(1);
+  const b = state(2);
+
+  assert.equal(a.get, b.get);
+  assert.equal(computed(() => 1).get, computed(() => 2).get);
+  assert.ok(isSignal(a) && isSignal(computed(() => 1)) && isSignal(resource(() => 1)));
+  assert.equal(Object.getPrototypeOf(Object.getPrototypeOf(a)), Object.getPrototypeOf(Object.getPrototypeOf(computed(() => 1))));
 });
