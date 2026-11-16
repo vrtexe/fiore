@@ -38,3 +38,10 @@ test('JSON __proto__ keys do not pollute Object.prototype without live values', 
 
   assert.equal({}.polluted, undefined);
 });
+
+test('a cyclic children array renders its other items instead of looping', () => {
+  const items = ['hi'];
+  items.push(items);
+
+  assert.equal(div(items).textContent, 'hi');
+});
