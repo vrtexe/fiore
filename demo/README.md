@@ -131,3 +131,5 @@ What to look at:
 ## Changing the code
 
 Edit `lib/` or `packages/signals/src/` and reload the page; there is nothing to build. To try an idea, add a card to one of the flow files, or a new file in `demo/flows/` and register it in `demo/main.js`.
+
+`npm run test:e2e` runs the flows above as browser tests (`test/e2e/playground.test.js`) in Chromium, Firefox and WebKit, with its own static server. Install the browsers once with `npx playwright install chromium firefox webkit`; a browser that is not installed is skipped. When you change what a card does, update its test.
