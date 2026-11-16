@@ -1,4 +1,4 @@
-import { enqueue, fail } from './scheduler.js';
+import { enqueue, enterRun, exitRun, fail } from './scheduler.js';
 
 /** @typedef {import('./scheduler.js').Queued} Queued */
 
@@ -212,12 +212,15 @@ function createEffect(fn, phase) {
       node.dirty = false;
       node.count = 0;
       reset();
+      enterRun();
       try {
         const result = runTracked(node, scope, fn);
         cleanup = typeof result === 'function' ? result : undefined;
       } catch (error) {
         fail(error);
         stopped = true;
+      } finally {
+        exitRun();
       }
       // Stopped by its error or during its own run: undo what the run set up.
       if (stopped) {

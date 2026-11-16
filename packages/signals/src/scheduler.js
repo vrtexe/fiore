@@ -16,6 +16,8 @@ let scheduled = false;
 let task = false;
 
 let flushing = false;
+/** Counts effect runs in progress, so flush() inside one, also in a first run outside a flush, does nothing. */
+let running = 0;
 
 /** Numbers flushes, so an effect can count its runs per flush. */
 let flushes = 0;
@@ -65,12 +67,22 @@ export function enqueue(node, phase) {
 
 /**
  * Runs the effects and bindings that are waiting now, instead of on the next microtask, for example before reading
- * the DOM after a change. Inside a running flush it does nothing, because that flush runs them before it ends.
+ * the DOM after a change. Inside an effect it does nothing: the running flush, or the next one, runs them.
  */
 export function flush() {
-  if (!flushing) {
+  if (!flushing && running === 0) {
     settle(false);
   }
+}
+
+/** Marks the start of an effect run. */
+export function enterRun() {
+  running++;
+}
+
+/** Marks the end of an effect run. */
+export function exitRun() {
+  running--;
 }
 
 /**

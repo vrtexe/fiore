@@ -1111,9 +1111,13 @@ test('resource does not load while its source is null, undefined or false', asyn
 test('resource keeps the error of a failed load until the next load starts', async () => {
   const { calls, fetcher } = manual();
   const data = resource(fetcher);
-  calls[0].reject(new Error('offline'));
-  await tick();
+  // Nothing reads the error, so the failed load is reported too.
+  const errors = await reported(async () => {
+    calls[0].reject(new Error('offline'));
+    await tick();
+  });
 
+  assert.equal(errors.length, 1);
   assert.match(String(data.error.get()), /offline/);
   assert.equal(data.loading.get(), false);
   data.refetch();
@@ -1128,10 +1132,13 @@ test('resource keeps the error of a failed load until the next load starts', asy
 });
 
 test('resource turns a synchronous throw of its fetcher into the error', async () => {
-  const data = resource(() => {
-    throw new Error('sync');
+  let data;
+  await reported(async () => {
+    data = resource(() => {
+      throw new Error('sync');
+    });
+    await tick();
   });
-  await tick();
 
   assert.match(String(data.error.get()), /sync/);
   assert.equal(data.loading.get(), false);
@@ -2019,4 +2026,54 @@ test('a binding stopped by its root does not resume when its element is inserted
 
   assert.equal(el.textContent, '0');
   el.remove();
+});
+
+test('flush() in the first run of an effect does not run that effect again inside itself', () => {
+  const count = state(0);
+  let depth = 0;
+  let deepest = 0;
+  effect(() => {
+    depth++;
+    deepest = Math.max(deepest, depth);
+    const value = count.get();
+    if (value < 3) {
+      count.set(value + 1);
+      flush();
+    }
+    depth--;
+  });
+  flush();
+
+  assert.equal(deepest, 1);
+  assert.equal(count.get(), 3);
+});
+
+test('a failed load is not reported when something reads the error', async () => {
+  const { calls, fetcher } = manual();
+  const data = resource(fetcher);
+  effect(() => data.error.get());
+
+  const errors = await reported(async () => {
+    calls[0].reject(new Error('offline'));
+    await tick();
+  });
+
+  assert.equal(errors.length, 0);
+  assert.match(String(data.error.get()), /offline/);
+});
+
+test('resource clears its error when its source becomes inactive', async () => {
+  const id = state(1);
+  const { calls, fetcher } = manual();
+  const data = resource(id, fetcher);
+  effect(() => data.error.get());
+  calls[0].reject(new Error('fail 1'));
+  await tick();
+  assert.match(String(data.error.get()), /fail 1/);
+
+  id.set(null);
+  flush();
+
+  assert.equal(data.error.get(), undefined);
+  assert.equal(data.loading.get(), false);
 });

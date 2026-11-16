@@ -1,6 +1,7 @@
 import { Signal, state } from './signal.js';
 import { effect, untrack } from './tracking.js';
 import { read } from './utils.js';
+import { report } from './scheduler.js';
 
 /**
  * A value loaded by a fetcher, with `loading` and `error` signals.
@@ -62,6 +63,10 @@ class Resource extends Signal {
         if (this._controller === own) {
           this.error.set(reason);
           this.loading.set(false);
+          // A failed load that nothing reads would otherwise go unnoticed.
+          if (this.error.subs.size === 0) {
+            report(reason);
+          }
         }
       },
     );
@@ -85,6 +90,7 @@ export function resource(source, fetcher) {
     result._input = read(/** @type {import('./signals.d.ts').Reactive<unknown>} */ (source));
     if (!result._active()) {
       result.loading.set(false);
+      result.error.set(undefined);
       return;
     }
     result._start();

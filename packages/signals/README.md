@@ -77,7 +77,7 @@ An effect or binding that throws is stopped. The other effects of the flush stil
 
 `resource(source, fetcher)` calls `fetcher` with the value of `source` and loads again whenever `source` changes; while `source` gives `null`, `undefined` or `false`, nothing is loaded. `resource(fetcher)` loads once. The fetcher runs untracked and gets an `AbortSignal` that aborts when a newer load starts or the effect or list row the resource was created in goes away; the result of an older load is ignored.
 
-The resource is a signal of the last loaded value, which it keeps while it reloads, with `loading` and `error` as signals, `refetch()` to load again and `mutate(value)` to set the value without loading. `error` is cleared when a new load starts.
+The resource is a signal of the last loaded value, which it keeps while it reloads, with `loading` and `error` as signals, `refetch()` to load again and `mutate(value)` to set the value without loading. `error` is cleared when a new load starts and when the source becomes `null`, `undefined` or `false`. A failed load that nothing reads `error` of is also reported with `reportError`, so it does not go unnoticed.
 
 ```js
 import { div } from 'fiorejs';
@@ -215,8 +215,9 @@ export const user = state(null);
 
 Bindings are stopped automatically:
 
-- when a live child replaces its content, the bindings inside the old content stop for good
+- when a computed child, an `if`/`case` branch or a list replaces content it built, the bindings inside the old content stop for good
 - when a list drops an item, or the effect or computed around the list reruns, the bindings inside its rows stop for good
+- content built outside any owner, for example `view = state(Home())`, is only paused when a live child replaces it and it leaves the document, like any removed element; build it in a computed or a root to stop it for good
 - when an element is removed from the document, its bindings pause; if it is inserted again, they resume with the current values
 - a live child among other children keeps its place between two comments, so it pauses and resumes correctly also when its nodes are moved, for example out of a JSX fragment; a live child that is the only child follows its element
 
@@ -232,7 +233,7 @@ dispose(); // stops every binding and effect of the app
 
 A page that loads two copies of `@fiorejs/signals` can bind signals from both, but a `computed` or `effect` only tracks signals from its own copy.
 
-An element that is created but never inserted keeps its bindings for as long as its signals live, unless it was created in a root that is disposed. Bindings are held weakly, so once the element and its signals are no longer referenced, everything can be garbage-collected.
+An element that is created but never inserted keeps its bindings for as long as its signals live, unless it was created in a root that is disposed. Once the element and its signals are no longer referenced, everything can be garbage-collected.
 
 ## Upgrading from 2.x
 
