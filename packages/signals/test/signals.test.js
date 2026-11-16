@@ -1386,3 +1386,76 @@ test('a computed that writes a signal it read shows the value after the write', 
   page.set(7);
   assert.equal(el.textContent, '4');
 });
+
+test('an error from a computed run that changed a signal it read is not cached, so the reader recovers', () => {
+  const s = state(0);
+  const c = computed(() => {
+    const value = s.get();
+    if (value === 0) {
+      s.set(1);
+      throw new Error('first');
+    }
+    return `ok${value}`;
+  });
+  const seen = [];
+  effect(() => {
+    try {
+      seen.push(c.get());
+    } catch (error) {
+      seen.push(error.message);
+    }
+  });
+
+  assert.equal(seen.at(-1), 'ok1');
+});
+
+test('a computed run that changed a signal it read stops what it built; only the last run keeps its effects', () => {
+  const s = state(0);
+  const probe = state(0);
+  let alive = 0;
+  let reruns = 0;
+  const c = computed(() => {
+    const value = s.get();
+    effect(() => {
+      probe.get();
+      reruns++;
+      alive++;
+      return () => alive--;
+    });
+    if (value < 1) s.set(value + 1);
+    return value;
+  });
+  const stop = effect(() => c.get());
+  assert.equal(alive, 1);
+
+  const before = reruns;
+  probe.set(1);
+  assert.equal(reruns - before, 1);
+
+  stop();
+  assert.equal(alive, 0);
+});
+
+test('a computed that writes a signal it read on every run is stopped by the loop limit, and signals keep working', async () => {
+  const s = state(0);
+  let runs = 0;
+  const c = computed(() => {
+    runs++;
+    const value = s.get();
+    s.set(value + 1);
+    return value;
+  });
+  const errors = await reported(() => {
+    effect(() => c.get());
+  });
+
+  assert.equal(errors.length, 1);
+  assert.match(String(errors[0].message), /more than 100 times/);
+  assert.ok(runs <= 205, `runs are bounded, got ${runs}`);
+
+  const t = state(1);
+  const seen = [];
+  effect(() => seen.push(t.computed((value) => value * 2).get()));
+  t.set(2);
+  assert.deepEqual(seen, [2, 4]);
+});

@@ -57,8 +57,11 @@ export type PickWritable<T> = Pick<T, WritableKeys<T>>;
 /** false, true, null and undefined are skipped, so `condition && node` works. */
 type Child = Node | string | number | boolean | null | undefined;
 
-/** One child, a live value of children, or an array whose items can be live, including a live list among siblings. */
-export type Children = Live<Child | Child[]> | (Child | LiveValue<Child | Child[]>)[];
+/** An item of a children array: a child, a live value of children, or a nested array, flattened at any depth. */
+type NestedChild = Child | LiveValue<Child | Child[]> | NestedChild[];
+
+/** One child, a live value of children, or an array of children nested as deep as needed. */
+export type Children = Live<Child | Child[]> | NestedChild[];
 
 export type ElementProps<T extends BaseElement> = PickWritable<
   RecursivePartial<T>

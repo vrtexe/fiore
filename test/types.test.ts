@@ -8,6 +8,10 @@ div({ children: [isAdmin && span(), null, undefined, true, 'text', 1, document.c
 div({ children: isAdmin ? span() : null });
 div('text');
 div([span(), ' text']);
+const rowText = ['a', 'b'];
+div([span('title'), rowText.map((text) => span(text))]);
+div({ children: [span('title'), [span('a'), [span('b'), null]]] });
+div.create([span('title'), rowText.map((text) => span(text))]);
 svg.circle({ attrs: { 'data-id': '1', r: 4 } });
 // @ts-expect-error SVG attributes are typed per element
 svg.circle({ attrs: { notAnAttribute: 1 } });
