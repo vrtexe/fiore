@@ -1,4 +1,4 @@
-import { b, div, em, i } from 'fiorejs';
+import { b, div, em, fragment, i } from 'fiorejs';
 import { state } from '@fiorejs/signals';
 import { action, card, domView, flow, logger } from '../debug.js';
 
@@ -28,9 +28,7 @@ export default function liveChildren() {
 
   // 5. A fragment that contains a live child keeps updating after it is inserted somewhere else.
   const open = state(false);
-  const fragment = document.createDocumentFragment();
-  fragment.append(...div([b('row'), open.computed((value) => (value ? em(' (details shown)') : null))]).childNodes);
-  const fragmentHost = div(fragment);
+  const fragmentHost = div(fragment([b('row'), open.computed((value) => (value ? em(' (details shown)') : null))]));
 
   return flow('live-children', 'Live children', 'A live value as a child: how its nodes are tracked, what the comment markers are, and why outside DOM changes such as normalize() or page translation do not break it.', [
     card('Only child versus siblings', div([only, withSiblings]), [action('Change text', () => text.set(`hello ${Math.floor(Math.random() * 100)}`))], { view: div([domView(only), domView(withSiblings)]) }),
