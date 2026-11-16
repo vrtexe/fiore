@@ -55,10 +55,8 @@ export type BindContext =
 export type Plugin = {
   /** Identifies the plugin; registering the same name again replaces it. */
   name: string;
-  /** 'pre' plugins are asked first and 'post' plugins last; otherwise registration order applies. */
-  order?: 'pre' | 'post';
   /** Return true to take over the value; call `apply` now and whenever it changes. */
-  bind?(value: unknown, apply: (value: unknown) => void, context: BindContext): boolean | void;
+  bind(value: unknown, apply: (value: unknown) => void, context: BindContext): boolean | void;
 };
 
 export type PickWritable<T> = Pick<T, WritableKeys<T>>;

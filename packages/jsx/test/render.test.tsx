@@ -306,7 +306,7 @@ test('plain values, getters and signals with the same name end up in the same pl
       ],
     ];
     for (const [tag, name, value, check] of cases) {
-      const forms = { plain: value, getter: () => value, signal: { [SIGNAL]: true, get: () => value } };
+      const forms = { plain: value, getter: () => value, signal: Object.create({ [SIGNAL]: true, get: () => value }) };
       for (const [form, input] of Object.entries(forms)) {
         try {
           check(jsx(tag, { [name]: input }));

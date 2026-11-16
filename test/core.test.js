@@ -131,22 +131,37 @@ test('a bound child keeps and reorders nodes it returns again', () => {
 });
 
 test('registering a plugin name again replaces the earlier plugin', () => {
-  const marker = { isMarker: true };
+  const marker = { __proto__: { isMarker: true } };
   use({ name: 'marker', bind: (value, apply) => value === marker && (apply('first'), true) });
   use({ name: 'marker', bind: (value, apply) => value === marker && (apply('second'), true) });
 
   assert.equal(div({ children: marker }).textContent, 'second');
 });
 
-test('pre plugins are asked first and post plugins last', () => {
-  const shared = { isShared: true };
+test('plugins are asked in the order they were registered and the first that binds wins', () => {
+  const shared = { __proto__: { isShared: true } };
   const claim = (text) => (value, apply) => value === shared && (apply(text), true);
-  use({ name: 'late', order: 'post', bind: claim('post') });
-  use({ name: 'plain', bind: claim('plain') });
-  assert.equal(div({ children: shared }).textContent, 'plain');
+  use({ name: 'first', bind: claim('first') });
+  use({ name: 'second', bind: claim('second') });
 
-  use({ name: 'early', order: 'pre', bind: claim('pre') });
-  assert.equal(div({ children: shared }).textContent, 'pre');
+  assert.equal(div({ children: shared }).textContent, 'first');
+});
+
+test('primitives, plain objects and nodes are never offered to plugins', () => {
+  const before = contexts.length;
+  const offered = [];
+  use({ name: 'everything', bind: (value) => void offered.push(value) });
+  const el = div({
+    props: { title: 't', hidden: true, style: { color: 'red' } },
+    attrs: { role: 'note', 'data-n': 1 },
+    children: ['a', 1, span(), { text: 'b' }],
+  });
+  use({ name: 'everything', bind: () => false });
+
+  assert.deepEqual(offered, []);
+  assert.equal(contexts.length, before);
+  assert.equal(el.style.color, 'red');
+  assert.equal(el.textContent, 'a1[object Object]');
 });
 
 test('loading a second copy of fiorejs logs a warning', async (t) => {
@@ -241,21 +256,19 @@ test('textContent and innerHTML props are kept when there are no children', () =
 });
 
 test('inline handler attributes are never set or offered to plugins, in any case; other on* names are', () => {
-  const offered = [];
-  use({ name: 'recorder', order: 'pre', bind: (value, apply, context) => void offered.push(context.name) });
+  const before = contexts.length;
   const el = div({
-    attrs: { onclick: 'go()', OnClick: 'go()', online: 'yes', title: 't' },
+    attrs: { onclick: signal('go()'), OnClick: signal('go()'), online: signal('yes'), title: signal('t') },
     props: { onclick: () => {} },
   });
-  use({ name: 'recorder', bind: () => false });
 
-  assert.deepEqual(offered, ['online', 'title']);
+  assert.deepEqual(contexts.slice(before).map((context) => context.name), ['online', 'title']);
   assert.equal(el.hasAttribute('onclick'), false);
   assert.equal(el.getAttribute('online'), 'yes');
 });
 
 test('a plugin that binds a child without applying it yet still gets a place', () => {
-  const later = { isLater: true };
+  const later = { __proto__: { isLater: true } };
   let applyLater;
   use({ name: 'later', bind: (value, apply) => value === later && ((applyLater = apply), true) });
   const el = div({ children: [later, 'b'] });
@@ -404,12 +417,11 @@ test('a very long child list does not overflow the argument limit', () => {
 });
 
 test('plugins get the full path of nested props', () => {
-  const paths = [];
-  use({ name: 'paths', order: 'pre', bind: (value, apply, context) => void (context.kind === 'property' && paths.push(context.path.join('.'))) });
-  div({ props: { style: { color: 'red' } } });
-  use({ name: 'paths', bind: () => false });
+  const before = contexts.length;
+  const el = div({ props: { title: signal('t'), style: { color: signal('red') } } });
 
-  assert.deepEqual(paths, ['style', 'style.color']);
+  assert.deepEqual(contexts.slice(before).map((context) => context.path.join('.')), ['title', 'style.color']);
+  assert.equal(el.style.color, 'red');
 });
 
 test('value, selectedIndex and checked are applied after attributes and children', () => {
@@ -429,7 +441,7 @@ test('a very deep bound array does not overflow the stack', () => {
 
 test('plugins get the comment before the nodes of a child', () => {
   let context;
-  const marker = { isMarker: true };
+  const marker = { __proto__: { isMarker: true } };
   use({ name: 'nodes', bind: (value, apply, ctx) => value === marker && ((context = ctx), apply('hi'), true) });
   div({ children: marker });
 
@@ -480,6 +492,32 @@ test('a live child inside a fragment that is the value of another live child kee
 
   outer.set('gone');
   assert.equal(el.textContent, '[gone]');
+});
+
+test('a live child that no plugin binds is shown as text and leaves no markers', () => {
+  const el = div({ children: ['a', () => 1, new (class { toString = () => 'obj'; })(), 'z'] });
+
+  assert.equal(el.textContent, 'a() => 1objz');
+  assert.equal(el.childNodes.length, 4);
+});
+
+test('a live child taken out of its element ignores later updates', () => {
+  const content = signal('a');
+  const el = div({ children: content });
+  el.replaceChildren();
+
+  assert.doesNotThrow(() => content.set([span()]));
+  assert.equal(el.childNodes.length, 0);
+});
+
+test('a live child whose end marker was removed stops updating and removes nothing', () => {
+  const content = signal([span()]);
+  const el = div({ children: ['a', content, 'z'] });
+  el.childNodes[3].remove();
+
+  content.set([document.createElement('i')]);
+
+  assert.equal(html(el), 'a<span></span>z');
 });
 
 test('a node that moves to another bound child leaves the first one working', () => {

@@ -421,6 +421,25 @@ test('a binding that fails on re-insertion does not stop its siblings', async (t
   wrapper.remove();
 });
 
+test('getters and signals under on* names that are not inline handlers are bound', () => {
+  const step = state('a');
+  const box = div({ props: { dataset: { onboarding: () => step.get() } }, attrs: { online: step } });
+  document.body.append(box);
+
+  step.set('b');
+
+  assert.equal(box.dataset.onboarding, 'b');
+  assert.equal(box.getAttribute('online'), 'b');
+  box.remove();
+});
+
+test('an object that is not a signal is assigned whole', () => {
+  const stream = new (class MediaStreamLike {})();
+  const el = div({ props: { stream } });
+
+  assert.equal(el.stream, stream);
+});
+
 test('a live object prop does not pile up bindings when it changes often', () => {
   const dark = state(false);
   const color = state('white');
