@@ -20,7 +20,7 @@
   <body>
     <script type="module">
       import { div, h2, button, p, li } from 'fiorejs';
-      import { state, effect } from '../src/signals.js';
+      import { state, effect, computed } from '../src/signals.js';
 
       const cards = Array.from({ length: 6 }, (_, i) => div({ props: { className: 'card', textContent: `card ${i + 1}` } }));
       const columns = { A: state([cards[0], cards[1], cards[2]]), B: state([cards[3]]), C: state([cards[4], cards[5]]) };
@@ -43,7 +43,7 @@
 
       const status = p({ attrs: { id: 'status' } });
       const view = div({ attrs: { class: 'columns' } , children: Object.keys(columns).map((name) =>
-        div({ attrs: { class: 'column', 'data-column': name }, children: [h2({ children: [name] }), () => columns[name].get()] }),
+        div({ attrs: { class: 'column', 'data-column': name }, children: [h2({ children: [name] }), columns[name]] }),
       ) });
 
       // The page checks itself after every change: each column must show exactly the cards of its state, in order.
@@ -66,7 +66,7 @@
         ] }),
         view,
         status,
-        div({ children: [() => log.get().slice(-8).map((line) => li({ children: [line] }))] }),
+        div({ children: [computed(() => log.get().slice(-8).map((line) => li({ children: [line] })))] }),
       );
     </script>
   </body>

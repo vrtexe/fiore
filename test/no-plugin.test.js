@@ -5,10 +5,10 @@ import { JSDOM } from 'jsdom';
 const { window } = new JSDOM();
 Object.assign(globalThis, { document: window.document, Node: window.Node });
 
-// No plugin is registered in this file, so every element takes the fast path most users take.
+// No live value is used in this file, so every element takes the static path most users take.
 const { div, element } = await import('../lib/html.js');
 
-test('nested props, attributes, children and listeners work without plugins', () => {
+test('nested props, attributes, children and listeners work without live values', () => {
   let clicks = 0;
   const el = element('button')({
     props: { title: 'Save', style: { height: '10px' } },
@@ -25,7 +25,7 @@ test('nested props, attributes, children and listeners work without plugins', ()
   assert.equal(clicks, 1);
 });
 
-test('children skip false, true and null without plugins', () => {
+test('children skip false, true and null without live values', () => {
   assert.equal(div({ children: [false, 'a', null, true] }).innerHTML, 'a');
 });
 
@@ -33,7 +33,7 @@ test('textContent is kept when there are no children', () => {
   assert.equal(div({ props: { textContent: 'hi' } }).textContent, 'hi');
 });
 
-test('JSON __proto__ keys do not pollute Object.prototype without plugins', () => {
+test('JSON __proto__ keys do not pollute Object.prototype without live values', () => {
   div({ props: { dataset: JSON.parse('{"__proto__":{"__proto__":{"polluted":"yes"}}}') } });
 
   assert.equal({}.polluted, undefined);

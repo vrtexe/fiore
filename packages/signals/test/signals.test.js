@@ -116,7 +116,7 @@ test('read accepts plain values, signals and getters', () => {
 test('signals and getters bind to properties, attributes and children', () => {
   const name = state('Ada');
   const onclick = () => 'clicked';
-  const field = input({ props: { value: name, onclick }, attrs: { title: () => `Name: ${name.get()}` } });
+  const field = input({ props: { value: name, onclick }, attrs: { title: computed(() => `Name: ${name.get()}`) } });
   const label = div({ children: ['Hello ', name] });
 
   name.set('Grace');
@@ -130,7 +130,7 @@ test('signals and getters bind to properties, attributes and children', () => {
 test('a getter child stops the bindings of what it replaced', () => {
   const show = state(true);
   const count = state(1);
-  const panel = div({ children: () => (show.get() ? span({ children: count }) : 'hidden') });
+  const panel = div({ children: computed(() => (show.get() ? span({ children: count }) : 'hidden')) });
   const inner = panel.firstElementChild;
 
   show.set(false);
@@ -144,7 +144,7 @@ test('each reuses rows by key and stops the bindings of removed rows', () => {
   const label = state('item');
   const items = state([{ id: 1 }, { id: 2 }, { id: 3 }]);
   const list = div({
-    children: each(items, (item) => span({ children: () => `${label.get()} ${item.id}` }), (item) => item.id),
+    children: each(items, (item) => span({ children: computed(() => `${label.get()} ${item.id}`) }), (item) => item.id),
   });
   const [one, two, three] = list.children;
 
@@ -191,7 +191,7 @@ const collected = async (ref) => {
 test('an element inserted and removed in the same task stops updating', async () => {
   const count = state(1);
   let reads = 0;
-  const el = div({ children: () => (reads++, count.get()) });
+  const el = div({ children: computed(() => (reads++, count.get())) });
   document.body.append(el);
   el.remove();
   await tick();
@@ -256,7 +256,9 @@ test('each stops its rows when the surrounding effect replaces them', () => {
   const label = state('row');
   const items = state([1]);
   const panel = div({
-    children: () => (show.get() ? div({ children: each(items, (item) => span({ children: () => `${label.get()} ${item}` })) }) : 'hidden'),
+    children: computed(() =>
+      show.get() ? div({ children: each(items, (item) => span({ children: computed(() => `${label.get()} ${item}`) })) }) : 'hidden',
+    ),
   });
   const row = panel.querySelector('span');
 
@@ -368,7 +370,7 @@ test('a binding that fails while building is reported, leaves no subscriber behi
   let reads = 0;
   let element;
   const errors = await reported(() => {
-    element = div({ children: () => (reads++, record.get().missing.x) });
+    element = div({ children: computed(() => (reads++, record.get().missing.x)) });
   });
 
   record.set({ missing: { x: 1 } });
@@ -404,7 +406,7 @@ test('a binding that fails on re-insertion does not stop its siblings', async (t
   const good = state('a');
   const fail = state(false);
   const wrapper = div({
-    children: [span({ children: () => (fail.get() ? null.boom : 'ok') }), span({ children: good })],
+    children: [span({ children: computed(() => (fail.get() ? null.boom : 'ok')) }), span({ children: good })],
   });
   document.body.append(wrapper);
   await tick();
@@ -446,7 +448,7 @@ test('an object that is not a signal is assigned whole', () => {
 test('a live object prop does not pile up bindings when it changes often', () => {
   const dark = state(false);
   const color = state('white');
-  const box = div({ props: { style: () => (dark.get() ? { color } : { color: 'black' }) } });
+  const box = div({ props: { style: computed(() => (dark.get() ? { color } : { color: 'black' })) } });
   document.body.append(box);
 
   const measure = () => {
@@ -470,7 +472,7 @@ test('each keeps its rows when a render fails partway through', async () => {
   const render = (item) => {
     renders++;
     if (item === 99) throw new Error('bad row');
-    return span({ children: () => (reads++, `${label.get()}${item}`) });
+    return span({ children: computed(() => (reads++, `${label.get()}${item}`)) });
   };
   div({ children: each(items, render) });
 
@@ -494,7 +496,7 @@ test('a function in an on* attribute or prop is never called as a binding, in an
 test('a live child built elsewhere pauses when the place it moved to is removed', async () => {
   const count = state(1);
   let reads = 0;
-  const holder = div({ children: ['Count: ', () => (reads++, count.get())] });
+  const holder = div({ children: ['Count: ', computed(() => (reads++, count.get()))] });
   const section = div();
   section.append(...holder.childNodes);
   document.body.append(section);
@@ -518,7 +520,7 @@ test('readers that catch the error of a computed recover; a binding that does no
       seen.push('error');
     }
   });
-  const label = span({ children: () => String(parsed.get()) });
+  const label = span({ children: computed(() => String(parsed.get())) });
 
   const errors = await reported(() => text.set('{bad'));
   text.set('{"a":9}');
@@ -549,12 +551,12 @@ test('a computed that throws without readers can be collected', async () => {
 test('a binding whose cleanup throws while paused still resumes', async () => {
   const price = state(10);
   const panel = div({
-    children: () => {
+    children: computed(() => {
       effect(() => () => {
         throw new Error('cleanup failed');
       });
       return `CHF ${price.get()}`;
-    },
+    }),
   });
   document.body.append(panel);
   await tick();
@@ -594,7 +596,7 @@ test('each still shows its new rows when a dropped row fails to stop', async () 
 test('a live child that starts with a comment pauses with its host', async () => {
   const count = state(1);
   let reads = 0;
-  const host = div({ children: () => (reads++, [document.createComment('start'), `x${count.get()}`]) });
+  const host = div({ children: computed(() => (reads++, [document.createComment('start'), `x${count.get()}`])) });
   document.body.append(host);
   await tick();
 
@@ -722,7 +724,7 @@ test('fault injection: a callback that throws during updates is reported once an
     });
     const healthy = [];
     effect(() => healthy.push(source.get()));
-    const label = div({ children: () => (fail('binding'), String(derived.get())) });
+    const label = div({ children: computed(() => (fail('binding'), String(derived.get()))) });
     const items = computed(() => [source.get(), source.get() + 1]);
     const list = div({
       children: each(items, (item) => {
@@ -784,7 +786,7 @@ test('fault injection: a callback that throws while things are created is report
           step('owned');
         });
       });
-      label = div({ children: () => (step('binding'), String(source.get())) });
+      label = div({ children: computed(() => (step('binding'), String(source.get()))) });
     });
     const failedRuns = runs[point];
     source.set(1);
@@ -1100,7 +1102,7 @@ test('a resource binds as a child', async () => {
   const { calls, fetcher } = manual();
   const data = resource(fetcher);
   const label = span({ children: data });
-  const status = span({ children: () => (data.loading.get() ? 'loading' : 'done') });
+  const status = span({ children: computed(() => (data.loading.get() ? 'loading' : 'done')) });
   assert.equal(status.textContent, 'loading');
 
   calls[0].resolve('Ada');
@@ -1150,4 +1152,14 @@ test('signals are class instances that share their methods', () => {
   assert.equal(computed(() => 1).get, computed(() => 2).get);
   assert.ok(isSignal(a) && isSignal(computed(() => 1)) && isSignal(resource(() => 1)));
   assert.equal(Object.getPrototypeOf(Object.getPrototypeOf(a)), Object.getPrototypeOf(Object.getPrototypeOf(computed(() => 1))));
+});
+
+test('a bare function is not live', () => {
+  const count = state(1);
+  const getter = () => count.get();
+  const el = div({ children: getter });
+
+  count.set(2);
+
+  assert.equal(el.textContent, String(getter));
 });

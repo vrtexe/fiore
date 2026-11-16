@@ -5,6 +5,7 @@
   "license": "MIT",
   "author": "vrtexe",
   "type": "module",
+  "sideEffects": false,
   "keywords": [
     "fiore",
     "fiorejs",

@@ -1,4 +1,4 @@
-import { use } from 'fiorejs';
+import { LIVE } from 'fiorejs';
 
 const SIGNAL = Symbol.for('fiorejs.signal');
 
@@ -16,6 +16,15 @@ class Signal {
   /** @returns {T} */
   get() {
     throw new TypeError('get() is implemented by State, Computed and Resource');
+  }
+
+  /**
+   * Binds the signal to a property, an attribute or a child of an element.
+   * @param {(value: unknown) => void} apply
+   * @param {import('fiorejs/type/base.dom.d.ts').BindContext} context
+   */
+  [LIVE](apply, context) {
+    bind(() => this.get(), apply, context);
   }
 }
 
@@ -214,7 +223,8 @@ export function state(value) {
 
 /**
  * A cached value derived from other signals; recalculated on read after an input changed. The instance is its own
- * source and computation; no cached result means it is dirty.
+ * source, computation and owner: bindings and effects created by a run stop before the next run and when it loses its
+ * readers. No cached result means it is dirty.
  * @template T
  * @extends {Signal<T>}
  */
@@ -230,6 +240,8 @@ class Computed extends Signal {
     /** @type {Set<Source>} */
     this.sources = new Set();
     this.missed = false;
+    /** @type {(() => void)[]} */
+    this.owned = [];
   }
 
   stale() {
@@ -248,6 +260,7 @@ class Computed extends Signal {
   release() {
     untrackSources(this);
     this._result = undefined;
+    this.owned.splice(0).forEach((stopOwned) => stopOwned());
   }
 
   get() {
@@ -255,8 +268,9 @@ class Computed extends Signal {
     track(this);
     let result = this._result;
     if (!result) {
+      this.owned.splice(0).forEach((stopOwned) => stopOwned());
       try {
-        result = { value: runTracked(this, null, this._fn) };
+        result = { value: runTracked(this, this, this._fn) };
       } catch (error) {
         result = { error };
       }
@@ -390,17 +404,17 @@ export function read(value) {
 }
 
 /**
- * A getter for `className` or the `class` attribute that lists classes by condition: strings are always on, and the keys
- * of an object are on while their value, a boolean, signal or getter, is truthy.
+ * A computed value for `className` or the `class` attribute that lists classes by condition: strings are always on, and
+ * the keys of an object are on while their value, a boolean, signal or getter, is truthy.
  * @param {string | Record<string, unknown> | readonly (string | Record<string, unknown>)[]} entries
- * @returns {() => string}
  */
 export function classList(entries) {
   const list = Array.isArray(entries) ? entries : [entries];
-  return () =>
+  return computed(() =>
     list
       .flatMap((entry) => (typeof entry === 'string' ? [entry] : Object.keys(entry).filter((name) => read(entry[name]))))
-      .join(' ');
+      .join(' '),
+  );
 }
 
 /**
@@ -519,7 +533,7 @@ export function each(items, render, key = (item) => item) {
     [...old.values()].flat().forEach((row) => row.stop());
   });
 
-  return () => {
+  const pass = () => {
     /** @type {Map<unknown, Row[]>} */
     const next = new Map();
     /** @type {Map<unknown, number>} */
@@ -562,6 +576,13 @@ export function each(items, render, key = (item) => item) {
       }
     }
     return nodes;
+  };
+  return {
+    /**
+     * @param {(value: unknown) => void} apply
+     * @param {import('fiorejs/type/base.dom.d.ts').BindContext} context
+     */
+    [LIVE]: (apply, context) => bind(pass, apply, context),
   };
 }
 
@@ -700,33 +721,26 @@ function forget(binding) {
   bindings.get(binding.anchor)?.delete(binding);
 }
 
-/** @type {import('fiorejs/type/base.dom.d.ts').Plugin} */
-export const plugin = {
-  name: 'fiorejs-signals',
-  bind(value, apply, context) {
-    // A function under an on* name, such as a custom element's onConfirm, is a callback, not a getter.
-    const isCallback = context.kind !== 'child' && /^on/i.test(context.name);
-    if (!isSignal(value) && (typeof value !== 'function' || isCallback)) {
-      return false;
-    }
-    const getter = isSignal(value) ? () => value.get() : /** @type {() => unknown} */ (value);
-
-    /** @type {Binding} */
-    const binding = {
-      anchor: context.kind === 'child' ? context.anchor : context.element,
-      start: () => runIn(null, null, () => effect(() => apply(getter()))),
-    };
-    follow(binding);
-    binding.stop = binding.start();
-    // The surrounding effect or list row ends the binding for good when it reruns or is removed.
-    owner?.owned.push(() => {
-      forget(binding);
-      binding.stop?.();
-      binding.stop = undefined;
-    });
-    observe();
-    return true;
-  },
-};
-
-use(plugin);
+/**
+ * Binds `read` to an element: `apply` gets its value now and whenever a signal it read changes, while its anchor is in
+ * the document.
+ * @param {() => unknown} read
+ * @param {(value: unknown) => void} apply
+ * @param {import('fiorejs/type/base.dom.d.ts').BindContext} context
+ */
+function bind(read, apply, context) {
+  /** @type {Binding} */
+  const binding = {
+    anchor: context.kind === 'child' ? context.anchor : context.element,
+    start: () => runIn(null, null, () => effect(() => apply(read()))),
+  };
+  follow(binding);
+  binding.stop = binding.start();
+  // The surrounding effect or list row ends the binding for good when it reruns or is removed.
+  owner?.owned.push(() => {
+    forget(binding);
+    binding.stop?.();
+    binding.stop = undefined;
+  });
+  observe();
+}

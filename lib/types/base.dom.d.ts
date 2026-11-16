@@ -1,4 +1,5 @@
 import type { HTMLElementsAttributesMap } from './attributes.d.ts';
+import type { LIVE } from '../core/base.js';
 
 export type IfEquals<X, Y, A = X, B = never> =
   (<T>() => T extends X ? 1 : 2) extends <T>() => T extends Y ? 1 : 2 ? A : B;
@@ -24,13 +25,12 @@ export type RecursivePartial<T> = {
   [P in keyof T]?: Live<T[P] extends object ? RecursivePartial<T[P]> : T[P]>;
 };
 
-/**
- * Plugins add the types of the live values they bind, e.g. `state: State<T>`. A live value must not be a plain object,
- * because plain objects are data objects and nested props such as `style`.
- */
-export interface LiveValues<T> {}
+/** A live value: core calls its [LIVE] method with an `apply` to call now and whenever the value changes. */
+export type LiveValue<T> = {
+  [LIVE](apply: (value: T) => void, context: BindContext): void;
+};
 
-export type Live<T> = T | LiveValues<T>[keyof LiveValues<T>];
+export type Live<T> = T | LiveValue<T>;
 
 export type LiveAttributes<A> = {
   [K in keyof A as K extends `on${string}` ? never : K]: Live<A[K]>;
@@ -51,13 +51,6 @@ export type BindContext =
       /** The comment before the nodes of the child, or the element when the child is its only child. */
       anchor: Node;
     };
-
-export type Plugin = {
-  /** Identifies the plugin; registering the same name again replaces it. */
-  name: string;
-  /** Return true to take over the value; call `apply` now and whenever it changes. */
-  bind(value: unknown, apply: (value: unknown) => void, context: BindContext): boolean;
-};
 
 export type PickWritable<T> = Pick<T, WritableKeys<T>>;
 

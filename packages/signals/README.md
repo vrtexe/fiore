@@ -8,7 +8,7 @@ Signals for [fiorejs](https://github.com/vrtexe/fiore). Bind a signal to a prope
 npm install fiorejs @fiorejs/signals
 ```
 
-Importing the package registers it with fiorejs, so there is no setup step.
+Signals carry the live-value method fiorejs looks for, so there is no setup step.
 
 ## Usage
 
@@ -20,10 +20,10 @@ const count = state(0);
 const double = computed(() => count.get() * 2);
 
 document.body.append(
-  div.attrs({ class: () => (count.get() > 5 ? 'many' : 'few') }).create([
+  div.attrs({ class: computed(() => (count.get() > 5 ? 'many' : 'few')) }).create([
     button.on({ click: () => count.update((n) => n + 1) }).create('+1'),
     span(count),
-    span(() => ` doubled: ${double.get()}`),
+    span(computed(() => ` doubled: ${double.get()}`)),
   ]),
 );
 ```
@@ -37,7 +37,7 @@ document.body.append(
 | `effect(fn)` | Runs `fn` now and whenever a signal it read changes. Returns a function that stops it. If `fn` returns a function, that function runs before the next run and when the effect stops. |
 | `untrack(fn)` | Runs `fn` without subscribing to the signals it reads. |
 | `read(value)` | Returns the current value of a signal, a getter function or a plain value. |
-| `classList(entries)` | A getter for `className` or the `class` attribute that lists classes by condition; see [Classes](#classes). |
+| `classList(entries)` | A computed value for `className` or the `class` attribute that lists classes by condition; see [Classes](#classes). |
 | `resource(source, fetcher)` | Loads a value asynchronously, like Solid's `createResource`; see [Loading data](#loading-data). |
 | `each(items, render, key)` | Renders a list and reuses the nodes of items whose key is unchanged. `render` gets the item's index at the time its row is created. |
 
@@ -53,24 +53,21 @@ The resource is a signal of the last loaded value, which it keeps while it reloa
 
 ```js
 import { div } from 'fiorejs';
-import { resource, state } from '@fiorejs/signals';
+import { computed, resource, state } from '@fiorejs/signals';
 
 const userId = state(1);
 const user = resource(userId, (id, { signal }) => fetch(`/users/${id}`, { signal }).then((response) => response.json()));
 
-div(() => (user.error.get() ? 'Could not load' : user.loading.get() ? 'Loading…' : user.get().name));
+div(computed(() => (user.error.get() ? 'Could not load' : user.loading.get() ? 'Loading…' : user.get().name)));
 ```
 
 ## Binding to the DOM
 
-A value is live when it is a signal or a function:
+A signal is live: it binds to its current value, for example `span(count)`, `input.props({ value: name })` or `div.attrs({ class: computed(() => ...) })`. A function is not live; wherever it appears it is a callback, so a value derived from signals is written `computed(() => ...)`.
 
-- a signal binds to its current value: `span(count)`, `input.props({ value: name })`
-- a function is called inside an effect and binds to its result: `div.attrs({ class: () => ... })`, `div(() => ...)`
+A value inside a nested prop binds too, for example `props({ style: { color: computed(() => ...) } })`. Bindings start when the element is created, so a builder used as a template binds once for every element it creates. A live child can return text, a node, a list of nodes or nothing.
 
-A value inside a nested prop binds too, for example `props({ style: { color: () => ... } })`. Bindings start when the element is created, so a builder used as a template binds once for every element it creates.
-
-Functions in `on`, and functions under a property or attribute name that starts with `on` in any case, such as a custom element's `onConfirm`, are callbacks and never bindings; a signal under such a name still binds. A live child can return text, a node, a list of nodes or nothing.
+A computed that builds elements owns the bindings and effects it creates: they stop before it recalculates and when nothing reads it any more, as they do inside an effect.
 
 ## Classes
 
@@ -92,7 +89,7 @@ A condition that is derived from a signal needs a getter or a `computed`: `{ dis
 
 ## Components
 
-A component is a function that runs once, so pass signals or getters to it, not their current values. `Reactive<T>` accepts all three forms, and `read()` unwraps them:
+A component is a function that runs once, so pass signals to it, not their current values. `Reactive<T>` accepts a plain value or a signal, and `read()` unwraps both:
 
 ```ts
 import { div } from 'fiorejs';
@@ -105,14 +102,14 @@ function Price(props: { amount: Reactive<number> }) {
 
 Price({ amount: 12 });
 Price({ amount: total });
-Price({ amount: () => total.get() * 1.081 });
+Price({ amount: computed(() => total.get() * 1.081) });
 ```
 
 ## Lists
 
 `each` reuses the node of every item whose key it has seen before and only renders new items. Without a key, the item itself is the key; a key that appears more than once gets one row per occurrence. When the order changes, only the rows that are out of place are moved, so a focused input in an unmoved row keeps its focus; browsers with `moveBefore` keep it in moved rows too. If `render` throws, the error is reported and the list keeps the rows it had, but stops updating like any binding that throws.
 
-`each(...)` returns a getter, so pass it directly as the children. Inside a live child, call it: `() => (show.get() ? each(items, render)() : null)`; rows are then reused only while that live child does not rerun.
+`each(...)` returns a live value, so pass it directly as the children. Inside a computed child, give it its own element: `computed(() => (show.get() ? ul(each(items, render)) : null))`; rows are then reused only while that computed does not recalculate.
 
 ```js
 import { ul, li } from 'fiorejs';
@@ -169,7 +166,6 @@ An element that is created but never inserted keeps its bindings for as long as 
 
 ## Limits
 
-- Functions passed as properties are treated as bindings unless the name starts with `on`, so a custom element property that expects a function under another name has to be set in code, for example in `also()`.
-- A getter that returns a nested object, such as `style: () => ({ color })`, merges that object into the element on every update and never clears a key that disappears from it. Bind each key on its own instead: `style: { color: () => ... }`.
+- A computed that returns a nested object, such as `style: computed(() => ({ color }))`, merges that object into the element on every update and never clears a key that disappears from it. Bind each key on its own instead: `style: { color: computed(() => ...) }`.
 - There is no `batch()` yet: outside an effect, every `set()` runs its effects immediately.
 - `refetch()` on a resource whose effect or list row has gone away still starts a load; call it only while the resource is in use.

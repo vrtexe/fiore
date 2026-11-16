@@ -1,18 +1,19 @@
-// Type-only checks: with a plugin's live values registered, JSX accepts them for children, attributes and properties.
-declare module 'fiorejs/type/base.dom.d.ts' {
-  interface LiveValues<T> {
-    getter: () => T;
-  }
-}
+// Type-only checks: JSX accepts live values for children, attributes and properties, and a bare getter is not one.
+import { LIVE } from 'fiorejs';
+import type { LiveValue } from 'fiorejs/type/base.dom.d.ts';
 
-const name = () => 'Ada';
+const live = <T,>(value: T): LiveValue<T> => ({ [LIVE]: (apply) => apply(value) });
+
+const name = live('Ada');
 
 void (<span>{name}</span>);
-void (<ul>{() => [<li>a</li>, <li>b</li>]}</ul>);
-void (<input value={name} placeholder={() => 'Name'} class={() => 'field'} />);
-void (<svg viewBox={() => '0 0 10 10'} />);
-// @ts-expect-error a getter must still return the right type
-void (<input placeholder={() => 42} />);
+void (<ul>{live([<li>a</li>, <li>b</li>])}</ul>);
+void (<input value={name} placeholder={live('Name')} class={live('field')} />);
+void (<svg viewBox={live('0 0 10 10')} />);
+// @ts-expect-error a live value must still have the right type
+void (<input placeholder={live(42)} />);
+// @ts-expect-error a getter is not a live value
+void (<input placeholder={() => 'Name'} />);
 // @ts-expect-error listeners are not live values
 void (<button onclick={'not a function'} />);
 

@@ -84,7 +84,7 @@ export class Builder<T extends Element, A, On extends object> {
      */
     create(children?: Children): T;
     /**
-     * The plain call: a plain object is the data object, anything else is the children.
+     * The plain call: a plain object is the data object, unless it is live; anything else is the children.
      * @param {TagData<T, A, On> | Children} [arg]
      */
     from(arg?: TagData<T, A, On> | Children): T;

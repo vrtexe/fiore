@@ -39,7 +39,7 @@ document.body.append(
   main.props({ className: 'app' }).create([
     header.create([
       h1.create(['Fiore ', small('+ signals')]),
-      span.props({ className: 'count' }).create(() => `${left.get()} left`),
+      span.props({ className: 'count' }).create(computed(() => `${left.get()} left`)),
     ]),
     form
       .props({ className: 'add' })

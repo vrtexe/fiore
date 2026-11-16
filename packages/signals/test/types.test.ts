@@ -8,8 +8,8 @@ const name = state('Ada');
 
 input({ props: { value: name } });
 div({
-  attrs: { title: () => name.get() },
-  children: [name, () => (name.get().length > 3 ? 'long' : 'short')],
+  attrs: { title: computed(() => name.get()) },
+  children: [name, computed(() => (name.get().length > 3 ? 'long' : 'short'))],
 });
 
 // @ts-expect-error a number signal is not a string value
@@ -21,7 +21,11 @@ function Label(props: { text: Reactive<string> }) {
 
 Label({ text: 'static' });
 Label({ text: name });
-Label({ text: () => name.get().toUpperCase() });
+Label({ text: computed(() => name.get().toUpperCase()) });
+// @ts-expect-error a getter is not live
+Label({ text: () => name.get() });
+// @ts-expect-error a getter is not a live child
+div({ children: () => name.get() });
 
 name.update((value) => value.trim());
 // @ts-expect-error update has to return the new value
@@ -39,7 +43,7 @@ void loaded;
 void busy;
 user.refetch();
 user.mutate({ value: 'x', aborted: false });
-div({ children: () => user.get()?.value ?? 'loading' });
+div({ children: computed(() => user.get()?.value ?? 'loading') });
 const plain = resource(() => 42);
 const answer: number | undefined = plain.get();
 void answer;

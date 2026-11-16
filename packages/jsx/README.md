@@ -64,7 +64,7 @@ The name alone decides, never the value, so `width="50%"` stays an attribute and
 
 ### Live values
 
-With a plugin such as [@fiorejs/signals](https://github.com/vrtexe/fiore/tree/main/packages/signals), a prop can be a signal or a getter function. On built-in elements a signal or getter goes where a plain value with the same name goes, so `title={() => null}` removes the attribute just like `title={null}`. On a custom element every function is a getter, so pass a callback as `() => callback` or assign it in code.
+A prop or child can be a live value, such as a signal from [@fiorejs/signals](https://github.com/vrtexe/fiore/tree/main/packages/signals). A live value goes where a plain value with the same name goes, so a signal holding `null` removes the `title` attribute just like `title={null}`. A function is never live: `class={() => ...}` passes the function itself, so write a derived value as `class={computed(() => ...)}`. On a custom element a function prop is therefore always a callback.
 
 Everything after `on` is used as the event name, exactly as written, so custom events work the same way as built-in ones: `oncart-add` listens to `cart-add`. A listener can also be an object with `handler` and `options`, which go to `addEventListener`:
 
@@ -120,7 +120,7 @@ const input = (<input value="Ada" />) as HTMLInputElement;
 ## Limits
 
 - `a`, `script`, `style` and `title` always create HTML elements, also inside `<svg>`.
-- `key` is accepted and ignored, because nothing is diffed. A `key` after a spread (`<li {...props} key="a" />`) compiles to `createElement` from `@fiorejs/jsx`, which the package exports.
+- `key` is accepted and ignored, because nothing is diffed; to reuse rows in a list, key the list with `@fiorejs/signals`. A `key` after a spread (`<li {...props} key="a" />`) compiles to `createElement` from `@fiorejs/jsx`, which the package exports.
 - Do not spread objects whose keys come from users: a key such as `innerHTML` or `srcdoc` sets that property or attribute.
 - Every prop that starts with `on` is treated as a listener, so a custom element property such as `online` has to be set in code.
 
