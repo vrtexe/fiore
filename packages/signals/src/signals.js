@@ -528,8 +528,7 @@ function createRow(render) {
 
 /**
  * @typedef {{
- *   anchor: () => Node | undefined,
- *   keyed?: Node,
+ *   anchor: Node,
  *   start: () => () => void,
  *   stop?: () => void,
  * }} Binding
@@ -586,7 +585,7 @@ function roots(nodes) {
  * @param {(binding: Binding) => void} fn
  */
 function visit(node, fn) {
-  const walker = document.createTreeWalker(node, 1 | 4 | 128 /* elements, text and comments */);
+  const walker = document.createTreeWalker(node, 1 | 128 /* elements and comments */);
   for (let current = /** @type {Node | null} */ (node); current; current = walker.nextNode()) {
     const set = bindings.get(current);
     if (!set) {
@@ -613,7 +612,7 @@ function report(error) {
 
 /** @param {Binding} binding */
 function pause(binding) {
-  if (!binding.anchor()?.isConnected) {
+  if (!binding.anchor.isConnected) {
     // Cleared first, so a stop that throws still leaves the binding ready to resume.
     const stop = binding.stop;
     binding.stop = undefined;
@@ -623,36 +622,27 @@ function pause(binding) {
 
 /** @param {Binding} binding */
 function resume(binding) {
-  if (!binding.stop && binding.anchor()?.isConnected) {
+  if (!binding.stop && binding.anchor.isConnected) {
     binding.stop = binding.start();
   }
 }
 
 /**
- * Files the binding under the node it currently follows.
+ * Files the binding under its anchor, so the observer finds it when the anchor is added or removed.
  * @param {Binding} binding
  */
 function follow(binding) {
-  const node = binding.anchor();
-  if (!node || node === binding.keyed) {
-    return;
-  }
-  forget(binding);
-  let set = bindings.get(node);
+  let set = bindings.get(binding.anchor);
   if (!set) {
     set = new Set();
-    bindings.set(node, set);
+    bindings.set(binding.anchor, set);
   }
   set.add(binding);
-  binding.keyed = node;
 }
 
 /** @param {Binding} binding */
 function forget(binding) {
-  if (binding.keyed) {
-    bindings.get(binding.keyed)?.delete(binding);
-    binding.keyed = undefined;
-  }
+  bindings.get(binding.anchor)?.delete(binding);
 }
 
 /** @type {import('fiorejs/type/base.dom.d.ts').Plugin} */
@@ -667,15 +657,10 @@ export const plugin = {
 
     /** @type {Binding} */
     const binding = {
-      anchor: () => (context.kind === 'child' ? context.nodes()[0] : context.element),
-      start: () =>
-        runIn(null, null, () =>
-          effect(() => {
-            apply(getter());
-            follow(binding);
-          }),
-        ),
+      anchor: context.kind === 'child' ? context.marker : context.element,
+      start: () => runIn(null, null, () => effect(() => apply(getter()))),
     };
+    follow(binding);
     binding.stop = binding.start();
     // The surrounding effect or list row ends the binding for good when it reruns or is removed.
     owner?.owned.push(() => {

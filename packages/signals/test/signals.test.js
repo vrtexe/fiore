@@ -132,7 +132,7 @@ test('a getter child stops the bindings of what it replaced', () => {
   const show = state(true);
   const count = state(1);
   const panel = div({ children: () => (show.get() ? span({ children: count }) : 'hidden') });
-  const inner = panel.firstChild;
+  const inner = panel.firstElementChild;
 
   show.set(false);
   count.set(2);
