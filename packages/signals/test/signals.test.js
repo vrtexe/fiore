@@ -1245,3 +1245,29 @@ test('with(fn) passes the signal to fn and returns its result', () => {
   assert.equal(count.with((signal) => signal), count);
   assert.equal(count.with((signal) => signal.get() + 1), 3);
 });
+
+test('a fragment row whose live child changes its nodes keeps them on the next list pass', () => {
+  const open = state(false);
+  const items = state(['a', 'b']);
+  const row = (key) => {
+    const fragment = document.createDocumentFragment();
+    fragment.append(...div([span(key), open.computed((value) => (value ? span(`${key}-detail`) : null))]).childNodes);
+    return fragment;
+  };
+  const list = div({ children: items.map(row) });
+
+  open.set(true);
+  items.set(['b', 'a']);
+
+  assert.equal(list.textContent, 'bb-detailaa-detail');
+});
+
+test('a computed read without a reader leaves what it builds to the caller', () => {
+  const count = state(1);
+  const view = computed(() => span(count));
+  const node = view.get();
+
+  count.set(2);
+
+  assert.equal(node.textContent, '2');
+});
