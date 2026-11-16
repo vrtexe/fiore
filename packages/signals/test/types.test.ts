@@ -60,3 +60,6 @@ div.props({ className: classList(['card', { active: name, disabled: () => false 
 
 div(state(true).if(() => span('a')).else(() => 'b'));
 div(['x', state(0).if(() => span('some'))]);
+div(state(0).case(0, () => 'none').case((n) => n > 10, () => span('many')).else(() => 'some'));
+// @ts-expect-error a case value has the signal's type
+state(0).case('zero', () => 'none');

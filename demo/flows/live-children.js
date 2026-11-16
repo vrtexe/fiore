@@ -26,6 +26,15 @@ export default function liveChildren() {
   let builds = 0;
   const conditional = div(count.if(() => (builds++, b(`some (branch built ${builds} times)`))).else(() => em('none')));
 
+  // A case condition shows the branch of the first case that matches.
+  const level = state(0);
+  const cases = div(
+    level
+      .case(0, () => em('none'))
+      .case((n) => n > 3, () => b('many'))
+      .else(() => 'a few'),
+  );
+
   // 5. A fragment that contains a live child keeps updating after it is inserted somewhere else.
   const open = state(false);
   const fragmentHost = div(fragment([b('row'), open.computed((value) => (value ? em(' (details shown)') : null))]));
@@ -70,6 +79,7 @@ export default function liveChildren() {
       events,
     ),
     card('if / else', conditional, [action('count + 1', () => count.update((value) => value + 1)), action('count = 0', () => count.set(0))], { view: domView(conditional) }),
+    card('case', cases, [action('level + 1', () => level.update((value) => value + 1)), action('level = 0', () => level.set(0))], { view: domView(cases) }),
     card('A live child inside a fragment', fragmentHost, [action('Toggle details', () => open.update((value) => !value))], { view: domView(fragmentHost) }),
   ]);
 }
