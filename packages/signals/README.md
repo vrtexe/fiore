@@ -39,15 +39,39 @@ document.body.append(
 | `signal.case(match, render).else(otherwise)` | Shows the branch of the first case the value matches; see [Conditions](#conditions). |
 | `signal.with(fn)` | Passes the signal to `fn` and returns its result, for reusable steps such as `todos.with(byId)`. |
 | `computed(fn)` | A value derived from other signals. It is calculated on first read and again on the next read after an input changed. It keeps its value while an effect or binding reads it, also when that reader reruns for another reason. If `fn` throws, the error is kept like a value and thrown on every read until an input changes; a reader that catches it stays subscribed and recovers then. While nothing reads it inside an effect or binding, it does not stay subscribed to its inputs and is recalculated on every read. Effects and bindings that read it run again only when its value changed (`Object.is`) or its error changed, so `user.computed((u) => u.name)` does not update the DOM when another field of `user` changes. `fn` derives a value and must not set signals: `set`, `update` or `mutate` inside it throws. To correct a value, derive the corrected one (`computed(() => Math.min(page.get(), last.get()))`) or correct it where it is set. |
-| `effect(fn)` | Runs `fn` now and whenever a signal it read changes. Returns a function that stops it. If `fn` returns a function, that function runs before the next run and when the effect stops. |
+| `effect(fn)` | Runs `fn` now and again in the next flush after a signal it read changed; see [Scheduling](#scheduling). Returns a function that stops it. If `fn` returns a function, that function runs before the next run and when the effect stops. |
+| `effect.pre(fn)`, `effect.post(fn)` | Like `effect`, but in the flush they run before, or after, the other effects and the bindings. The first run of `effect.post` waits for the next flush. |
+| `flush()` | Runs the effects and bindings that wait for the flush now. |
+| `tick()` | A promise that resolves after the waiting effects and bindings have run. |
+| `root(fn)` | Runs `fn` with an owner of its own and returns a function that stops everything `fn` created; see [Cleanup](#cleanup). |
 | `untrack(fn)` | Runs `fn` without subscribing to the signals it reads. |
 | `read(value)` | Returns the current value of a signal, a getter function or a plain value. |
 | `classList(entries)` | A computed value for `className` or the `class` attribute that lists classes by condition; see [Classes](#classes). |
 | `resource(source, fetcher)` | Loads a value asynchronously, like Solid's `createResource`; see [Loading data](#loading-data). |
 
-Setting a signal runs its effects before `set()` returns. A signal set while an effect runs, including its first run, is handled after that run has finished, so an effect is never re-entered.
+## Scheduling
 
-An effect or binding that throws is stopped, and its error is reported with `reportError` (`console.error` where that does not exist); the other effects keep running, and `set()` and `effect()` never throw because of an effect. A cleanup that throws is reported and does not stop its effect. An effect that runs more than 100 times in one update, usually because it sets a signal it reads, is reported and stopped the same way.
+A write applies at once: after `count.set(1)`, `count.get()` and every computed that reads it return the new value. The effects and bindings that read it run again later, together, in one flush on a microtask. Several writes in a row cost one run of each reader, and an effect is never re-entered.
+
+```js
+count.set(1);
+count.set(2);   // effects and bindings that read count run once, with 2
+count.get();    // 2
+```
+
+A new effect or binding runs at once, so `div(count)` shows its value before the next line runs. A flush runs `effect.pre` effects first, then the other effects and the bindings in the order they were created, so an effect runs before the effects it created, and `effect.post` effects last. `effect.post` sees the DOM after the bindings have updated it, and its first run waits for the next flush, when the element it was created with is usually in the document. A write during the flush is handled in the same flush, which goes back to the first phase that has work.
+
+The DOM therefore updates after the code that wrote the signal has finished. To read it right away, for example to focus or measure an element, call `flush()`; in async code, `await tick()` waits for the flush instead:
+
+```js
+submitted.set(true);
+flush();
+input.focus(); // the input that submitted shows is in the DOM now
+```
+
+Tests call `flush()` after their writes and before their assertions. `flush()` inside an effect does nothing, because the running flush handles everything before it ends.
+
+An effect or binding that throws is stopped. The other effects of the flush still run, and at its end the flush throws the first error and reports the others with `reportError` (`console.error` where that does not exist). The error reaches the caller of `flush()`, rejects a waiting `tick()`, and is otherwise an uncaught error. An effect that runs more than 100 times in one flush, usually because it sets a signal it reads, is stopped with an error the same way. An error in the first run of a new effect, outside a flush, is reported.
 
 ## Loading data
 
@@ -143,7 +167,7 @@ div(count.case(0, () => 'none').case((n) => n > 10, () => 'many').else(() => 'so
 
 ## Lists
 
-`signal.map(render)` renders a list from a signal of an array and reuses the rows of items it has seen before, so it only renders new items. The item itself is the key, so an item replaced by a copy gets a new row. `signal.for().map(render)` keys rows by `item.key`, and `signal.for((item) => item.id).map(render)` by what the function returns. A row is rendered once, for the item it was created with: a copy with the same key reuses the row as it is, so put the fields that change in signals (`{ id, text, done: state(false) }`) when you key a list. A key that appears more than once gets one row per occurrence; items without a `key` field all get the key `undefined` and are matched by position, so such a row keeps showing the item it was created for. A row can be a node or a fragment. When the order changes, only the rows that are out of place are moved, so a focused input in an unmoved row keeps its focus; browsers with `moveBefore` keep it in moved rows too. If `render` throws, the error is reported and the list keeps the rows it had, but stops updating like any binding that throws.
+`signal.map(render)` renders a list from a signal of an array and reuses the rows of items it has seen before, so it only renders new items. The item itself is the key, so an item replaced by a copy gets a new row. `signal.for().map(render)` keys rows by `item.key`, and `signal.for((item) => item.id).map(render)` by what the function returns. A row is rendered once, for the item it was created with: a copy with the same key reuses the row as it is, so put the fields that change in signals (`{ id, text, done: state(false) }`) when you key a list. A key that appears more than once gets one row per occurrence; items without a `key` field all get the key `undefined` and are matched by position, so such a row keeps showing the item it was created for. A row can be a node or a fragment. When the order changes, only the rows that are out of place are moved, so a focused input in an unmoved row keeps its focus; browsers with `moveBefore` keep it in moved rows too. If `render` throws, the list keeps the rows it had, but stops updating like any binding that throws, and the error is thrown at the end of the flush.
 
 A list is a live value, so pass it directly as the children. Each place it is bound keeps its own rows. Inside a computed child, give it its own element: `computed(() => (show.get() ? ul(todos.map(render)) : null))`; rows are then reused only while that computed does not recalculate. `render` gets the item's index at the time its row is created.
 
@@ -198,12 +222,25 @@ Bindings are stopped automatically:
 
 Removal and insertion are detected with a `MutationObserver` on the document, so elements inside a shadow root are not paused.
 
+`root(fn)` stops things when you decide. It runs `fn` with an owner of its own, so the effects, bindings, computeds and lists created in it, inserted or not, stop when you call the function it returns. A binding stopped this way stays stopped when its element is inserted again. A root belongs to no other owner, also when it is created inside an effect, so call its function yourself. If `fn` throws, what it created is stopped.
+
+```js
+const dispose = root(() => document.body.append(App()));
+dispose(); // stops every binding and effect of the app
+```
+
+
 A page that loads two copies of `@fiorejs/signals` can bind signals from both, but a `computed` or `effect` only tracks signals from its own copy.
 
-An element that is created but never inserted keeps its bindings for as long as its signals live. Bindings are held weakly, so once the element and its signals are no longer referenced, everything can be garbage-collected.
+An element that is created but never inserted keeps its bindings for as long as its signals live, unless it was created in a root that is disposed. Bindings are held weakly, so once the element and its signals are no longer referenced, everything can be garbage-collected.
+
+## Upgrading from 2.x
+
+- Effects and bindings run in a flush on a microtask, not inside `set()`. Code that reads the DOM right after a write calls `flush()` first, or uses `effect.post`; tests call `flush()` before their assertions.
+- An error of an effect or binding is thrown at the end of the flush instead of being reported, and the loop limit counts runs in one flush. A first run outside a flush still reports its error.
+- New: `flush()`, `tick()`, `effect.pre`, `effect.post` and `root(fn)`.
 
 ## Limits
 
 - A computed that returns a nested object, such as `style: computed(() => ({ color }))`, merges that object into the element on every update and never clears a key that disappears from it. Bind each key on its own instead: `style: { color: computed(() => ...) }`.
-- There is no `batch()` yet: outside an effect, every `set()` runs its effects immediately.
 - `refetch()` on a resource whose effect or list row has gone away still starts a load; call it only while the resource is in use.

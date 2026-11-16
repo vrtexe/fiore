@@ -1,5 +1,5 @@
 import { b, div, em, fragment, i } from 'fiorejs';
-import { state } from '@fiorejs/signals';
+import { flush, state } from '@fiorejs/signals';
 import { action, card, domView, flow, logger } from '../debug.js';
 
 const words = ['one', 'two', 'three', 'four', 'five'];
@@ -73,6 +73,8 @@ export default function liveChildren() {
         action('Update the value', () => {
           next = (next + 1) % words.length;
           word.set(words[next]);
+          // The DOM updates in the next flush; flush() runs it now, so the text below is the new one.
+          flush();
           events.write(`set "${words[next]}": shown "${robust.textContent}"`);
         }),
       ],

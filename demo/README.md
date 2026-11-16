@@ -55,18 +55,27 @@ What to look at:
 - **classList.** Classes switch on and off from a boolean, a signal or a getter.
 - **Two-way input.** `input.props({ value: name }).on({ input: … })` keeps the field and the greeting in sync.
 
-### 3. Live children (`flows/live-children.js`)
+### 3. Scheduling (`flows/scheduling.js`)
+
+A write applies at once, but effects and bindings rerun together in one flush on a microtask.
+
+- **Batching.** **Set three times** writes `count` three times in one click; the log shows one effect run, with the final value.
+- **flush().** **Set "two"** logs the DOM right after the write and still sees the old text, because the flush has not run yet. **Set "three", then flush()** calls `flush()` first and sees the new text.
+- **effect.pre and effect.post.** Both read the box's text. `effect.pre` runs before the bindings of the flush and sees the old size; `effect.post` runs after them and sees the new one.
+- **root().** **Create a widget in a root** builds a widget whose effect logs every second. **Dispose the root** stops it: the log and the widget stop updating.
+
+### 4. Live children (`flows/live-children.js`)
 
 A live value as a child keeps its own place in the parent. Open the markup views:
 
 - **Only child versus siblings.** `div(text)` has one text node and no markers: the element itself bounds the child. `div(['[', text, ']'])` keeps the live text between two `⟨marker⟩` comments, because it has siblings.
 - **Text, node, list, nested, nothing.** One live child switches between a string, an element, a list of nodes, nested arrays and `null`. Only the nodes between its markers change.
-- **Robust against outside DOM changes.** Press `normalize()` (it merges adjacent text nodes), then **Simulate translation** (it replaces the live text node with `<font>`, as Chrome's page translation does), then **Update the value**. The new value still appears, because fiorejs reads the nodes between the markers instead of remembering them.
+- **Robust against outside DOM changes.** Press `normalize()` (it merges adjacent text nodes), then **Simulate translation** (it replaces the live text node with `<font>`, as Chrome's page translation does), then **Update the value** (it calls `flush()` so the log can read the DOM right away). The new value still appears, because fiorejs reads the nodes between the markers instead of remembering them.
 - **if / else.** `count.if(() => …).else(() => …)` shows a branch by truthiness. Press **count + 1** several times: the branch is built once; press **count = 0** and then **count + 1**: it is built again, because the truthiness flipped.
 - **case.** `level.case(0, …).case((n) => n > 3, …).else(…)` shows the branch of the first case that matches: **none** at 0, **a few** from 1 to 3, **many** above 3.
 - **A live child inside a fragment.** The fragment's nodes are moved into another element, and the live child inside keeps updating.
 
-### 4. Lists (`flows/lists.js`)
+### 5. Lists (`flows/lists.js`)
 
 `signal.map(render)` renders a list from a signal of an array and keeps the rows of items it has seen, so only new items are rendered:
 
@@ -82,14 +91,14 @@ What to look at:
 - **Fields in signals.** Each todo keeps `done` in a signal, so checking a box updates only that row's class and the "left" count.
 - **for(key) and copies.** The second card keys rows by `id`. **Replace with an edited copy** changes the data, but the rows keep showing the text they were created with: a keyed row is rendered once, and a copy with the same key reuses it. Put fields that change in signals, as the todo list does.
 
-### 5. Lifecycle (`flows/lifecycle.js`)
+### 6. Lifecycle (`flows/lifecycle.js`)
 
 Bindings follow the document, without any component tree:
 
 - **Pause and resume.** A live text updates every second. **Remove from the page**, wait a few seconds, then **Insert again**: while it was out of the document, its binding did not run, and on insert it shows the current tick at once. **Status** prints how often the binding has run.
 - **Ownership of a computed child.** The child is a computed that creates an inner effect. The log shows the effect's runs and cleanups; **Toggle** hides the child, and its inner effect stops for good.
 
-### 6. Async: resource (`flows/resource.js`)
+### 7. Async: resource (`flows/resource.js`)
 
 `resource(source, fetcher)` loads a value whenever `source` changes. The fake server answers after a random delay and fails for user 4.
 
@@ -99,7 +108,7 @@ What to look at:
 - **loading and error.** Both are signals; the card shows them next to the name. Go to user 4 to see an error.
 - **Refetch** loads the current user again; **Rename locally** sets the value with `mutate` without loading.
 
-### 7. The live protocol (`flows/live-protocol.js`)
+### 8. The live protocol (`flows/live-protocol.js`)
 
 fiorejs binds any value that has a method under `Symbol.for('fiorejs.live')`, exported as `LIVE`:
 
