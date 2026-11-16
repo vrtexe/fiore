@@ -276,20 +276,30 @@ for (const [name, type] of Object.entries({ chromium, firefox, webkit })) {
       if (!browser) return t.skip(reason);
       const { page } = await playground();
 
-      const resumed = await page.evaluate(async () => {
+      const result = await page.evaluate(async () => {
         const wait = (/** @type {number} */ ms) => new Promise((resolve) => setTimeout(resolve, ms));
         const section = /** @type {Element} */ (document.getElementById('lifecycle'));
         const press = (/** @type {string} */ label) =>
           /** @type {HTMLButtonElement} */ ([...section.querySelectorAll('button')].find((button) => button.textContent === label)).click();
-        const stage = () => section.querySelector('.card .stage')?.textContent;
+        // The span the binding writes "tick N" into; the clock ticks every second.
+        const watched = /** @type {Element} */ (section.querySelector('.card .stage span'));
         press('Remove from the page');
-        const removed = stage();
+        await wait(50);
+        const atRemoval = watched.textContent;
         await wait(2200);
+        const whileRemoved = watched.textContent;
         press('Insert again');
-        await wait(100);
-        return stage() !== removed;
+        for (let i = 0; i < 40 && watched.textContent === whileRemoved; i++) {
+          await wait(50);
+        }
+        return { atRemoval, whileRemoved, afterInsert: watched.textContent };
       });
-      assert.equal(resumed, true);
+      // Paused: the text did not change while the span was out of the document.
+      assert.equal(result.whileRemoved, result.atRemoval);
+      assert.match(result.atRemoval ?? '', /^tick \d+$/);
+      // Resumed: inserting it again applied the current, later tick.
+      assert.notEqual(result.afterInsert, result.whileRemoved);
+      assert.match(result.afterInsert ?? '', /^tick \d+$/);
       await page.close();
     });
   });

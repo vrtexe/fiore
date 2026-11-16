@@ -2188,3 +2188,18 @@ test('replaced content held by a state only pauses and resumes when inserted aga
   assert.equal(inner.textContent, '1');
   for (const node of [host, old, host2, inner]) node.remove();
 });
+
+test('resource does not abort a load that has already failed', async () => {
+  const id = state(1);
+  const { calls, fetcher } = manual();
+  const user = resource(id, fetcher);
+  effect(() => user.error.get());
+  calls[0].reject(new Error('offline'));
+  await tick();
+
+  id.set(2);
+  flush();
+
+  assert.equal(calls[0].signal.aborted, false);
+  assert.equal(calls.length, 2);
+});
