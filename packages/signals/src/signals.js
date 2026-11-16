@@ -305,7 +305,8 @@ class Computed extends Signal {
     if (!result) {
       this.owned.splice(0).forEach((stopOwned) => stopOwned());
       try {
-        result = { value: runTracked(this, this, this._fn) };
+        // Without a reader the computed releases right after this read, so what the run creates belongs to the caller.
+        result = { value: runTracked(this, this.subs.size > 0 ? this : owner, this._fn) };
       } catch (error) {
         result = { error };
       }
@@ -547,7 +548,7 @@ export function resource(source, fetcher) {
 }
 
 /**
- * @typedef {{ nodes: Node[], stop: () => void }} Row
+ * @typedef {{ first: Node | null, last: Node | null, stop: () => void }} Row
  */
 
 /** A signal of a list with its key, waiting for `map`. */
@@ -627,7 +628,7 @@ class List {
             } else {
               next.set(id, [row]);
             }
-            for (const node of row.nodes) {
+            for (let node = row.first; node; node = node === row.last ? null : node.nextSibling) {
               nodes.push(node);
             }
           });
@@ -663,8 +664,10 @@ function createRow(render) {
   const stop = () => scope.owned.splice(0).forEach((stopOwned) => stopOwned());
   try {
     const node = runIn(null, scope, render);
-    // A fragment empties when it is inserted, so the row keeps the nodes it held.
-    return { nodes: node.nodeType === Node.DOCUMENT_FRAGMENT_NODE ? [...node.childNodes] : [node], stop };
+    // A fragment empties when it is inserted, so the row keeps its first and last node; a live child between them can
+    // change the nodes in between.
+    const fragment = node.nodeType === Node.DOCUMENT_FRAGMENT_NODE;
+    return { first: fragment ? node.firstChild : node, last: fragment ? node.lastChild : node, stop };
   } catch (error) {
     stop();
     throw error;
