@@ -1451,3 +1451,60 @@ test('a computed bound to the DOM that sets a signal is reported once, and signa
   t.set(2);
   assert.deepEqual(seen, [2, 4]);
 });
+
+test('if shows its branch while the signal is truthy, and nothing otherwise', () => {
+  const open = state(false);
+  const el = div(['[', open.if(() => span('yes')), ']']);
+  assert.equal(el.textContent, '[]');
+
+  open.set(true);
+  assert.equal(el.textContent, '[yes]');
+
+  open.set(false);
+  assert.equal(el.textContent, '[]');
+});
+
+test('else shows the other branch', () => {
+  const open = state(true);
+  const el = div(open.if(() => span('open')).else(() => 'closed'));
+  assert.equal(el.textContent, 'open');
+
+  open.set(false);
+  assert.equal(el.textContent, 'closed');
+});
+
+test('a branch is built once while the condition keeps its truthiness', () => {
+  const count = state(1);
+  let builds = 0;
+  const el = div(count.if(() => (builds++, span('some'))).else(() => 'none'));
+
+  count.set(2);
+  count.set(3);
+  assert.equal(builds, 1);
+
+  count.set(0);
+  assert.equal(el.textContent, 'none');
+  count.set(5);
+  assert.equal(builds, 2);
+});
+
+test('what a branch builds stops when the branch changes', () => {
+  const open = state(true);
+  const tick = state(0);
+  const seen = [];
+  div(
+    open.if(() => {
+      effect(() => {
+        seen.push(tick.get());
+        return () => seen.push('stopped');
+      });
+      return span('open');
+    }),
+  );
+
+  tick.set(1);
+  open.set(false);
+  tick.set(2);
+
+  assert.deepEqual(seen, [0, 'stopped', 1, 'stopped']);
+});

@@ -21,7 +21,12 @@ export default function liveChildren() {
   const events = logger();
   const liveText = () => [...robust.childNodes].find((node) => node.nodeType === Node.TEXT_NODE && node.data === word.get());
 
-  // 4. A fragment that contains a live child keeps updating after it is inserted somewhere else.
+  // 4. if/else switches between two branches; only the shown one is built, and it is rebuilt only when the truthiness flips.
+  const count = state(0);
+  let builds = 0;
+  const conditional = div(count.if(() => (builds++, b(`some (branch built ${builds} times)`))).else(() => em('none')));
+
+  // 5. A fragment that contains a live child keeps updating after it is inserted somewhere else.
   const open = state(false);
   const fragment = document.createDocumentFragment();
   fragment.append(...div([b('row'), open.computed((value) => (value ? em(' (details shown)') : null))]).childNodes);
@@ -66,6 +71,7 @@ export default function liveChildren() {
       ],
       events,
     ),
+    card('if / else', conditional, [action('count + 1', () => count.update((value) => value + 1)), action('count = 0', () => count.set(0))], { view: domView(conditional) }),
     card('A live child inside a fragment', fragmentHost, [action('Toggle details', () => open.update((value) => !value))], { view: domView(fragmentHost) }),
   ]);
 }
