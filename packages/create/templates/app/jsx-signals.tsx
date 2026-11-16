@@ -17,7 +17,7 @@ function remove(todo: Todo) {
 function TodoItem(props: { todo: Todo }) {
   const { todo } = props;
   return (
-    <li class={() => (todo.done.get() ? 'item done' : 'item')}>
+    <li class={computed(() => (todo.done.get() ? 'item done' : 'item'))}>
       <label>
         <input type="checkbox" checked={todo.done} onchange={(event) => todo.done.set(event.currentTarget.checked)} />
         <span>{todo.text}</span>
@@ -38,7 +38,7 @@ function App() {
         <h1>
           Fiore <small>+ signals</small>
         </h1>
-        <span class="count">{() => `${left.get()} left`}</span>
+        <span class="count">{computed(() => `${left.get()} left`)}</span>
       </header>
       <form
         class="add"

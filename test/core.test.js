@@ -6,15 +6,21 @@ import { JSDOM } from 'jsdom';
 const { window } = new JSDOM();
 Object.assign(globalThis, { document: window.document, Node: window.Node });
 
-const { div, input, element, use } = await import('../lib/html.js');
+const { div, input, element, LIVE } = await import('../lib/html.js');
 const { default: math } = await import('../lib/math.js');
 const { default: svg } = await import('../lib/svg.js');
 const { assignProperties } = await import('../lib/core/base.js');
 const { deprecatedElement } = await import('../lib/core/html.js');
 const { option, select, span } = await import('../lib/html.js');
 
-/** Minimal signal used to exercise the plugin hook; like real signals it is not a plain object. */
-const signalPrototype = { isSignal: true };
+/** Minimal signal used to exercise live values: it records the context it is bound with. */
+const signalPrototype = {
+  [LIVE](apply, context) {
+    contexts.push(context);
+    apply(this.get());
+    this.subscribe(apply);
+  },
+};
 function signal(value) {
   const subscribers = new Set();
   return {
@@ -35,19 +41,6 @@ const region = (marker) => {
   for (let node = marker.nextSibling; node.nodeType !== 8; node = node.nextSibling) nodes.push(node);
   return nodes;
 };
-use({
-  name: 'test-signals',
-  bind(value, apply, context) {
-    if (!value?.isSignal) {
-      return false;
-    }
-    contexts.push(context);
-    apply(value.get());
-    value.subscribe(apply);
-    return true;
-  },
-});
-
 test('nested props merge into existing objects and other objects are assigned whole', () => {
   const stream = new (class MediaStreamLike {})();
   const el = element('video')({ props: { srcObject: stream, style: { height: '10px' } } });
@@ -75,7 +68,7 @@ test('children accept strings, numbers, nodes and arrays', () => {
   assert.equal(div({ children: 'only' }).textContent, 'only');
 });
 
-test('a plugin can bind properties and attributes', () => {
+test('a live value binds properties and attributes', () => {
   const value = signal('first');
   const label = signal('Open');
   const el = input({ props: { value }, attrs: { 'aria-label': label } });
@@ -130,47 +123,37 @@ test('a bound child keeps and reorders nodes it returns again', () => {
   assert.equal(html(el), '&lt;<a></a>&gt;');
 });
 
-test('registering a plugin name again replaces the earlier plugin', () => {
-  const marker = { __proto__: { isMarker: true } };
-  use({ name: 'marker', bind: (value, apply) => value === marker && (apply('first'), true) });
-  use({ name: 'marker', bind: (value, apply) => value === marker && (apply('second'), true) });
-
-  assert.equal(div({ children: marker }).textContent, 'second');
-});
-
-test('plugins are asked in the order they were registered and the first that binds wins', () => {
-  const shared = { __proto__: { isShared: true } };
-  const claim = (text) => (value, apply) => value === shared && (apply(text), true);
-  use({ name: 'first', bind: claim('first') });
-  use({ name: 'second', bind: claim('second') });
-
-  assert.equal(div({ children: shared }).textContent, 'first');
-});
-
-test('primitives, plain objects and nodes are never offered to plugins', () => {
+test('only values with a [LIVE] method are bound; functions are never live', () => {
   const before = contexts.length;
-  const offered = [];
-  use({ name: 'everything', bind: (value) => void offered.push(value) });
+  const cb = () => 'x';
   const el = div({
-    props: { title: 't', hidden: true, style: { color: 'red' } },
+    props: { cb, title: 't', style: { color: 'red' } },
     attrs: { role: 'note', 'data-n': 1 },
-    children: ['a', 1, span(), { text: 'b' }],
+    children: ['a', 1, span(), { text: 'b' }, () => 1],
   });
-  use({ name: 'everything', bind: () => false });
 
-  assert.deepEqual(offered, []);
   assert.equal(contexts.length, before);
+  assert.equal(el.cb, cb);
   assert.equal(el.style.color, 'red');
-  assert.equal(el.textContent, 'a1[object Object]');
+  assert.equal(el.textContent, 'a1[object Object]() => 1');
 });
 
-test('loading a second copy of fiorejs logs a warning', async (t) => {
-  const warn = t.mock.method(console, 'warn', () => {});
+test('a plain object with [LIVE] is live, also as the only argument of a tag', () => {
+  const live = { [LIVE]: (apply) => apply('hi') };
 
-  await import('../lib/core/plugins.js?second-copy');
+  assert.equal(div({ children: live }).textContent, 'hi');
+  assert.equal(div(live).textContent, 'hi');
+});
 
-  assert.equal(warn.mock.callCount(), 1);
-  assert.match(warn.mock.calls[0].arguments[0], /fiorejs is loaded twice/);
+test('a live value from another copy of fiorejs binds', async () => {
+  const copy = await import('../lib/core/base.js?copy');
+  const text = signal('a');
+  const el = document.createElement('div');
+  copy.replaceChildren(el, ['<', text]);
+
+  text.set('b');
+
+  assert.equal(el.textContent, '<b');
 });
 
 test('JSON __proto__ keys and inherited keys never reach Object.prototype or the element', () => {
@@ -255,7 +238,7 @@ test('textContent and innerHTML props are kept when there are no children', () =
   assert.equal(div({ props: { innerHTML: '<b>x</b>' } }).innerHTML, '<b>x</b>');
 });
 
-test('inline handler attributes are never set or offered to plugins, in any case; other on* names are', () => {
+test('inline handler attributes are never set or bound, in any case; other on* names are', () => {
   const before = contexts.length;
   const el = div({
     attrs: { onclick: signal('go()'), OnClick: signal('go()'), online: signal('yes'), title: signal('t') },
@@ -267,10 +250,13 @@ test('inline handler attributes are never set or offered to plugins, in any case
   assert.equal(el.getAttribute('online'), 'yes');
 });
 
-test('a plugin that binds a child without applying it yet still gets a place', () => {
-  const later = { __proto__: { isLater: true } };
+test('a live child that is not applied yet still gets a place', () => {
   let applyLater;
-  use({ name: 'later', bind: (value, apply) => value === later && ((applyLater = apply), true) });
+  const later = {
+    [LIVE](apply) {
+      applyLater = apply;
+    },
+  };
   const el = div({ children: [later, 'b'] });
 
   applyLater('hello');
@@ -399,12 +385,6 @@ test('a bound property update does not read the current value first', () => {
   assert.equal(reads, 0);
 });
 
-test('use() requires a plugin name that is a non-empty string', () => {
-  for (const name of [undefined, '', 42]) {
-    assert.throws(() => use({ name, bind: () => false }), /needs a plugin with a name/);
-  }
-});
-
 test('objects from another window are replaced, not merged into', () => {
   const el = div();
   const foreign = runInNewContext('({ title: "frame" })');
@@ -426,7 +406,7 @@ test('objects without a prototype are replaced, not merged into', () => {
   assert.notEqual(el.bag, bare);
 });
 
-test('nested keys that start with on are still offered to plugins', () => {
+test('nested keys that start with on are still bound', () => {
   const step = signal('2');
   const el = div({ props: { dataset: { onboardingStep: step } } });
 
@@ -444,7 +424,7 @@ test('a very long child list does not overflow the argument limit', () => {
   }
 });
 
-test('plugins get the full path of nested props', () => {
+test('live values get the full path of nested props', () => {
   const before = contexts.length;
   const el = div({ props: { title: signal('t'), style: { color: signal('red') } } });
 
@@ -467,7 +447,7 @@ test('a very deep bound array does not overflow the stack', () => {
   assert.equal(div({ children: signal(deep) }).textContent, 'x');
 });
 
-test('plugins get the comment before the nodes of a child as its anchor, or the element for an only child', () => {
+test('live values get the comment before the nodes of a child as their anchor, or the element for an only child', () => {
   const before = contexts.length;
   const only = div({ children: signal('a') });
   div({ children: ['<', signal('b')] });
@@ -538,13 +518,6 @@ test('a live child inside a fragment that is the value of another live child kee
 
   outer.set('gone');
   assert.equal(el.textContent, '[gone]');
-});
-
-test('a live child that no plugin binds is shown as text and leaves no markers', () => {
-  const el = div({ children: ['a', () => 1, new (class { toString = () => 'obj'; })(), 'z'] });
-
-  assert.equal(el.textContent, 'a() => 1objz');
-  assert.equal(el.childNodes.length, 4);
 });
 
 test('an only live child reorders its nodes in place', () => {

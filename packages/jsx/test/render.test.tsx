@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { JSDOM } from 'jsdom';
-import { use } from 'fiorejs';
+import { LIVE } from 'fiorejs';
 import { jsx, type Child } from '@fiorejs/jsx/jsx-runtime';
 
 const { window } = new JSDOM();
@@ -270,71 +270,55 @@ test('very deep children do not overflow the stack', () => {
   assert.equal(((<div>{deep}</div>) as HTMLDivElement).textContent, 'x');
 });
 
-test('plain values, getters and signals with the same name end up in the same place', () => {
-  const SIGNAL = Symbol.for('fiorejs.signal');
-  use({
-    name: 'test-live',
-    bind: (value, apply) => {
-      if (typeof value === 'function') return apply(value()), true;
-      if (value && typeof value === 'object' && SIGNAL in value) return apply((value as unknown as { get(): unknown }).get()), true;
-      return false;
-    },
-  });
-  try {
-    const cases: [tag: string, name: string, value: unknown, check: (el: any) => void][] = [
-      ['div', 'title', 'tip', (el) => assert.equal(el.getAttribute('title'), 'tip')],
-      ['div', 'title', null, (el) => assert.equal(el.hasAttribute('title'), false)],
-      ['div', 'title', false, (el) => assert.equal(el.hasAttribute('title'), false)],
-      ['div', 'id', 'main', (el) => assert.equal(el.id, 'main')],
-      ['img', 'width', '50%', (el) => assert.equal(el.getAttribute('width'), '50%')],
-      ['img', 'width', 100, (el) => assert.equal(el.width, 100)],
-      ['button', 'disabled', true, (el) => assert.equal(el.disabled, true)],
-      ['button', 'disabled', false, (el) => assert.equal(el.hasAttribute('disabled'), false)],
-      ['div', 'hidden', true, (el) => assert.equal(el.hidden, true)],
-      ['div', 'draggable', false, (el) => assert.equal(el.getAttribute('draggable'), 'false')],
-      ['input', 'value', 'typed', (el) => (assert.equal(el.value, 'typed'), assert.equal(el.hasAttribute('value'), false))],
-      ['input', 'checked', true, (el) => (assert.equal(el.checked, true), assert.equal(el.hasAttribute('checked'), false))],
-      ['div', 'textContent', 'text', (el) => assert.equal(el.textContent, 'text')],
-      ['div', 'className', 'box', (el) => assert.equal(el.getAttribute('class'), 'box')],
-      ['audio', 'volume', 0.5, (el) => (assert.equal(el.volume, 0.5), assert.equal(el.hasAttribute('volume'), false))],
-      ['option', 'text', 'Label', (el) => (assert.equal(el.textContent, 'Label'), assert.equal(el.hasAttribute('text'), false))],
-      [
-        'x-undefined',
-        'className',
-        'card',
-        (el) => (assert.equal(el.getAttribute('class'), 'card'), assert.equal(el.hasAttribute('classname'), false)),
-      ],
-    ];
-    for (const [tag, name, value, check] of cases) {
-      const forms = { plain: value, getter: () => value, signal: Object.create({ [SIGNAL]: true, get: () => value }) };
-      for (const [form, input] of Object.entries(forms)) {
-        try {
-          check(jsx(tag, { [name]: input }));
-        } catch (error) {
-          throw new Error(`<${tag} ${name}={${form} ${JSON.stringify(value)}}>: ${(error as Error).message}`);
-        }
+test('plain values and live values with the same name end up in the same place', () => {
+  const cases: [tag: string, name: string, value: unknown, check: (el: any) => void][] = [
+    ['div', 'title', 'tip', (el) => assert.equal(el.getAttribute('title'), 'tip')],
+    ['div', 'title', null, (el) => assert.equal(el.hasAttribute('title'), false)],
+    ['div', 'title', false, (el) => assert.equal(el.hasAttribute('title'), false)],
+    ['div', 'id', 'main', (el) => assert.equal(el.id, 'main')],
+    ['img', 'width', '50%', (el) => assert.equal(el.getAttribute('width'), '50%')],
+    ['img', 'width', 100, (el) => assert.equal(el.width, 100)],
+    ['button', 'disabled', true, (el) => assert.equal(el.disabled, true)],
+    ['button', 'disabled', false, (el) => assert.equal(el.hasAttribute('disabled'), false)],
+    ['div', 'hidden', true, (el) => assert.equal(el.hidden, true)],
+    ['div', 'draggable', false, (el) => assert.equal(el.getAttribute('draggable'), 'false')],
+    ['input', 'value', 'typed', (el) => (assert.equal(el.value, 'typed'), assert.equal(el.hasAttribute('value'), false))],
+    ['input', 'checked', true, (el) => (assert.equal(el.checked, true), assert.equal(el.hasAttribute('checked'), false))],
+    ['div', 'textContent', 'text', (el) => assert.equal(el.textContent, 'text')],
+    ['div', 'className', 'box', (el) => assert.equal(el.getAttribute('class'), 'box')],
+    ['audio', 'volume', 0.5, (el) => (assert.equal(el.volume, 0.5), assert.equal(el.hasAttribute('volume'), false))],
+    ['option', 'text', 'Label', (el) => (assert.equal(el.textContent, 'Label'), assert.equal(el.hasAttribute('text'), false))],
+    [
+      'x-undefined',
+      'className',
+      'card',
+      (el) => (assert.equal(el.getAttribute('class'), 'card'), assert.equal(el.hasAttribute('classname'), false)),
+    ],
+  ];
+  for (const [tag, name, value, check] of cases) {
+    const forms = { plain: value, live: { [LIVE]: (apply: (next: unknown) => void) => apply(value) } };
+    for (const [form, input] of Object.entries(forms)) {
+      try {
+        check(jsx(tag, { [name]: input }));
+      } catch (error) {
+        throw new Error(`<${tag} ${name}={${form} ${JSON.stringify(value)}}>: ${(error as Error).message}`);
       }
     }
-  } finally {
-    use({ name: 'test-live', bind: () => false });
   }
 });
 
 test('a lone live child of a fragment keeps updating after the fragment is inserted', () => {
   const listeners: ((value: unknown) => void)[] = [];
-  const live = Object.create({ isTestLive: true });
-  use({
-    name: 'test-fragment',
-    bind: (value, apply) => value === live && (apply('a'), listeners.push(apply), true),
-  });
-  try {
-    const host = (<div>{(<>{live}</>) as unknown as Child}</div>) as HTMLDivElement;
-    listeners.forEach((apply) => apply('b'));
+  const live = {
+    [LIVE](apply: (value: unknown) => void) {
+      apply('a');
+      listeners.push(apply);
+    },
+  };
+  const host = (<div>{(<>{live}</>) as unknown as Child}</div>) as HTMLDivElement;
+  listeners.forEach((apply) => apply('b'));
 
-    assert.equal(host.textContent, 'b');
-  } finally {
-    use({ name: 'test-fragment', bind: () => false });
-  }
+  assert.equal(host.textContent, 'b');
 });
 
 test('a key inside a spread object is ignored', () => {

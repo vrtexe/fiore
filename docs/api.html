@@ -1754,9 +1754,10 @@ button.<span class="fn">with</span>(card).<span class="fn">props</span>({ type<s
             </table>
           </div>
           <p>
-            A plugin's live values must not be plain objects, because plain objects are data
-            objects and nested props such as <code>style</code>; give a live value a class or a
-            prototype.
+            Plugins and <code>use()</code> are gone: a value is live when it has a method under
+            <code>Symbol.for('fiorejs.live')</code>, exported as <code>LIVE</code>, and signals from
+            <code>@fiorejs/signals</code> 2.0.0 have one. A bare function is no longer live; wrap a
+            getter in <code>computed(() =&gt; …)</code>.
           </p>
         </section>
       </main>

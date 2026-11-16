@@ -1,6 +1,9 @@
 export { element };
-export { use } from "./core/plugins.js";
-/** @typedef {import('./types/base.dom.d.ts').Plugin} Plugin */
+export { LIVE } from "./core/base.js";
+/**
+ * @template T
+ * @typedef {import('./types/base.dom.d.ts').LiveValue<T>} LiveValue
+ */
 /** @typedef {import('./types/base.dom.d.ts').BindContext} BindContext */
 /**
  * @template T
@@ -236,7 +239,7 @@ declare const _default: Readonly<{
     wbr: import("./types/html.dom.d.ts").HTMLTag<"wbr">;
 }>;
 export default _default;
-export type Plugin = import("./types/base.dom.d.ts").Plugin;
+export type LiveValue<T> = import("./types/base.dom.d.ts").LiveValue<T>;
 export type BindContext = import("./types/base.dom.d.ts").BindContext;
 export type Live<T> = import("./types/base.dom.d.ts").Live<T>;
 export type HTMLBuilder = import("./types/html.dom.d.ts").HTMLBuilder;

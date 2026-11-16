@@ -162,67 +162,32 @@ declare global {
 
 Versions before 1.2.0 skipped every falsy value, including `0` and `''`. Use `null` or `false` to leave an attribute out.
 
-### Plugins (experimental)
+### Live values
 
-A plugin can take over a property, attribute or child value before it is applied. `use()` registers it; `bind` returns `true` for the values it handles and calls `apply` with the current value now and whenever the value changes:
+A value is live when it has a method under `Symbol.for('fiorejs.live')`, exported as `LIVE`. fiorejs calls that method with an `apply` function and a context; the value calls `apply` with its current value now and whenever the value changes. Signals from [`@fiorejs/signals`](packages/signals) are live values, and any other observable can become one:
 
 ```js
-import { use } from 'fiorejs';
+import { LIVE, span } from 'fiorejs';
 
-use({
-  name: 'my-observables',
-  bind(value, apply, context) {
-    if (!(value instanceof MyObservable)) return false;
-    apply(value.current);
-    value.subscribe(apply);
-    return true;
-  },
-});
-```
+class Observed {
+  constructor(source) {
+    this.source = source;
+  }
 
-`context.kind` is `'property'`, `'attribute'` or `'child'`, and `context.element` is the element being built. Properties and attributes come with `context.name`; properties also carry `context.path`, the full key path such as `['style', 'color']`. A child comes with `context.anchor`, a node that stays in the document as long as the child does. A child that is the only item of `children` fills the element, and its anchor is the element. Any other child lives between two empty comments, and its anchor is the first one; the comments move with its nodes, for example out of a fragment, and show in `childNodes` and `innerHTML`, but not in `children`, `textContent` or CSS selectors. An only child belongs to its element: if code moves its nodes to another parent, later updates still go to the element, and nodes that other code adds to the element, for example in `also()`, are removed at its next update; give it a sibling in both cases. Only functions and objects that are neither plain objects nor nodes are offered to plugins, as props, attributes and children; strings, numbers, booleans, plain objects and nodes are always static. Listeners in `on`, and attributes and top-level props that are inline event handlers of the element, such as `onclick` in any case, are never offered to plugins; other names such as `online`, and nested keys such as `dataset.onboarding`, are. A child that a plugin binds without calling `apply` yet keeps an empty place until it does. A node that one bound child places can be taken over by another bound child, which then owns it; a node from a bound child that is passed as a static child of another element is moved there without its bound child being told, so give each node one owner. Registering a plugin with a name that is already registered replaces the earlier plugin, so a plugin module that runs again, for example after a hot reload, does not register twice. The plugin API can still change in a minor version.
-
-Plugins are asked in the order they were registered, and the first one that returns `true` handles the value.
-
-A live value must not be a plain object, because plain objects are data objects and nested props such as `style`; give it a class or a prototype.
-
-The `Plugin`, `BindContext` and `Live` types are exported from `fiorejs`. To tell TypeScript which live values a plugin accepts, extend `LiveValues`; props, attributes and children then accept those values:
-
-```ts
-declare module 'fiorejs/type/base.dom.d.ts' {
-  interface LiveValues<T> {
-    observable: MyObservable<T>;
+  [LIVE](apply, context) {
+    apply(this.source.current);
+    this.source.subscribe(apply);
   }
 }
+
+span(new Observed(clock));
 ```
 
-A plugin package usually calls `use()` in its own module. A module runs once per page however often it is imported, so the plugin is registered once.
+`context.kind` is `'property'`, `'attribute'` or `'child'`, and `context.element` is the element being built. Properties and attributes come with `context.name`; properties also carry `context.path`, the full key path such as `['style', 'color']`. A child comes with `context.anchor`, a node that stays in the document as long as the child does. A child that is the only item of `children` fills the element, and its anchor is the element. Any other child lives between two empty comments, and its anchor is the first one; the comments move with its nodes, for example out of a fragment, and show in `childNodes` and `innerHTML`, but not in `children`, `textContent` or CSS selectors. An only child belongs to its element: if code moves its nodes to another parent, later updates still go to the element, and nodes that other code adds to the element, for example in `also()`, are removed at its next update; give it a sibling in both cases.
 
-#### One copy of fiorejs
+Only values with a `[LIVE]` method are live. A plain function is a callback, never a getter, in props, attributes and children alike; strings, numbers, booleans, nodes and plain objects without `[LIVE]` are static. Listeners in `on`, and attributes and top-level props that are inline event handlers of the element, such as `onclick` in any case, are never bound; other names such as `online`, and nested keys such as `dataset.onboarding`, are. A live child that has not called `apply` yet keeps an empty place until it does. A node that one live child places can be taken over by another live child, which then owns it; a node from a live child that is passed as a static child of another element is moved there without its live child being told, so give each node one owner.
 
-Plugins are registered on the copy of fiorejs they import. If a page loads fiorejs from two different URLs, for example from two CDNs or two installed versions, a plugin can end up on one copy while elements are created by the other. fiorejs logs a warning in the console when a second copy loads.
-
-Without a bundler, use an import map so every module resolves `fiorejs` to the same URL:
-
-```html
-<script type="importmap">
-  {
-    "imports": {
-      "fiorejs": "https://cdn.jsdelivr.net/npm/fiorejs@2.0.0/lib/html.js",
-      "fiorejs/html": "https://cdn.jsdelivr.net/npm/fiorejs@2.0.0/lib/html.js",
-      "fiorejs/html/deprecated": "https://cdn.jsdelivr.net/npm/fiorejs@2.0.0/lib/html-deprecated.js",
-      "fiorejs/svg": "https://cdn.jsdelivr.net/npm/fiorejs@2.0.0/lib/svg.js",
-      "fiorejs/math": "https://cdn.jsdelivr.net/npm/fiorejs@2.0.0/lib/math.js",
-      "fiorejs/global": "https://cdn.jsdelivr.net/npm/fiorejs@2.0.0/lib/index.js"
-    }
-  }
-</script>
-<script type="module">
-  import { div } from 'fiorejs';
-</script>
-```
-
-Plugin packages should import fiorejs by its package name, never by a URL or relative path, so the import map applies to them too.
+The key comes from `Symbol.for`, so live values also work when a page loads two copies of fiorejs. The `LiveValue`, `Live` and `BindContext` types are exported from `fiorejs`; a value whose `[LIVE]` method passes a `T` to `apply` fits `Live<T>`, so props, attributes and children check the type of a live value like that of a plain one.
 
 ## Upgrading from 1.x
 
@@ -235,7 +200,7 @@ Version 2 renames two keys of the data object and adds the builder; everything e
 | `div({ children: 'Hi' })` | still works, or `div.create(value)`; `div('Hi')` is fine for literal text, see [Plain calls](#plain-calls) |
 | `element('div', data)` | `element('div')(data)` |
 
-A plugin's live values must not be plain objects; see [Plugins](#plugins-experimental). For plugin authors, version 2 also changes the plugin hook: a child's context has `anchor` instead of `nodes()`, `order` is gone and plugins are asked in the order they were registered, `bind` is required and must return `true` to take a value, and strings, numbers, booleans, plain objects and nodes are no longer offered. A live child that has siblings now sits between two empty comments, which show in `childNodes` and `innerHTML`.
+Plugins are gone in version 2, and so is `use()`. A value is live when it carries a `[LIVE]` method instead, see [Live values](#live-values); signals from `@fiorejs/signals` 2.0.0 do. A bare function is no longer live: wrap a getter in `computed(() => …)`. A live child that has siblings now sits between two empty comments, which show in `childNodes` and `innerHTML`.
 
 ## Packages
 
