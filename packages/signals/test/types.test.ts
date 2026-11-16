@@ -76,3 +76,6 @@ const dispose: () => void = root(() => {});
 void dispose;
 // @ts-expect-error root takes a function without arguments
 root((x: number) => x);
+
+// A resource can be cleared without loading.
+resource(() => ({ name: 'Ada' })).mutate(undefined);

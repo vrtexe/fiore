@@ -55,3 +55,7 @@ const wrong: HTMLInputElement = div.create();
 void wrong;
 // @ts-expect-error create takes one children value, an array for several
 div.create('a', 'b');
+
+// A bigint renders as text, like a number.
+void div(10n);
+void div([1n, ' items']);

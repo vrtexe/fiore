@@ -87,7 +87,7 @@ export interface Resource<T> extends Signal<T | undefined> {
   /** Loads again with the last source value. */
   refetch(): void;
   /** Sets the value without loading. */
-  mutate(value: T): void;
+  mutate(value: T | undefined): void;
 }
 
 export interface ResourceInfo {
