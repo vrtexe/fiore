@@ -866,3 +866,35 @@ test('a lone live child of a fragment keeps updating after the fragment is inser
 
   assert.equal(html(host), 'before2after');
 });
+
+test('inline handlers without a property, onfocusin and onfocusout, are never set either', () => {
+  const el = input.attrs({ onfocusin: 'window.ran = 1', ONFOCUSOUT: 'window.ran = 2', online: 'yes' }).create();
+
+  assert.equal(el.hasAttribute('onfocusin'), false);
+  assert.equal(el.hasAttribute('onfocusout'), false);
+  assert.equal(el.getAttribute('online'), 'yes');
+});
+
+test('a plain call reads only the own keys of its data object', () => {
+  Object.prototype.props = { innerHTML: '<img src="x">' };
+  Object.prototype.attrs = { title: 'polluted' };
+  try {
+    const el = div({ children: 'hello' });
+
+    assert.equal(el.innerHTML, 'hello');
+    assert.equal(el.hasAttribute('title'), false);
+  } finally {
+    delete Object.prototype.props;
+    delete Object.prototype.attrs;
+  }
+});
+
+test('a listener with options gets them', () => {
+  let calls = 0;
+  const el = div.on({ click: { handler: () => calls++, options: { once: true } } }).create();
+
+  el.dispatchEvent(new window.Event('click'));
+  el.dispatchEvent(new window.Event('click'));
+
+  assert.equal(calls, 1);
+});
