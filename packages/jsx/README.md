@@ -119,6 +119,7 @@ const input = (<input value="Ada" />) as HTMLInputElement;
 
 ## Limits
 
+- Attribute values are passed to `setAttribute` unchecked, so a `javascript:` URL in `href` or `src` runs when it is followed. Check the scheme of a URL that comes from untrusted data.
 - `a`, `script`, `style` and `title` always create HTML elements, also inside `<svg>`.
 - `key` is accepted and ignored, because nothing is diffed; to reuse rows in a list, key it with `@fiorejs/signals`: `todos.for((todo) => todo.id).map(render)`. A `key` after a spread (`<li {...props} key="a" />`) compiles to `createElement` from `@fiorejs/jsx`, which the package exports.
 - Do not spread objects whose keys come from users: a key such as `innerHTML` or `srcdoc` sets that property or attribute.

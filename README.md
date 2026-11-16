@@ -168,7 +168,7 @@ declare global {
 
 ### Attribute values
 
-`null`, `undefined` and `false` leave an attribute out. Every other value, including `0` and `''`, is passed to `setAttribute`, which converts it to a string; Trusted Types objects are passed through unchanged. `aria-*` and `data-*` attributes, and the enumerated attributes `contenteditable`, `draggable` and `spellcheck`, keep `false` as the string `"false"`.
+`null`, `undefined` and `false` leave an attribute out. Every other value, including `0` and `''`, is passed to `setAttribute`, which converts it to a string; Trusted Types objects are passed through unchanged. Values are not checked: a `javascript:` URL in `href` or `src` runs when it is followed, so check the scheme of a URL that comes from untrusted data. `aria-*` and `data-*` attributes, and the enumerated attributes `contenteditable`, `draggable` and `spellcheck`, keep `false` as the string `"false"`.
 
 Versions before 1.2.0 skipped every falsy value, including `0` and `''`. Use `null` or `false` to leave an attribute out.
 
