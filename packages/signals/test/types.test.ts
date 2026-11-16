@@ -1,5 +1,5 @@
 import { div, input, li, ul } from 'fiorejs';
-import { classList, computed, each, read, resource, state, type Reactive } from '@fiorejs/signals';
+import { classList, computed, read, resource, state, type Reactive } from '@fiorejs/signals';
 // @ts-expect-error the brand is not exported
 import { SIGNAL } from '@fiorejs/signals';
 void SIGNAL;
@@ -34,7 +34,14 @@ name.update((value) => value.length);
 const doubled: number = read(computed(() => 2));
 void doubled;
 
-ul({ children: each(state(['a', 'b']), (item) => li({ children: item })) });
+ul({ children: state(['a', 'b']).map((item) => li({ children: item })) });
+ul({ children: state([{ id: 1 }]).for((item) => item.id).map((item) => li({ children: String(item.id) })) });
+const doubledName: number = state(2).computed((value) => value * 2).get();
+void doubledName;
+// @ts-expect-error map needs a signal of an array
+state(1).map(() => li());
+// @ts-expect-error for needs a signal of an array
+state(1).for();
 
 const user = resource(name, async (value, { signal }) => ({ value, aborted: signal.aborted }));
 const loaded: { value: string; aborted: boolean } | undefined = user.get();

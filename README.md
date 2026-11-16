@@ -200,7 +200,7 @@ Version 2 renames two keys of the data object and adds the builder; everything e
 | `div({ children: 'Hi' })` | still works, or `div.create(value)`; `div('Hi')` is fine for literal text, see [Plain calls](#plain-calls) |
 | `element('div', data)` | `element('div')(data)` |
 
-Plugins are gone in version 2, and so is `use()`. A value is live when it carries a `[LIVE]` method instead, see [Live values](#live-values); signals from `@fiorejs/signals` 2.0.0 do. A bare function is no longer live: wrap a getter in `computed(() => …)`. A live child that has siblings now sits between two empty comments, which show in `childNodes` and `innerHTML`.
+Plugins are gone in version 2, and so is `use()`. A value is live when it carries a `[LIVE]` method instead, see [Live values](#live-values); signals from `@fiorejs/signals` 2.0.0 do. A bare function is no longer live: wrap a getter in `computed(() => …)`. In `@fiorejs/signals`, `each(todos, row, key)` becomes `todos.for(key).map(row)`, and `each(todos, row)` becomes `todos.map(row)`. A live child that has siblings now sits between two empty comments, which show in `childNodes` and `innerHTML`.
 
 ## Packages
 

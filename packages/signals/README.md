@@ -33,13 +33,15 @@ document.body.append(
 | Function | What it does |
 | --- | --- |
 | `state(value)` | A value with `get()`, `set(value)`, `update(fn)` and `mutate(fn)`. `update` sets the value `fn` returns, `mutate` changes the value in place. Reading it inside an effect, a computed or a binding subscribes to it. Setting an equal value (`Object.is`) does nothing. |
+| `signal.computed(fn)` | A computed value derived from one signal's value: `count.computed((n) => n * 2)`. |
+| `signal.map(render)`, `signal.for(key).map(render)` | A list that reuses the rows of items it has seen; see [Lists](#lists). |
+| `signal.with(fn)` | Passes the signal to `fn` and returns its result, for reusable steps such as `todos.with(byId)`. |
 | `computed(fn)` | A value derived from other signals. It is calculated on first read and again on the next read after an input changed. It keeps its value while an effect or binding reads it, also when that reader reruns for another reason. If `fn` throws, the error is kept like a value and thrown on every read until an input changes; a reader that catches it stays subscribed and recovers then. While nothing reads it inside an effect or binding, it does not stay subscribed to its inputs and is recalculated on every read. |
 | `effect(fn)` | Runs `fn` now and whenever a signal it read changes. Returns a function that stops it. If `fn` returns a function, that function runs before the next run and when the effect stops. |
 | `untrack(fn)` | Runs `fn` without subscribing to the signals it reads. |
 | `read(value)` | Returns the current value of a signal, a getter function or a plain value. |
 | `classList(entries)` | A computed value for `className` or the `class` attribute that lists classes by condition; see [Classes](#classes). |
 | `resource(source, fetcher)` | Loads a value asynchronously, like Solid's `createResource`; see [Loading data](#loading-data). |
-| `each(items, render, key)` | Renders a list and reuses the nodes of items whose key is unchanged. `render` gets the item's index at the time its row is created. |
 
 Setting a signal runs its effects before `set()` returns. A signal set while an effect runs, including its first run, is handled after that run has finished, so an effect is never re-entered.
 
@@ -107,17 +109,17 @@ Price({ amount: computed(() => total.get() * 1.081) });
 
 ## Lists
 
-`each` reuses the node of every item whose key it has seen before and only renders new items. Without a key, the item itself is the key; a key that appears more than once gets one row per occurrence. When the order changes, only the rows that are out of place are moved, so a focused input in an unmoved row keeps its focus; browsers with `moveBefore` keep it in moved rows too. If `render` throws, the error is reported and the list keeps the rows it had, but stops updating like any binding that throws.
+`signal.map(render)` renders a list from a signal of an array and reuses the rows of items it has seen before, so it only renders new items. The item itself is the key. When items are replaced by copies, key the list: `signal.for().map(render)` keys rows by `item.key`, and `signal.for((item) => item.id).map(render)` by what the function returns. A key that appears more than once gets one row per occurrence; items without a `key` field all get the key `undefined` and are matched by position. A row can be a node or a fragment. When the order changes, only the rows that are out of place are moved, so a focused input in an unmoved row keeps its focus; browsers with `moveBefore` keep it in moved rows too. If `render` throws, the error is reported and the list keeps the rows it had, but stops updating like any binding that throws.
 
-`each(...)` returns a live value, so pass it directly as the children. Inside a computed child, give it its own element: `computed(() => (show.get() ? ul(each(items, render)) : null))`; rows are then reused only while that computed does not recalculate.
+A list is a live value, so pass it directly as the children. Each place it is bound keeps its own rows. Inside a computed child, give it its own element: `computed(() => (show.get() ? ul(todos.map(render)) : null))`; rows are then reused only while that computed does not recalculate. `render` gets the item's index at the time its row is created.
 
 ```js
 import { ul, li } from 'fiorejs';
-import { each, state } from '@fiorejs/signals';
+import { state } from '@fiorejs/signals';
 
 const todos = state([{ id: 1, text: 'Write docs' }]);
 
-ul(each(todos, (todo) => li.create(todo.text), (todo) => todo.id));
+ul(todos.for((todo) => todo.id).map((todo) => li.create(todo.text)));
 
 todos.set([...todos.get(), { id: 2, text: 'Publish' }]);
 ```
@@ -156,7 +158,7 @@ export const user = state(null);
 Bindings are stopped automatically:
 
 - when a live child replaces its content, the bindings inside the old content stop for good
-- when `each` drops an item, or the effect around the list reruns, the bindings inside its rows stop for good
+- when a list drops an item, or the effect or computed around the list reruns, the bindings inside its rows stop for good
 - when an element is removed from the document, its bindings pause; if it is inserted again, they resume with the current values
 - a live child among other children keeps its place between two comments, so it pauses and resumes correctly also when its nodes are moved, for example out of a JSX fragment; a live child that is the only child follows its element
 

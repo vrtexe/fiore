@@ -1,4 +1,4 @@
-import { computed, each, state, type State } from '@fiorejs/signals';
+import { computed, state, type State } from '@fiorejs/signals';
 
 type Todo = { id: number; text: string; done: State<boolean> };
 
@@ -17,7 +17,7 @@ function remove(todo: Todo) {
 function TodoItem(props: { todo: Todo }) {
   const { todo } = props;
   return (
-    <li class={computed(() => (todo.done.get() ? 'item done' : 'item'))}>
+    <li class={todo.done.computed((done) => (done ? 'item done' : 'item'))}>
       <label>
         <input type="checkbox" checked={todo.done} onchange={(event) => todo.done.set(event.currentTarget.checked)} />
         <span>{todo.text}</span>
@@ -38,7 +38,7 @@ function App() {
         <h1>
           Fiore <small>+ signals</small>
         </h1>
-        <span class="count">{computed(() => `${left.get()} left`)}</span>
+        <span class="count">{left.computed((count) => `${count} left`)}</span>
       </header>
       <form
         class="add"
@@ -53,13 +53,11 @@ function App() {
         <button type="submit">Add</button>
       </form>
       <ul class="list">
-        {each(
-          todos,
-          (todo) => (
+        {todos
+          .for((todo) => todo.id)
+          .map((todo) => (
             <TodoItem todo={todo} />
-          ),
-          (todo) => todo.id,
-        )}
+          ))}
       </ul>
       <p class="hint">Only the parts that read a signal update when it changes; there is no virtual DOM.</p>
     </main>
