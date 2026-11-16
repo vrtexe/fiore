@@ -79,3 +79,18 @@ test('the DOM templates pass data to create(), never as the only argument of a p
     }
   }
 });
+
+test('the TypeScript templates type-check against the packages, with the options the generator writes', async () => {
+  const { default: ts } = await import('typescript');
+  const dir = fileURLToPath(new URL('../templates/app/', import.meta.url));
+  for (const file of ['dom-plain.ts', 'dom-signals.ts', 'jsx-plain.tsx', 'jsx-signals.tsx']) {
+    const jsx = file.endsWith('.tsx') ? { jsx: 'react-jsx', jsxImportSource: '@fiorejs/jsx' } : {};
+    const { options } = ts.convertCompilerOptionsFromJson(
+      { target: 'es2022', module: 'esnext', moduleResolution: 'bundler', ...jsx, strict: true, lib: ['es2022', 'dom', 'dom.iterable'], noEmit: true },
+      dir,
+    );
+    const program = ts.createProgram([join(dir, file)], options);
+    const messages = ts.getPreEmitDiagnostics(program).map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n'));
+    assert.deepEqual(messages, [], file);
+  }
+});
