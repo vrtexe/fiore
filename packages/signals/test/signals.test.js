@@ -1509,6 +1509,63 @@ test('what a branch builds stops when the branch changes', () => {
   assert.deepEqual(seen, [0, 'stopped', 1, 'stopped']);
 });
 
+test('case shows the branch of the first case that matches, by value or by predicate, and else otherwise', () => {
+  const count = state(0);
+  const el = div(
+    count
+      .case(0, () => 'none')
+      .case((n) => n > 10, () => span('many'))
+      .case((n) => n > 0, () => span('some'))
+      .else(() => 'negative'),
+  );
+  assert.equal(el.textContent, 'none');
+
+  count.set(3);
+  assert.equal(el.textContent, 'some');
+
+  count.set(11);
+  assert.equal(el.textContent, 'many');
+
+  count.set(-1);
+  assert.equal(el.textContent, 'negative');
+});
+
+test('case without else shows nothing when no case matches', () => {
+  const mode = state('a');
+  const el = div(['[', mode.case('a', () => 'A').case('b', () => 'B'), ']']);
+  assert.equal(el.textContent, '[A]');
+
+  mode.set('c');
+  assert.equal(el.textContent, '[]');
+});
+
+test('a case branch is rebuilt only when another case wins', () => {
+  const count = state(1);
+  let builds = 0;
+  const el = div(count.case((n) => n > 0, () => (builds++, span('some'))).else(() => 'none'));
+
+  count.set(2);
+  count.set(3);
+  assert.equal(builds, 1);
+
+  count.set(0);
+  assert.equal(el.textContent, 'none');
+  count.set(4);
+  assert.equal(builds, 2);
+});
+
+test('if can be followed by case', () => {
+  const value = state(0);
+  const el = div(value.if(() => 'truthy').case('', () => 'empty').else(() => 'falsy'));
+  assert.equal(el.textContent, 'falsy');
+
+  value.set('');
+  assert.equal(el.textContent, 'empty');
+
+  value.set(1);
+  assert.equal(el.textContent, 'truthy');
+});
+
 test('an effect that reads a computed does not rerun when the computed keeps its value', () => {
   const user = state({ name: 'Ada', age: 36 });
   const name = user.computed((value) => value.name);

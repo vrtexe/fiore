@@ -63,6 +63,7 @@ A live value as a child keeps its own place in the parent. Open the markup views
 - **Text, node, list, nested, nothing.** One live child switches between a string, an element, a list of nodes, nested arrays and `null`. Only the nodes between its markers change.
 - **Robust against outside DOM changes.** Press `normalize()` (it merges adjacent text nodes), then **Simulate translation** (it replaces the live text node with `<font>`, as Chrome's page translation does), then **Update the value**. The new value still appears, because fiorejs reads the nodes between the markers instead of remembering them.
 - **if / else.** `count.if(() => …).else(() => …)` shows a branch by truthiness. Press **count + 1** several times: the branch is built once; press **count = 0** and then **count + 1**: it is built again, because the truthiness flipped.
+- **case.** `level.case(0, …).case((n) => n > 3, …).else(…)` shows the branch of the first case that matches: **none** at 0, **a few** from 1 to 3, **many** above 3.
 - **A live child inside a fragment.** The fragment's nodes are moved into another element, and the live child inside keeps updating.
 
 ### 4. Lists (`flows/lists.js`)

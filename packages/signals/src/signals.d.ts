@@ -14,13 +14,23 @@ export interface Signal<T> extends LiveValue<T> {
   /** Keys the rows of a list by `item.key`, or by what `key` returns. */
   for<U>(this: Signal<readonly U[]>, key?: (item: U) => unknown): Keyed<U>;
   /** Shows what `then` returns while the value is truthy, and nothing otherwise; add `.else(fn)` for the other case. */
-  if<A>(then: () => A): When<A, null>;
+  if<A>(then: () => A): When<A, null, T>;
+  /**
+   * Shows what `render` returns while the value matches, and nothing otherwise. A function is a test on the value; any
+   * other value is compared with `Object.is`. Add more `.case` calls and `.else(fn)`; the first match wins.
+   */
+  case<A>(match: T | Test<T>, render: () => A): When<A, null, T>;
 }
 
-/** A live value that shows one of two branches; only the shown branch is built. */
-export interface When<A, B> extends LiveValue<A | B> {
-  /** Shows what `otherwise` returns while the value is falsy. */
-  else<C>(otherwise: () => C): When<A, C>;
+/** A test on a value. Written as a method, so a signal of a narrower type still fits where a wider one is expected. */
+type Test<T> = { test(value: T): unknown }['test'];
+
+/** A live value that shows the branch of the first matching case, or the other branch; only the shown branch is built. */
+export interface When<A, B, T = unknown> extends LiveValue<A | B> {
+  /** Adds a case, tried after the earlier ones. */
+  case<C>(match: T | Test<T>, render: () => C): When<A | C, B, T>;
+  /** Shows what `otherwise` returns while no case matches. */
+  else<C>(otherwise: () => C): When<A, C, T>;
 }
 
 /** A signal of a list with its key, waiting for `map`. */

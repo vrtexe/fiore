@@ -36,6 +36,7 @@ document.body.append(
 | `signal.computed(fn)` | A computed value derived from one signal's value: `count.computed((n) => n * 2)`. |
 | `signal.map(render)`, `signal.for(key).map(render)` | A list that reuses the rows of items it has seen; see [Lists](#lists). |
 | `signal.if(then).else(otherwise)` | Shows one of two branches by the signal's truthiness; see [Conditions](#conditions). |
+| `signal.case(match, render).else(otherwise)` | Shows the branch of the first case the value matches; see [Conditions](#conditions). |
 | `signal.with(fn)` | Passes the signal to `fn` and returns its result, for reusable steps such as `todos.with(byId)`. |
 | `computed(fn)` | A value derived from other signals. It is calculated on first read and again on the next read after an input changed. It keeps its value while an effect or binding reads it, also when that reader reruns for another reason. If `fn` throws, the error is kept like a value and thrown on every read until an input changes; a reader that catches it stays subscribed and recovers then. While nothing reads it inside an effect or binding, it does not stay subscribed to its inputs and is recalculated on every read. Effects and bindings that read it run again only when its value changed (`Object.is`) or its error changed, so `user.computed((u) => u.name)` does not update the DOM when another field of `user` changes. `fn` derives a value and must not set signals: `set`, `update` or `mutate` inside it throws. To correct a value, derive the corrected one (`computed(() => Math.min(page.get(), last.get()))`) or correct it where it is set. |
 | `effect(fn)` | Runs `fn` now and whenever a signal it read changes. Returns a function that stops it. If `fn` returns a function, that function runs before the next run and when the effect stops. |
@@ -123,7 +124,22 @@ div(open.if(() => Details())); // nothing while closed
 div(count.computed((n) => n > 10).if(() => em('many')));
 ```
 
-Both branches are functions, so only the shown branch is built. It is built once and rebuilt only when the truthiness flips, so `count.if(...)` does not rebuild when `count` goes from 1 to 2. When the branch changes, the bindings and effects the old branch created stop. For a condition other than truthiness, derive it first with `signal.computed(...)`. A branch returns text, nodes or nothing; to show a live value in a branch, put it in an element: `.else(() => span(user.computed(...)))`.
+Both branches are functions, so only the shown branch is built. It is built once and rebuilt only when the truthiness flips, so `count.if(...)` does not rebuild when `count` goes from 1 to 2. When the branch changes, the bindings and effects the old branch created stop. A branch returns text, nodes or nothing; to show a live value in a branch, put it in an element: `.else(() => span(user.computed(...)))`.
+
+For more than two branches, `signal.case(match, render)` shows what `render` returns while the value matches. A function is a test on the value; any other value is compared with `Object.is`. Chain more cases, and `.else(otherwise)` for the rest; the first case that matches wins, and without `.else` nothing shows when none matches. A branch is rebuilt only when another case wins.
+
+```js
+div(
+  status
+    .case('loading', () => Spinner())
+    .case('error', () => em('Something went wrong'))
+    .case((value) => value.startsWith('done'), () => Done())
+    .else(() => null),
+);
+div(count.case(0, () => 'none').case((n) => n > 10, () => 'many').else(() => 'some'));
+```
+
+`.if(then)` is the case `Boolean`, so `.if(then).case(...)` works too. To match a function value itself, test it: `.case((value) => value === handler, ...)`.
 
 ## Lists
 

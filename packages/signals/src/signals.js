@@ -74,7 +74,20 @@ class Signal {
    * @returns {When<A, null>}
    */
   if(then) {
-    return new When(this, then, () => null);
+    return new When(this, [[Boolean, then]], () => null);
+  }
+
+  /**
+   * Shows what `render` returns while the signal's value matches `match`, and nothing otherwise. A function is a test
+   * on the value; any other value is compared with `Object.is`. Add more cases with `.case` and the rest with
+   * `.else(fn)`; the first case that matches wins.
+   * @template A
+   * @param {unknown} match
+   * @param {() => A} render
+   * @returns {When<A, null>}
+   */
+  case(match, render) {
+    return new When(this, [[match, render]], () => null);
   }
 }
 
@@ -798,30 +811,44 @@ class List {
 }
 
 /**
- * A live value that shows one branch while a signal is truthy and the other otherwise. A branch is built once when it is
- * shown, outside the binding's tracking, so it is rebuilt only when the truthiness flips; what it builds stops then.
+ * A live value that shows the branch of the first case the signal's value matches, or the other branch when none does.
+ * A branch is built once when it is shown, outside the binding's tracking, so it is rebuilt only when another case
+ * wins; what it builds stops then.
  * @template A, B
  */
 class When {
   /**
    * @param {Signal<unknown>} source
-   * @param {() => A} then
+   * @param {[unknown, () => A][]} cases
    * @param {() => B} otherwise
    */
-  constructor(source, then, otherwise) {
+  constructor(source, cases, otherwise) {
     this._source = source;
-    this._then = then;
+    this._cases = cases;
     this._otherwise = otherwise;
   }
 
   /**
-   * Shows what `otherwise` returns while the signal's value is falsy.
+   * Adds a case, tried after the earlier ones.
+   * @template C
+   * @param {unknown} match
+   * @param {() => C} render
+   * @returns {When<A | C, B>}
+   */
+  case(match, render) {
+    /** @type {[unknown, () => A | C][]} */
+    const cases = [...this._cases, [match, render]];
+    return new When(this._source, cases, this._otherwise);
+  }
+
+  /**
+   * Shows what `otherwise` returns while no case matches.
    * @template C
    * @param {() => C} otherwise
    * @returns {When<A, C>}
    */
   else(otherwise) {
-    return new When(this._source, this._then, otherwise);
+    return new When(this._source, this._cases, otherwise);
   }
 
   /**
@@ -829,7 +856,7 @@ class When {
    * @param {import('fiorejs/type/base.dom.d.ts').BindContext} context
    */
   [LIVE](apply, context) {
-    /** @type {boolean | undefined} */
+    /** @type {number | undefined} The index of the shown case, -1 for the other branch. */
     let shown;
     /** @type {A | B | undefined} */
     let value;
@@ -840,12 +867,16 @@ class When {
 
     attach(
       () => {
-        const visible = Boolean(this._source.get());
-        if (visible !== shown) {
+        const current = this._source.get();
+        const index = this._cases.findIndex(([match]) =>
+          typeof match === 'function' ? match(current) : Object.is(match, current),
+        );
+        if (index !== shown) {
           stopBranch();
-          shown = visible;
+          shown = index;
           scope = { owned: [] };
-          value = visible ? runIn(null, scope, this._then) : runIn(null, scope, this._otherwise);
+          const branch = this._cases[index];
+          value = branch ? runIn(null, scope, branch[1]) : runIn(null, scope, this._otherwise);
         }
         return value;
       },
