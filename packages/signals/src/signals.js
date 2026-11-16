@@ -101,11 +101,21 @@ class Signal {
 let current = null;
 /** @type {Owner | null} */
 let owner = null;
-/** @type {Set<{ run(): void, stop(): void }>} */
-const pending = new Set();
-let flushing = false;
+/** @typedef {{ id: number, run(): void, stop(): void }} Queued */
 
-/** How often one effect may run in a single update before it counts as a loop. */
+/** @type {[Set<Queued>, Set<Queued>, Set<Queued>]} Effects waiting for the flush, by phase: pre, normal, post. */
+const queues = [new Set(), new Set(), new Set()];
+/** True while a flush is queued as a microtask. */
+let scheduled = false;
+let flushing = false;
+/** @type {{ error: unknown } | undefined} The first error of the running flush. */
+let failure;
+/** @type {{ resolve(): void, reject(error: unknown): void }[]} The tick() promises waiting for the flush. */
+let waiters = [];
+/** Numbers effects in creation order, so a parent runs before the effects it created. */
+let nextId = 0;
+
+/** How often one effect may run in a single flush before it counts as a loop. */
 const MAX_RUNS = 100;
 
 /** @param {Source} source */
@@ -121,31 +131,103 @@ function notify(source) {
   for (const sub of source.subs) {
     sub.stale(false);
   }
-  flush();
 }
 
-function flush() {
-  if (flushing) {
-    return;
+/** Queues a flush on a microtask, unless one is queued or running; a running flush takes new work itself. */
+function schedule() {
+  if (!scheduled && !flushing) {
+    scheduled = true;
+    queueMicrotask(() => {
+      if (scheduled) {
+        settle(true);
+      }
+    });
   }
+}
+
+/**
+ * Runs the effects and bindings that are waiting now, instead of on the next microtask, for example before reading
+ * the DOM after a change. Inside a running flush it does nothing, because that flush runs them before it ends.
+ */
+export function flush() {
+  if (!flushing) {
+    settle(false);
+  }
+}
+
+/**
+ * Returns a promise that resolves after the waiting effects and bindings have run, or right away when none wait. It
+ * rejects with the first error of that flush.
+ * @returns {Promise<void>}
+ */
+export function tick() {
+  return new Promise((resolve, reject) => {
+    if (scheduled || flushing) {
+      waiters.push({ resolve, reject });
+    } else {
+      resolve();
+    }
+  });
+}
+
+/**
+ * Runs queued effects until none is left: the pre phase, then effects and bindings, then the post phase, each in
+ * creation order. A write during the flush queues more work, and the flush goes back to the first phase that has
+ * some. Every effect runs even when another throws; the first error is thrown at the end.
+ * @param {boolean} queued whether the flush runs from its microtask, where a waiting tick() takes the error
+ */
+function settle(queued) {
+  scheduled = false;
   flushing = true;
-  /** @type {Map<object, number>} */
+  /** @type {Map<Queued, number>} */
   const runs = new Map();
   try {
-    for (const effect of pending) {
-      pending.delete(effect);
-      const count = (runs.get(effect) ?? 0) + 1;
-      runs.set(effect, count);
-      if (count > MAX_RUNS) {
-        // Only the looping effect stops; the others still run.
-        report(new Error(`An effect ran more than ${MAX_RUNS} times in one update; it probably sets a signal it reads.`));
-        effect.stop();
-        continue;
+    for (let queue = queues.find((q) => q.size > 0); queue; queue = queues.find((q) => q.size > 0)) {
+      for (const node of [...queue].sort((a, b) => a.id - b.id)) {
+        // Run only what is still queued: an earlier effect may have stopped it, or it ran and was queued again.
+        if (!queue.delete(node)) {
+          continue;
+        }
+        const count = (runs.get(node) ?? 0) + 1;
+        runs.set(node, count);
+        if (count > MAX_RUNS) {
+          // Only the looping effect stops; the others still run.
+          fail(new Error(`An effect ran more than ${MAX_RUNS} times in one flush; it probably sets a signal it reads.`));
+          node.stop();
+          continue;
+        }
+        node.run();
       }
-      effect.run();
     }
   } finally {
     flushing = false;
+  }
+  const result = failure;
+  failure = undefined;
+  const waiting = waiters;
+  waiters = [];
+  for (const waiter of waiting) {
+    if (result) {
+      waiter.reject(result.error);
+    } else {
+      waiter.resolve();
+    }
+  }
+  if (result && !(queued && waiting.length > 0)) {
+    throw result.error;
+  }
+}
+
+/**
+ * Keeps the first error of the running flush, to throw at its end; later errors and errors outside a flush are
+ * reported, so none is lost.
+ * @param {unknown} error
+ */
+function fail(error) {
+  if (flushing && !failure) {
+    failure = { error };
+  } else {
+    report(error);
   }
 }
 
@@ -410,20 +492,45 @@ export function computed(fn) {
 }
 
 /**
- * Runs `fn` now and again whenever a signal it read changes; returns a function that stops it.
+ * Runs `fn` now and again in the next flush after a signal it read changed; returns a function that stops it.
  * `fn` may return a cleanup function, called before the next run and when stopped.
- * If a run throws, the error is reported and the effect is stopped.
+ * If a run throws, the effect is stopped and the error is thrown at the end of the flush.
  * @param {() => void | (() => void)} fn
  * @returns {() => void}
  */
 export function effect(fn) {
+  return createEffect(fn, 1);
+}
+
+/**
+ * Like `effect`, but its runs come before the effects and bindings of a flush.
+ * @param {() => void | (() => void)} fn
+ * @returns {() => void}
+ */
+effect.pre = (fn) => createEffect(fn, 0);
+
+/**
+ * Like `effect`, but its runs come after the effects and bindings of a flush, and its first run waits for the next
+ * flush, so the elements built with it are in the document by then.
+ * @param {() => void | (() => void)} fn
+ * @returns {() => void}
+ */
+effect.post = (fn) => createEffect(fn, 2);
+
+/**
+ * @param {() => void | (() => void)} fn
+ * @param {0 | 1 | 2} phase
+ * @returns {() => void}
+ */
+function createEffect(fn, phase) {
   /** @type {(() => void) | undefined} */
   let cleanup;
   let stopped = false;
   /** @type {Owner} */
   const scope = { owned: [] };
-  /** @type {Computation & { run(): void, stop(): void, dirty: boolean, seen: Computed<unknown>[] | undefined, versions: number[] | undefined, count: number }} */
+  /** @type {Computation & Queued & { dirty: boolean, seen: Computed<unknown>[] | undefined, versions: number[] | undefined, count: number }} */
   const node = {
+    id: nextId++,
     sources: new Set(),
     /** True when a signal it read changed for certain, false when only computeds said they may have changed. */
     dirty: false,
@@ -440,7 +547,8 @@ export function effect(fn) {
       if (!maybe) {
         node.dirty = true;
       }
-      pending.add(node);
+      queues[phase].add(node);
+      schedule();
     },
     run() {
       if (stopped) {
@@ -457,7 +565,7 @@ export function effect(fn) {
         const result = runTracked(node, scope, fn);
         cleanup = typeof result === 'function' ? result : undefined;
       } catch (error) {
-        report(error);
+        fail(error);
         stopped = true;
       }
       // Stopped by its error or during its own run: undo what the run set up.
@@ -475,7 +583,7 @@ export function effect(fn) {
 
   /**
    * Stops the effects created by the last run and calls its cleanup, keeping the subscriptions. A cleanup that
-   * throws is reported and does not keep this effect from running.
+   * throws does not keep this effect from running; its error is thrown like an error of the run.
    */
   function reset() {
     scope.owned.splice(0).forEach((stopOwned) => stopOwned());
@@ -484,13 +592,13 @@ export function effect(fn) {
     try {
       done?.();
     } catch (error) {
-      report(error);
+      fail(error);
     }
   }
 
   function stop() {
     stopped = true;
-    pending.delete(node);
+    queues[phase].delete(node);
     reset();
     untrackSources(node);
     node.seen = undefined;
@@ -499,21 +607,34 @@ export function effect(fn) {
   }
 
   owner?.owned.push(stop);
-  // Writes during the first run are queued until it has finished, so the run is never re-entered and no cleanup
-  // is overwritten.
-  const outermost = !flushing;
-  flushing = true;
-  try {
+  if (phase === 2) {
+    node.dirty = true;
+    queues[phase].add(node);
+    schedule();
+  } else {
     node.run();
-  } finally {
-    if (outermost) {
-      flushing = false;
-    }
-  }
-  if (outermost) {
-    flush();
   }
   return stop;
+}
+
+/**
+ * Runs `fn` with a new owner and returns a function that stops what `fn` created: effects, bindings, computeds and
+ * lists. Reads in `fn` do not subscribe. A root belongs to no other owner, also when it is created inside one, so it
+ * lives until its function is called. If `fn` throws, what it created is stopped.
+ * @param {() => void} fn
+ * @returns {() => void}
+ */
+export function root(fn) {
+  /** @type {Owner} */
+  const scope = { owned: [] };
+  const dispose = () => scope.owned.splice(0).forEach((stop) => stop());
+  try {
+    runIn(null, scope, fn);
+  } catch (error) {
+    dispose();
+    throw error;
+  }
+  return dispose;
 }
 
 /**

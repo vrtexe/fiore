@@ -10,19 +10,31 @@ Object.assign(globalThis, {
 });
 
 const { button, div, span, input } = await import('fiorejs');
-const { state, computed, effect, untrack, read, resource, classList, isSignal } = await import('@fiorejs/signals');
+const { state, computed, effect, untrack, read, resource, classList, isSignal, flush, tick: flushed, root } = await import('@fiorejs/signals');
 
 const tick = () => new Promise((resolve) => setTimeout(resolve));
 
 /** Collects errors sent to reportError (or console.error) while `fn` runs. */
+/** Runs `fn` and then the flush, and returns the errors they reported or threw. */
 async function reported(fn) {
   const errors = [];
   const previous = globalThis.reportError;
   const previousConsole = console.error;
   globalThis.reportError = (error) => errors.push(error);
   console.error = (error) => errors.push(error);
+  // Flushed before awaiting, so the queued microtask flush does not run first and throw where nothing catches it.
+  const settle = () => {
+    try {
+      flush();
+    } catch (error) {
+      errors.push(error);
+    }
+  };
   try {
-    await fn();
+    const result = fn();
+    settle();
+    await result;
+    settle();
   } finally {
     globalThis.reportError = previous;
     console.error = previousConsole;
@@ -40,9 +52,12 @@ test('effects rerun when what they read changes, and stop cleanly', () => {
   });
 
   count.set(2);
+  flush();
   count.set(2);
+  flush();
   stop();
   count.set(3);
+  flush();
 
   assert.deepEqual(seen, [1, 2]);
   assert.deepEqual(cleanups, ['cleanup', 'cleanup']);
@@ -51,6 +66,7 @@ test('effects rerun when what they read changes, and stop cleanly', () => {
 test('update sets the value its function returns', () => {
   const count = state(1);
   count.update((value) => value + 1);
+  flush();
 
   assert.equal(count.get(), 2);
 });
@@ -62,6 +78,7 @@ test('mutate changes the value in place and always notifies', () => {
   const before = list.get();
 
   list.mutate((items) => items.push(3));
+  flush();
 
   assert.equal(list.get(), before);
   assert.deepEqual(lengths, [2, 3]);
@@ -76,6 +93,7 @@ test('computed values are lazy, cached and consistent inside effects', () => {
   const seen = [];
   effect(() => seen.push([count.get(), double.get()]));
   count.set(2);
+  flush();
   double.get();
 
   assert.equal(runs, 2);
@@ -90,8 +108,11 @@ test('effects only follow the branch they took last', () => {
   effect(() => (runs++, useA.get() ? a.get() : b.get()));
 
   b.set('b2');
+  flush();
   useA.set(false);
+  flush();
   a.set('a2');
+  flush();
 
   assert.equal(runs, 2);
 });
@@ -101,6 +122,7 @@ test('untrack reads without subscribing', () => {
   let runs = 0;
   effect(() => (runs++, untrack(() => count.get())));
   count.set(2);
+  flush();
 
   assert.equal(runs, 1);
 });
@@ -120,6 +142,7 @@ test('signals and computed values bind to properties, attributes and children', 
   const label = div({ children: ['Hello ', name] });
 
   name.set('Grace');
+  flush();
 
   assert.equal(field.value, 'Grace');
   assert.equal(field.getAttribute('title'), 'Name: Grace');
@@ -134,7 +157,9 @@ test('a computed child stops the bindings of what it replaced', () => {
   const inner = panel.firstElementChild;
 
   show.set(false);
+  flush();
   count.set(2);
+  flush();
 
   assert.equal(panel.textContent, 'hidden');
   assert.equal(inner.textContent, '1');
@@ -149,7 +174,9 @@ test('map reuses rows by key and stops the bindings of removed rows', () => {
   const [one, two, three] = list.children;
 
   items.set([items.get()[2], items.get()[0]]);
+  flush();
   label.set('row');
+  flush();
 
   assert.deepEqual([...list.children], [three, one]);
   assert.equal(list.textContent, 'row 3row 1');
@@ -165,6 +192,7 @@ test('bindings stop after their element is removed from the document', async () 
   el.remove();
   await tick();
   count.set(2);
+  flush();
 
   assert.equal(el.textContent, '1');
 });
@@ -176,6 +204,7 @@ test('elements that were never inserted keep their bindings', async () => {
   await tick();
 
   count.set(2);
+  flush();
 
   assert.equal(el.textContent, '2');
 });
@@ -197,6 +226,7 @@ test('an element inserted and removed in the same task stops updating', async ()
   await tick();
 
   count.set(2);
+  flush();
 
   assert.equal(reads, 1);
   assert.equal(el.textContent, '1');
@@ -210,12 +240,14 @@ test('an element that is removed and inserted again resumes its bindings', async
   el.remove();
   await tick();
   count.set(2);
+  flush();
   assert.equal(el.textContent, '1');
 
   document.body.append(el);
   await tick();
   assert.equal(el.textContent, '2');
   count.set(3);
+  flush();
   assert.equal(el.textContent, '3');
   el.remove();
 });
@@ -246,6 +278,7 @@ test('map renders repeated keys once per occurrence', () => {
   const list = div({ children: items.map((item) => span({ children: item })) });
 
   items.set(['a', 'a', 'b']);
+  flush();
 
   assert.equal(list.children.length, 3);
   assert.equal(list.textContent, 'aab');
@@ -263,7 +296,9 @@ test('map stops its rows when the surrounding effect replaces them', () => {
   const row = panel.querySelector('span');
 
   show.set(false);
+  flush();
   label.set('changed');
+  flush();
 
   assert.equal(row.textContent, 'row 1');
 });
@@ -280,6 +315,7 @@ test('an effect that throws is reported and stopped, and the other effects still
 
   const errors = await reported(() => count.set(2));
   count.set(3);
+  flush();
 
   assert.deepEqual(seen, [1, 2, 3]);
   assert.equal(failing, 2);
@@ -296,6 +332,7 @@ test('an effect that keeps setting what it reads is stopped with an error', asyn
 
   assert.match(String(errors[0]), /ran more than 100 times/);
   count.set(1000);
+  flush();
   assert.equal(count.get(), 1000);
 });
 
@@ -326,7 +363,9 @@ test('an effect stopped during its own run is cleaned up', () => {
   });
 
   count.set(2);
+  flush();
   count.set(3);
+  flush();
 
   assert.equal(runs, 2);
   assert.equal(cleanups, 2);
@@ -341,7 +380,9 @@ test('a computed keeps its cache when its reader reruns for another reason', () 
   effect(() => `${label.get()}: ${doubled.get()}`);
 
   label.set('b');
+  flush();
   label.set('c');
+  flush();
 
   assert.equal(runs, 1);
 });
@@ -359,6 +400,7 @@ test('an effect whose first run throws is reported and stopped', async () => {
   });
 
   count.set(1);
+  flush();
   stop();
 
   assert.equal(runs, 1);
@@ -374,6 +416,7 @@ test('a binding that fails while building is reported, leaves no subscriber behi
   });
 
   record.set({ missing: { x: 1 } });
+  flush();
 
   assert.equal(reads, 1);
   assert.equal(errors.length, 1);
@@ -391,10 +434,7 @@ test('a cleanup that throws does not stop the effect that owns it', async () => 
     });
   });
 
-  const errors = await reported(() => {
-    count.set(1);
-    count.set(2);
-  });
+  const errors = [...(await reported(() => count.set(1))), ...(await reported(() => count.set(2)))];
 
   assert.equal(outerRuns, 3);
   assert.equal(errors.length, 2);
@@ -413,10 +453,12 @@ test('a binding that fails on re-insertion does not stop its siblings', async (t
   wrapper.remove();
   await tick();
   fail.set(true);
+  flush();
 
   document.body.append(wrapper);
   await tick();
   good.set('c');
+  flush();
 
   assert.equal(wrapper.lastChild.textContent, 'c');
   wrapper.remove();
@@ -430,6 +472,7 @@ test('signals under on* names bind, and functions under them are callbacks that 
   document.body.append(box);
 
   step.set('b');
+  flush();
 
   assert.equal(box.onConfirm, onConfirm);
   assert.deepEqual(calls, []);
@@ -456,8 +499,10 @@ test('a live object prop does not pile up bindings when it changes often', () =>
     return process.memoryUsage().heapUsed;
   };
   for (let i = 0; i < 2000; i++) dark.set(!dark.get());
+  flush();
   const before = measure();
   for (let i = 0; i < 20000; i++) dark.set(!dark.get());
+  flush();
   const growth = measure() - before;
 
   box.remove();
@@ -479,8 +524,10 @@ test('map keeps its rows when a render fails partway through', async () => {
   const errors = await reported(() => items.set([1, 2, 99]));
   assert.match(String(errors[0]), /bad row/);
   items.set([1, 2]);
+  flush();
   reads = 0;
   label.set('b');
+  flush();
 
   assert.equal(renders, 3);
   assert.equal(reads, 2);
@@ -505,6 +552,7 @@ test('a live child built elsewhere pauses when the place it moved to is removed'
   section.remove();
   await tick();
   count.set(2);
+  flush();
 
   assert.equal(reads, 1);
 });
@@ -524,6 +572,7 @@ test('readers that catch the error of a computed recover; a binding that does no
 
   const errors = await reported(() => text.set('{bad'));
   text.set('{"a":9}');
+  flush();
 
   assert.deepEqual(seen, [1, 'error', 9]);
   assert.equal(label.textContent, '1');
@@ -546,6 +595,7 @@ test('a computed that throws without readers can be collected', async () => {
 
   assert.equal(await collected(ref), true);
   source.set(2);
+  flush();
 });
 
 test('a binding whose cleanup throws while paused still resumes', async () => {
@@ -566,6 +616,7 @@ test('a binding whose cleanup throws while paused still resumes', async () => {
     await tick();
   });
   price.set(99);
+  flush();
   document.body.append(panel);
   await tick();
 
@@ -603,6 +654,7 @@ test('a live child that starts with a comment pauses with its host', async () =>
   host.remove();
   await tick();
   count.set(2);
+  flush();
 
   assert.equal(reads, 1);
 });
@@ -624,7 +676,9 @@ test('an effect that stops itself and then throws leaves nothing running', async
 
   const errors = await reported(() => count.set(1));
   count.set(2);
+  flush();
   count.set(3);
+  flush();
 
   assert.equal(inner, 1);
   assert.equal(errors.length, 1);
@@ -740,6 +794,7 @@ test('fault injection: a callback that throws during updates is reported once an
     const errors = await reported(() => source.set(1));
     armed = false;
     source.set(10);
+    flush();
 
     // The computed is read by the effect and the binding, and each reader reports its own failure.
     assert.equal(errors.length, point === 'computed' ? 2 : 1, `${point}: reported once per reader`);
@@ -790,7 +845,9 @@ test('fault injection: a callback that throws while things are created is report
     });
     const failedRuns = runs[point];
     source.set(1);
+    flush();
     source.set(2);
+    flush();
 
     assert.equal(errors.length, 1, `${point}: reported once`);
     assert.match(String(errors[0]), new RegExp(`injected ${point}`), `${point}: the injected error`);
@@ -818,6 +875,7 @@ test('effect() returns its stop function even when the effects it starts fail', 
   });
   stop();
   own.set(1);
+  flush();
 
   assert.equal(errors.length, 1);
   assert.equal(runs, 1);
@@ -859,8 +917,10 @@ test('a computed that failed before reading another computed recovers', () => {
 
   fail = true;
   x.set(1);
+  flush();
   fail = false;
   x.set(2);
+  flush();
 
   assert.deepEqual(seen, [10, 'error', 30]);
 });
@@ -907,6 +967,7 @@ test('mutate notifies even when its function throws', () => {
       throw new Error('mutate failed');
     }),
   );
+  flush();
 
   assert.deepEqual(lengths, [0, 1]);
 });
@@ -940,7 +1001,9 @@ test('an effect that writes what it read during its first run keeps every cleanu
     if (value < 1) count.set(value + 1);
     return () => log.push(`cleanup${value}`);
   });
+  flush();
   count.set(5);
+  flush();
 
   assert.deepEqual(log, ['run0', 'cleanup0', 'run1', 'cleanup1', 'run5']);
 });
@@ -961,6 +1024,7 @@ test('an update through many diamond-shaped dependencies stays linear', () => {
   const started = performance.now();
 
   source.set(1);
+  flush();
 
   assert.equal(runs, 75);
   assert.ok(performance.now() - started < 100);
@@ -1015,6 +1079,7 @@ test('resource loads when its source changes and ignores older responses', async
 
   assert.equal(user.loading.get(), true);
   id.set(2);
+  flush();
   assert.equal(calls[0].signal.aborted, true);
   calls[1].resolve('two');
   await tick();
@@ -1034,8 +1099,11 @@ test('resource does not load while its source is null, undefined or false', asyn
   assert.equal(calls.length, 0);
   assert.equal(user.loading.get(), false);
   id.set(false);
+  flush();
   id.set(undefined);
+  flush();
   id.set(3);
+  flush();
 
   assert.deepEqual(calls.map((call) => call.value), [3]);
 });
@@ -1049,6 +1117,7 @@ test('resource keeps the error of a failed load until the next load starts', asy
   assert.match(String(data.error.get()), /offline/);
   assert.equal(data.loading.get(), false);
   data.refetch();
+  flush();
   assert.equal(data.error.get(), undefined);
   assert.equal(data.loading.get(), true);
   calls[1].resolve('ok');
@@ -1074,9 +1143,11 @@ test('resource keeps its value while reloading, and mutate sets it without loadi
   calls[0].resolve('first');
   await tick();
   data.refetch();
+  flush();
 
   assert.equal(data.get(), 'first');
   data.mutate('local');
+  flush();
   assert.equal(data.get(), 'local');
   assert.equal(calls.length, 2);
 });
@@ -1089,6 +1160,7 @@ test('resource runs its fetcher untracked and aborts when its owner stops', asyn
     data = resource((value, info) => (other.get(), fetcher(value, info)));
   });
   other.set(1);
+  flush();
   stop();
   calls[0].resolve('late');
   await tick();
@@ -1122,7 +1194,9 @@ test('classList keeps strings on and toggles object keys by booleans, signals an
 
   assert.equal(card.className, 'card shadow');
   active.set(true);
+  flush();
   enabled.set(false);
+  flush();
   assert.equal(card.className, 'card active disabled shadow');
   assert.equal(shape.getAttribute('class'), 'hot');
 });
@@ -1135,8 +1209,11 @@ test('signals bind through builder props and attrs, nested props and plain-call 
   const text = span(label);
 
   done.set(true);
+  flush();
   color.set('blue');
+  flush();
   label.set('Grace');
+  flush();
 
   assert.equal(box.checked, true);
   assert.equal(box.style.color, 'blue');
@@ -1160,6 +1237,7 @@ test('a bare function is not live', () => {
   const el = div({ children: getter });
 
   count.set(2);
+  flush();
 
   assert.equal(el.textContent, String(getter));
 });
@@ -1171,6 +1249,7 @@ test('map reuses the rows of items it has seen', () => {
   const [first, second] = list.children;
 
   items.set([b, a, c]);
+  flush();
 
   assert.deepEqual([...list.children].slice(0, 2), [second, first]);
   assert.equal(list.children.length, 3);
@@ -1181,12 +1260,14 @@ test('for() keys rows by item.key by default and by a function when given', () =
   const list = div({ children: items.for().map((item) => span(item.key)) });
   const [a, b] = list.children;
   items.set([{ key: 'b' }, { key: 'a' }]);
+  flush();
   assert.deepEqual([...list.children], [b, a]);
 
   const rows = state([{ id: 1 }, { id: 2 }]);
   const other = div({ children: rows.for((item) => item.id).map((item) => span(String(item.id))) });
   const [one, two] = other.children;
   rows.set([{ id: 2 }, { id: 1 }]);
+  flush();
   assert.deepEqual([...other.children], [two, one]);
 });
 
@@ -1202,6 +1283,7 @@ test('rows that render a fragment survive the next update', () => {
   const before = [...list.children];
 
   items.set([1, 2, 3]);
+  flush();
 
   assert.equal(list.children.length, 6);
   assert.deepEqual([...list.children].slice(0, 4), before);
@@ -1214,6 +1296,7 @@ test('one list bound in two places keeps separate rows', () => {
   const second = div(rows);
 
   items.set([1, 2, 3]);
+  flush();
 
   assert.equal(first.textContent, '123');
   assert.equal(second.textContent, '123');
@@ -1224,9 +1307,15 @@ test('for() without key fields matches rows by position and does not throw', () 
   const items = state([{ n: 1 }, { n: 2 }]);
   const list = div({ children: items.for().map((item) => span(String(item.n))) });
 
-  assert.doesNotThrow(() => items.set([{ n: 3 }, { n: 4 }, { n: 5 }]));
+  assert.doesNotThrow(() => {
+    items.set([{ n: 3 }, { n: 4 }, { n: 5 }]);
+    flush();
+  });
   assert.equal(list.children.length, 3);
-  assert.doesNotThrow(() => items.set([null, { n: 6 }]));
+  assert.doesNotThrow(() => {
+    items.set([null, { n: 6 }]);
+    flush();
+  });
 });
 
 test('computed(fn) on a signal derives from its value', () => {
@@ -1236,6 +1325,7 @@ test('computed(fn) on a signal derives from its value', () => {
   effect(() => seen.push(doubled.get()));
 
   count.set(3);
+  flush();
 
   assert.deepEqual(seen, [4, 6]);
 });
@@ -1258,7 +1348,9 @@ test('a fragment row whose live child changes its nodes keeps them on the next l
   const list = div({ children: items.map(row) });
 
   open.set(true);
+  flush();
   items.set(['b', 'a']);
+  flush();
 
   assert.equal(list.textContent, 'bb-detailaa-detail');
 });
@@ -1269,6 +1361,7 @@ test('a computed read without a reader leaves what it builds to the caller', () 
   const node = view.get();
 
   count.set(2);
+  flush();
 
   assert.equal(node.textContent, '2');
 });
@@ -1283,6 +1376,7 @@ test('a computed stops what it built when it loses its readers', () => {
 
   stop();
   count.set(2);
+  flush();
 
   assert.equal(node.textContent, '1');
 });
@@ -1305,8 +1399,10 @@ test('a computed that throws stops what its run built', () => {
   });
 
   fail.set(true);
+  flush();
   const orphan = made;
   count.set(2);
+  flush();
 
   assert.equal(orphan.textContent, '1');
 });
@@ -1321,6 +1417,7 @@ test('a computed read in a list row without a reader gives what it builds to the
   div({ children: items.map((item) => span(label.get() + item)) });
 
   items.set([]);
+  flush();
 
   assert.deepEqual(cleanups, ['stopped']);
 });
@@ -1335,6 +1432,7 @@ test('a list inside a computed stops its rows when the computed stops showing it
   div({ children: show.computed((visible) => (visible ? div(rows) : null)) });
 
   show.set(false);
+  flush();
 
   assert.deepEqual(cleanups.toSorted(), ['a', 'b']);
 });
@@ -1351,6 +1449,7 @@ test('a list inside a computed that recalculates renders its rows again and stop
   div({ children: step.computed(() => div(rows)) });
 
   step.set(1);
+  flush();
 
   assert.equal(cleanups.length, 2);
   assert.equal(renders, 4);
@@ -1367,6 +1466,7 @@ test('a computed whose run changes a signal it read through an effect shows the 
       return String(value);
     }),
   );
+  flush();
 
   assert.equal(s.get(), 3);
   assert.equal(el.textContent, '3');
@@ -1390,6 +1490,7 @@ test('an error from a computed run that changed a signal it read is not cached, 
       seen.push(error.message);
     }
   });
+  flush();
 
   assert.equal(seen.at(-1), 'ok1');
 });
@@ -1417,6 +1518,7 @@ test('a computed run that changed a signal it read stops what it built; only the
 
   const before = reruns;
   probe.set(1);
+  flush();
   assert.equal(reruns - before, 1);
 
   stop();
@@ -1432,6 +1534,7 @@ test('a computed that sets a signal throws, while effects and untrack inside it 
   assert.equal(s.get(), 0);
 
   computed(() => untrack(() => s.set(2))).get();
+  flush();
   assert.equal(s.get(), 2);
 });
 
@@ -1449,6 +1552,7 @@ test('a computed bound to the DOM that sets a signal is reported once, and signa
   const seen = [];
   effect(() => seen.push(t.computed((value) => value * 2).get()));
   t.set(2);
+  flush();
   assert.deepEqual(seen, [2, 4]);
 });
 
@@ -1458,9 +1562,11 @@ test('if shows its branch while the signal is truthy, and nothing otherwise', ()
   assert.equal(el.textContent, '[]');
 
   open.set(true);
+  flush();
   assert.equal(el.textContent, '[yes]');
 
   open.set(false);
+  flush();
   assert.equal(el.textContent, '[]');
 });
 
@@ -1470,6 +1576,7 @@ test('else shows the other branch', () => {
   assert.equal(el.textContent, 'open');
 
   open.set(false);
+  flush();
   assert.equal(el.textContent, 'closed');
 });
 
@@ -1479,12 +1586,16 @@ test('a branch is built once while the condition keeps its truthiness', () => {
   const el = div(count.if(() => (builds++, span('some'))).else(() => 'none'));
 
   count.set(2);
+  flush();
   count.set(3);
+  flush();
   assert.equal(builds, 1);
 
   count.set(0);
+  flush();
   assert.equal(el.textContent, 'none');
   count.set(5);
+  flush();
   assert.equal(builds, 2);
 });
 
@@ -1503,8 +1614,11 @@ test('what a branch builds stops when the branch changes', () => {
   );
 
   tick.set(1);
+  flush();
   open.set(false);
+  flush();
   tick.set(2);
+  flush();
 
   assert.deepEqual(seen, [0, 'stopped', 1, 'stopped']);
 });
@@ -1521,12 +1635,15 @@ test('case shows the branch of the first case that matches, by value or by predi
   assert.equal(el.textContent, 'none');
 
   count.set(3);
+  flush();
   assert.equal(el.textContent, 'some');
 
   count.set(11);
+  flush();
   assert.equal(el.textContent, 'many');
 
   count.set(-1);
+  flush();
   assert.equal(el.textContent, 'negative');
 });
 
@@ -1536,6 +1653,7 @@ test('case without else shows nothing when no case matches', () => {
   assert.equal(el.textContent, '[A]');
 
   mode.set('c');
+  flush();
   assert.equal(el.textContent, '[]');
 });
 
@@ -1545,12 +1663,16 @@ test('a case branch is rebuilt only when another case wins', () => {
   const el = div(count.case((n) => n > 0, () => (builds++, span('some'))).else(() => 'none'));
 
   count.set(2);
+  flush();
   count.set(3);
+  flush();
   assert.equal(builds, 1);
 
   count.set(0);
+  flush();
   assert.equal(el.textContent, 'none');
   count.set(4);
+  flush();
   assert.equal(builds, 2);
 });
 
@@ -1560,9 +1682,11 @@ test('if can be followed by case', () => {
   assert.equal(el.textContent, 'falsy');
 
   value.set('');
+  flush();
   assert.equal(el.textContent, 'empty');
 
   value.set(1);
+  flush();
   assert.equal(el.textContent, 'truthy');
 });
 
@@ -1576,9 +1700,11 @@ test('an effect that reads a computed does not rerun when the computed keeps its
   });
 
   user.set({ ...user.get(), age: 37 });
+  flush();
   assert.equal(runs, 1);
 
   user.set({ ...user.get(), name: 'Grace' });
+  flush();
   assert.equal(runs, 2);
 });
 
@@ -1590,8 +1716,11 @@ test('a chain of computeds stops at the first one that keeps its value', () => {
   effect(() => seen.push(label.get()));
 
   count.set(2);
+  flush();
   count.set(3);
+  flush();
   count.set(-1);
+  flush();
 
   assert.deepEqual(seen, ['positive', 'not positive']);
 });
@@ -1604,7 +1733,9 @@ test('an effect that reads a state and a computed reruns when the state changes'
   effect(() => seen.push(`${a.get()}:${parity.get()}`));
 
   a.set(2);
+  flush();
   b.set(3);
+  flush();
 
   assert.deepEqual(seen, ['1:1', '2:1']);
 });
@@ -1622,7 +1753,9 @@ test('a computed that starts throwing reruns its readers, and recovers', () => {
   });
 
   input.set('not json');
+  flush();
   input.set('{"a":1}');
+  flush();
 
   assert.deepEqual(seen, [1, 'error', 1]);
 });
@@ -1634,10 +1767,12 @@ test('a binding to a computed is not reapplied when the computed keeps its value
   new MutationObserver((records) => (writes += records.length)).observe(el, { characterData: true, childList: true, subtree: true });
 
   user.set({ ...user.get(), age: 37 });
+  flush();
   await tick();
   assert.equal(writes, 0);
 
   user.set({ ...user.get(), name: 'Grace' });
+  flush();
   await tick();
   assert.equal(writes, 1);
   assert.equal(el.textContent, 'Grace');

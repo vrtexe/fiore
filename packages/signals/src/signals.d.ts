@@ -54,7 +54,20 @@ export type Reactive<T> = T | Signal<T>;
 
 export function state<T>(value: T): State<T>;
 export function computed<T>(fn: () => T): Computed<T>;
-export function effect(fn: () => void | (() => void)): () => void;
+/** Runs `fn` now and again in the next flush after a signal it read changed; returns a function that stops it. */
+export const effect: {
+  (fn: () => void | (() => void)): () => void;
+  /** Like `effect`, but its runs come before the effects and bindings of a flush. */
+  pre(fn: () => void | (() => void)): () => void;
+  /** Like `effect`, but its runs come after the effects and bindings of a flush, and its first run waits for the next flush. */
+  post(fn: () => void | (() => void)): () => void;
+};
+/** Runs the waiting effects and bindings now instead of on the next microtask. */
+export function flush(): void;
+/** Resolves after the waiting effects and bindings have run; rejects with the first error of that flush. */
+export function tick(): Promise<void>;
+/** Runs `fn` with a new owner and returns a function that stops everything `fn` created. */
+export function root(fn: () => void): () => void;
 export function untrack<T>(fn: () => T): T;
 export function isSignal(value: unknown): value is Signal<unknown>;
 export function read<T>(value: Reactive<T> | (() => T)): T;
