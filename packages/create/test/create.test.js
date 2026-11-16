@@ -67,3 +67,15 @@ test('refuses a folder that is not empty', () => {
   assert.equal(result.status, 1);
   assert.match(result.stderr, /already exists and is not empty/);
 });
+
+test('the DOM templates pass data to create(), never as the only argument of a plain tag call', () => {
+  const dir = fileURLToPath(new URL('../templates/app/', import.meta.url));
+  for (const file of ['dom-plain.ts', 'dom-plain.js', 'dom-signals.ts', 'dom-signals.js']) {
+    const source = readFileSync(join(dir, file), 'utf8');
+    const tags = source.match(/import \{([^}]+)\} from 'fiorejs'/)[1].split(',').map((name) => name.trim());
+    for (const tag of tags) {
+      // A plain call with a variable reads an object, for example parsed JSON, as the data object.
+      assert.doesNotMatch(source, new RegExp(`(?<![.\\w])${tag}\\(\\s*[A-Za-z_$]`), `${file}: ${tag}(variable)`);
+    }
+  }
+});

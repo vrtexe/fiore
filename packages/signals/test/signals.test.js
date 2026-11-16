@@ -2150,3 +2150,41 @@ test('after a case fails, switching back builds the earlier case again, and it s
   assert.equal(host.textContent, '[7]');
   host.remove();
 });
+
+test('replaced content held by a state only pauses and resumes when inserted again; content a computed built stops for good', async () => {
+  const t = state(0);
+  const held = [];
+  const view = state(span(t.computed((v) => (held.push(v), String(v)))));
+  const old = view.get();
+  const host = div(view);
+  document.body.append(host);
+  await tick();
+
+  view.set('x');
+  flush();
+  await tick();
+  t.set(1);
+  flush();
+  assert.deepEqual(held, [0]);
+  document.body.append(old);
+  await tick();
+  assert.equal(old.textContent, '1');
+
+  const show = state(true);
+  const built = [];
+  let inner;
+  const host2 = div(show.computed((on) => (on ? (inner = span(t.computed((v) => (built.push(v), String(v))))) : 'off')));
+  document.body.append(host2);
+  await tick();
+  show.set(false);
+  flush();
+  await tick();
+  document.body.append(inner);
+  await tick();
+  t.set(2);
+  flush();
+
+  assert.deepEqual(built, [1]);
+  assert.equal(inner.textContent, '1');
+  for (const node of [host, old, host2, inner]) node.remove();
+});

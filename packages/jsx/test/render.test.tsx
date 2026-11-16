@@ -213,6 +213,25 @@ test('custom elements get object values as properties, also when defined after f
   assert.equal(later.dataset.label, 'hi');
 });
 
+test('an element created before its class is defined keeps string props as attributes, with no setter call on upgrade', () => {
+  const early = (<x-early label="hi" items={[1]} />) as HTMLElement & { items?: unknown };
+  document.body.append(early);
+  const labels: string[] = [];
+  window.customElements.define(
+    'x-early',
+    class extends window.HTMLElement {
+      set label(value: string) {
+        labels.push(value);
+      }
+    },
+  );
+
+  assert.equal(early.getAttribute('label'), 'hi');
+  assert.deepEqual(labels, []);
+  assert.deepEqual(early.items, [1]);
+  early.remove();
+});
+
 test('null removes an attribute instead of writing "null"', () => {
   const el = (<div id={null} title={null} style={null} />) as HTMLDivElement;
 
