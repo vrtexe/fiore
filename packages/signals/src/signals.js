@@ -2,8 +2,22 @@ import { use } from 'fiorejs';
 
 const SIGNAL = Symbol.for('fiorejs.signal');
 
-/** Signals inherit their brand, so a signal is not a plain object: fiorejs reads plain objects as data or as nested props. */
-const signalPrototype = Object.freeze({ [SIGNAL]: true });
+/**
+ * The base of every signal. Signals inherit their brand, so a signal is not a plain object: fiorejs reads plain objects
+ * as data or as nested props.
+ * @template T
+ */
+class Signal {
+  /** @returns {true} */
+  get [SIGNAL]() {
+    return true;
+  }
+
+  /** @returns {T} */
+  get() {
+    throw new TypeError('get() is implemented by State, Computed and Resource');
+  }
+}
 
 /**
  * @typedef {{ subs: Set<Computation>, release?(): void, missed?: boolean }} Source
@@ -140,49 +154,122 @@ function runTracked(computation, nextOwner, fn) {
 }
 
 /**
+ * A value that can be read and written; reading it inside an effect or computed subscribes. The instance is its own
+ * source.
+ * @template T
+ * @extends {Signal<T>}
+ */
+class State extends Signal {
+  /** @param {T} value */
+  constructor(value) {
+    super();
+    this._value = value;
+    /** @type {Set<Computation>} */
+    this.subs = new Set();
+  }
+
+  get() {
+    track(this);
+    return this._value;
+  }
+
+  /** @param {T} next */
+  set(next) {
+    if (!Object.is(next, this._value)) {
+      this._value = next;
+      notify(this);
+    }
+  }
+
+  /**
+   * Sets the value that `fn` returns for the current value, for example `(count) => count + 1`.
+   * @param {(value: T) => T} fn
+   */
+  update(fn) {
+    this.set(fn(this._value));
+  }
+
+  /**
+   * Changes the value in place, for example with `list.push(item)`, and always notifies.
+   * @param {(value: T) => unknown} fn
+   */
+  mutate(fn) {
+    // The value may already have changed when fn throws, so readers are notified either way.
+    try {
+      fn(this._value);
+    } finally {
+      notify(this);
+    }
+  }
+}
+
+/**
  * A value that can be read and written; reading it inside an effect or computed subscribes.
  * @template T
  * @param {T} value
  */
 export function state(value) {
-  /** @type {Source} */
-  const source = { subs: new Set() };
+  return new State(value);
+}
 
-  /** @param {T} next */
-  function set(next) {
-    if (!Object.is(next, value)) {
-      value = next;
-      notify(source);
+/**
+ * A cached value derived from other signals; recalculated on read after an input changed. The instance is its own
+ * source and computation; no cached result means it is dirty.
+ * @template T
+ * @extends {Signal<T>}
+ */
+class Computed extends Signal {
+  /** @param {() => T} fn */
+  constructor(fn) {
+    super();
+    this._fn = fn;
+    /** @type {{ value: T } | { error: unknown } | undefined} The last result, an error cached like a value. */
+    this._result = undefined;
+    /** @type {Set<Computation>} */
+    this.subs = new Set();
+    /** @type {Set<Source>} */
+    this.sources = new Set();
+    this.missed = false;
+  }
+
+  stale() {
+    // Already dirty means the readers heard of the change, unless one of them failed before reading it again.
+    if (!this._result && !this.missed) {
+      return;
+    }
+    this.missed = false;
+    this._result = undefined;
+    for (const sub of this.subs) {
+      sub.stale();
     }
   }
 
-  return {
-    __proto__: signalPrototype,
-    get() {
-      track(source);
-      return value;
-    },
-    set,
-    /**
-     * Sets the value that `fn` returns for the current value, for example `(count) => count + 1`.
-     * @param {(value: T) => T} fn
-     */
-    update(fn) {
-      set(fn(value));
-    },
-    /**
-     * Changes the value in place, for example with `list.push(item)`, and always notifies.
-     * @param {(value: T) => unknown} fn
-     */
-    mutate(fn) {
-      // The value may already have changed when fn throws, so readers are notified either way.
+  /** Without readers a computed lets go of its sources, so it can be collected and is not visited on every set. */
+  release() {
+    untrackSources(this);
+    this._result = undefined;
+  }
+
+  get() {
+    // The reader subscribes first, so it stays subscribed even when the calculation throws.
+    track(this);
+    let result = this._result;
+    if (!result) {
       try {
-        fn(value);
-      } finally {
-        notify(source);
+        result = { value: runTracked(this, null, this._fn) };
+      } catch (error) {
+        result = { error };
       }
-    },
-  };
+      this._result = result;
+    }
+    if (this.subs.size === 0) {
+      this.release();
+    }
+    if ('error' in result) {
+      throw result.error;
+    }
+    return result.value;
+  }
 }
 
 /**
@@ -191,58 +278,7 @@ export function state(value) {
  * @param {() => T} fn
  */
 export function computed(fn) {
-  /** @type {T} */
-  let value;
-  /** @type {{ error: unknown } | undefined} An error from the last calculation, cached like a value. */
-  let failure;
-  let dirty = true;
-  /** @type {Source & Computation} */
-  const node = {
-    subs: new Set(),
-    sources: new Set(),
-    stale() {
-      // Already dirty means the readers heard of the change, unless one of them failed before reading it again.
-      if (dirty && !node.missed) {
-        return;
-      }
-      node.missed = false;
-      dirty = true;
-      for (const sub of node.subs) {
-        sub.stale();
-      }
-    },
-    release,
-  };
-
-  // Without readers a computed lets go of its sources, so it can be collected and is not visited on every set.
-  function release() {
-    untrackSources(node);
-    dirty = true;
-  }
-
-  return {
-    __proto__: signalPrototype,
-    get() {
-      // The reader subscribes first, so it stays subscribed even when the calculation throws.
-      track(node);
-      if (dirty) {
-        try {
-          value = runTracked(node, null, fn);
-          failure = undefined;
-        } catch (error) {
-          failure = { error };
-        }
-        dirty = false;
-      }
-      if (node.subs.size === 0) {
-        release();
-      }
-      if (failure) {
-        throw failure.error;
-      }
-      return value;
-    },
-  };
+  return new Computed(fn);
 }
 
 /**
@@ -368,6 +404,72 @@ export function classList(entries) {
 }
 
 /**
+ * A value loaded by a fetcher, with `loading` and `error` signals.
+ * @extends {Signal<unknown>}
+ */
+class Resource extends Signal {
+  /** @param {(value: any, info: { signal: AbortSignal }) => unknown} load */
+  constructor(load) {
+    super();
+    this._load = load;
+    this._value = state(/** @type {unknown} */ (undefined));
+    this.loading = state(false);
+    this.error = state(/** @type {unknown} */ (undefined));
+    /** @type {unknown} The last source value. */
+    this._input = undefined;
+    /** @type {AbortController | undefined} */
+    this._controller = undefined;
+  }
+
+  get() {
+    return this._value.get();
+  }
+
+  /** Loads again with the last source value. */
+  refetch() {
+    if (this._active()) {
+      this._start();
+    }
+  }
+
+  /**
+   * Sets the value without loading, for example after an optimistic change.
+   * @param {unknown} value
+   */
+  mutate(value) {
+    this._value.set(value);
+  }
+
+  _active() {
+    return this._input != null && this._input !== false;
+  }
+
+  _start() {
+    this._controller?.abort();
+    const own = new AbortController();
+    this._controller = own;
+    this.loading.set(true);
+    this.error.set(undefined);
+    const input = this._input;
+    // Called inside the promise, so a synchronous throw from the fetcher becomes the error too.
+    new Promise((resolve) => resolve(untrack(() => this._load(input, { signal: own.signal })))).then(
+      (result) => {
+        if (this._controller === own) {
+          this._value.set(result);
+          this.loading.set(false);
+        }
+      },
+      (reason) => {
+        if (this._controller === own) {
+          this.error.set(reason);
+          this.loading.set(false);
+        }
+      },
+    );
+  }
+}
+
+/**
  * Loads a value with `fetcher`, and again whenever `source` changes, like Solid's createResource. While `source`
  * gives null, undefined or false nothing is loaded. `fetcher` gets the source value and an AbortSignal that aborts
  * when a newer load starts or the resource is stopped with its owner; the result of an older load is ignored.
@@ -379,67 +481,20 @@ export function resource(source, fetcher) {
     fetcher = /** @type {(value: any, info: { signal: AbortSignal }) => unknown} */ (source);
     source = () => true;
   }
-  const load = fetcher;
-  const value = state(/** @type {unknown} */ (undefined));
-  const loading = state(false);
-  const error = state(/** @type {unknown} */ (undefined));
-  /** @type {unknown} */
-  let input;
-  /** @type {AbortController | undefined} */
-  let controller;
-
-  function start() {
-    controller?.abort();
-    const own = new AbortController();
-    controller = own;
-    loading.set(true);
-    error.set(undefined);
-    // Called inside the promise, so a synchronous throw from the fetcher becomes the error too.
-    new Promise((resolve) => resolve(untrack(() => load(input, { signal: own.signal })))).then(
-      (result) => {
-        if (controller === own) {
-          value.set(result);
-          loading.set(false);
-        }
-      },
-      (reason) => {
-        if (controller === own) {
-          error.set(reason);
-          loading.set(false);
-        }
-      },
-    );
-  }
-
-  const active = () => input != null && input !== false;
-
+  const result = new Resource(fetcher);
   effect(() => {
-    input = read(/** @type {import('./signals.d.ts').Reactive<unknown>} */ (source));
-    if (!active()) {
-      loading.set(false);
+    result._input = read(/** @type {import('./signals.d.ts').Reactive<unknown>} */ (source));
+    if (!result._active()) {
+      result.loading.set(false);
       return;
     }
-    start();
+    result._start();
     return () => {
-      controller?.abort();
-      controller = undefined;
+      result._controller?.abort();
+      result._controller = undefined;
     };
   });
-
-  return {
-    __proto__: signalPrototype,
-    get: value.get,
-    loading: { __proto__: signalPrototype, get: loading.get },
-    error: { __proto__: signalPrototype, get: error.get },
-    /** Loads again with the last source value. */
-    refetch() {
-      if (active()) {
-        start();
-      }
-    },
-    /** Sets the value without loading, for example after an optimistic change. */
-    mutate: value.set,
-  };
+  return result;
 }
 
 /**
