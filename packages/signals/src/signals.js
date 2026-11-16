@@ -201,6 +201,13 @@ function runTracked(computation, nextOwner, fn) {
   }
 }
 
+/** A computed derives a value; a write from its run would loop through its own inputs, so it throws instead. */
+function forbidInComputed() {
+  if (current instanceof Computed) {
+    throw new Error('A computed cannot set a signal; derive the value, or set it in an effect or an event handler.');
+  }
+}
+
 /**
  * A value that can be read and written; reading it inside an effect or computed subscribes. The instance is its own
  * source.
@@ -223,6 +230,7 @@ class State extends Signal {
 
   /** @param {T} next */
   set(next) {
+    forbidInComputed();
     if (!Object.is(next, this._value)) {
       this._value = next;
       notify(this);
@@ -242,6 +250,7 @@ class State extends Signal {
    * @param {(value: T) => unknown} fn
    */
   mutate(fn) {
+    forbidInComputed();
     // The value may already have changed when fn throws, so readers are notified either way.
     try {
       fn(this._value);
