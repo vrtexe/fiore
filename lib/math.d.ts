@@ -1,6 +1,6 @@
 export { mathElement as element };
 /** @deprecated `a` is not a MathML element; wrap the math in an HTML `a` or set an `href` attribute instead. */
-export const a: import("./types/math.dom.js").MathTag<"mrow">;
+export const a: import("./types/math.dom.js").MathTag<"a">;
 export const annotation: import("./types/math.dom.js").MathTag<"annotation">;
 export const annotationXml: import("./types/math.dom.js").MathTag<"annotation-xml">;
 export const maction: import("./types/math.dom.js").MathTag<"maction">;

@@ -535,8 +535,8 @@ function createRow(render) {
  */
 
 /**
- * Bindings by the node whose place in the document they follow: the element for a property or attribute, the first
- * node of the slot for a child, which moves with the slot, for example out of a fragment.
+ * Bindings by the node whose place in the document they follow: the element for a property, an attribute or an only
+ * child, the start comment for any other child, which moves with its nodes, for example out of a fragment.
  * @type {WeakMap<Node, Set<Binding>>}
  */
 const bindings = new WeakMap();
@@ -649,7 +649,9 @@ function forget(binding) {
 export const plugin = {
   name: 'fiorejs-signals',
   bind(value, apply, context) {
-    if (!isSignal(value) && typeof value !== 'function') {
+    // A function under an on* name, such as a custom element's onConfirm, is a callback, not a getter.
+    const isCallback = context.kind !== 'child' && /^on/i.test(context.name);
+    if (!isSignal(value) && (typeof value !== 'function' || isCallback)) {
       return false;
     }
     const getter = isSignal(value) ? () => value.get() : /** @type {() => unknown} */ (value);

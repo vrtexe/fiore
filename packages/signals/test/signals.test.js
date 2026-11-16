@@ -421,13 +421,17 @@ test('a binding that fails on re-insertion does not stop its siblings', async (t
   wrapper.remove();
 });
 
-test('getters and signals under on* names that are not inline handlers are bound', () => {
+test('signals under on* names bind, and functions under them are callbacks that are never called', () => {
   const step = state('a');
-  const box = div({ props: { dataset: { onboarding: () => step.get() } }, attrs: { online: step } });
+  const calls = [];
+  const onConfirm = () => calls.push('confirm');
+  const box = div({ props: { onConfirm, dataset: { onboarding: step } }, attrs: { online: step } });
   document.body.append(box);
 
   step.set('b');
 
+  assert.equal(box.onConfirm, onConfirm);
+  assert.deepEqual(calls, []);
   assert.equal(box.dataset.onboarding, 'b');
   assert.equal(box.getAttribute('online'), 'b');
   box.remove();

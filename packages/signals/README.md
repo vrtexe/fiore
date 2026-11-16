@@ -70,7 +70,7 @@ A value is live when it is a signal or a function:
 
 A value inside a nested prop binds too, for example `props({ style: { color: () => ... } })`. Bindings start when the element is created, so a builder used as a template binds once for every element it creates.
 
-Functions in `on`, and properties or attributes whose name starts with `on` in any case, are listeners and never bindings. A live child can return text, a node, a list of nodes or nothing.
+Functions in `on`, and functions under a property or attribute name that starts with `on` in any case, such as a custom element's `onConfirm`, are callbacks and never bindings; a signal under such a name still binds. A live child can return text, a node, a list of nodes or nothing.
 
 ## Classes
 
@@ -161,7 +161,7 @@ Bindings are stopped automatically:
 - when a live child replaces its content, the bindings inside the old content stop for good
 - when `each` drops an item, or the effect around the list reruns, the bindings inside its rows stop for good
 - when an element is removed from the document, its bindings pause; if it is inserted again, they resume with the current values
-- a live child follows its own nodes, so it pauses and resumes correctly also when it was built in one place and moved, for example out of a JSX fragment
+- a live child among other children keeps its place between two comments, so it pauses and resumes correctly also when its nodes are moved, for example out of a JSX fragment; a live child that is the only child follows its element
 
 Removal and insertion are detected with a `MutationObserver` on the document, so elements inside a shadow root are not paused.
 
@@ -169,7 +169,7 @@ An element that is created but never inserted keeps its bindings for as long as 
 
 ## Limits
 
-- Functions passed as properties are treated as bindings, so a custom element property that expects a function has to be set in code, for example in `also()`.
+- Functions passed as properties are treated as bindings unless the name starts with `on`, so a custom element property that expects a function under another name has to be set in code, for example in `also()`.
 - A getter that returns a nested object, such as `style: () => ({ color })`, merges that object into the element on every update and never clears a key that disappears from it. Bind each key on its own instead: `style: { color: () => ... }`.
 - There is no `batch()` yet: outside an effect, every `set()` runs its effects immediately.
 - `refetch()` on a resource whose effect or list row has gone away still starts a load; call it only while the resource is in use.

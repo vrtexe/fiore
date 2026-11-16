@@ -2,6 +2,11 @@ import type { HTMLElementsAttributesMap } from './attributes.d.ts';
 import type { CustomEventData, TagData } from './base.dom.d.ts';
 import type { Tag } from '../core/builder.js';
 
+/** The MathML tag names, plus the deprecated `a`, which the DOM types do not list. */
+export interface MathElementTagNameMap extends MathMLElementTagNameMap {
+  a: MathMLElement;
+}
+
 export type MathDomEventListener<
   T extends MathMLElement,
   K extends keyof E,
@@ -29,12 +34,12 @@ export type MathElementEventData<
 } & CustomEventData<T>;
 
 export type MathElementData<
-  T extends keyof MathMLElementTagNameMap,
+  T extends keyof MathElementTagNameMap,
   E extends MathMLElementEventMap = MathMLElementEventMap,
-> = TagData<MathMLElementTagNameMap[T], HTMLElementsAttributesMap[T], MathElementEventData<MathMLElementTagNameMap[T], E>>;
+> = TagData<MathElementTagNameMap[T], HTMLElementsAttributesMap[T], MathElementEventData<MathElementTagNameMap[T], E>>;
 
-export type MathTag<T extends keyof MathMLElementTagNameMap> = Tag<
-  MathMLElementTagNameMap[T],
+export type MathTag<T extends keyof MathElementTagNameMap> = Tag<
+  MathElementTagNameMap[T],
   HTMLElementsAttributesMap[T],
-  MathElementEventData<MathMLElementTagNameMap[T]>
+  MathElementEventData<MathElementTagNameMap[T]>
 >;
