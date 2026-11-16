@@ -1,4 +1,4 @@
-import { effect, owner, runIn } from './tracking.js';
+import { effect, owner, untrack } from './tracking.js';
 import { report } from './scheduler.js';
 
 /**
@@ -105,7 +105,7 @@ export function attach(read, apply, context) {
   /** @type {Binding} */
   const binding = {
     anchor: context.kind === 'child' ? context.anchor : context.element,
-    start: () => runIn(null, null, () => effect(() => apply(read()))),
+    start: () => untrack(() => effect(() => apply(read()))),
   };
   // Filed under its anchor, so the observer finds it when the anchor is added or removed.
   let set = bindings.get(binding.anchor);

@@ -1,6 +1,6 @@
 import { LIVE } from "fiorejs";
-import { current, notify, owner, runTracked, track, untrackSources } from "./tracking.js";
-import { Keyed, List, itemKey } from "./list.js";
+import { current, notify, owner, runTracked, stopOwned, track, untrackSources } from "./tracking.js";
+import { List, itemKey } from "./list.js";
 import { When } from "./when.js";
 import { attach } from "./dom.js";
 
@@ -70,7 +70,13 @@ export class Signal {
    * @param {(item: U) => unknown} [key]
    */
   for(key = itemKey) {
-    return new Keyed(this, key);
+    return {
+      /**
+       * Renders the list and reuses the rows of items whose key it has seen.
+       * @param {(item: U, index: number) => Node} render
+       */
+      map: (render) => new List(this, render, key),
+    };
   }
 
   /**
@@ -222,7 +228,7 @@ export class Computed extends Signal {
   release() {
     untrackSources(this);
     this._result = undefined;
-    this.owned.splice(0).forEach((stopOwned) => stopOwned());
+    stopOwned(this);
   }
 
   get() {
@@ -230,14 +236,14 @@ export class Computed extends Signal {
     track(this);
     let result = this._result;
     if (!result) {
-      this.owned.splice(0).forEach((stopOwned) => stopOwned());
+      stopOwned(this);
       this._running = true;
       this._changed = false;
       try {
         // Without a reader the computed releases right after this read, so what the run creates belongs to the caller.
         result = { value: runTracked(this, this.subs.size > 0 ? this : owner, this._fn) };
       } catch (error) {
-        this.owned.splice(0).forEach((stopOwned) => stopOwned());
+        stopOwned(this);
         result = { error };
       } finally {
         this._running = false;

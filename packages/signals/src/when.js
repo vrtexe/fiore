@@ -1,13 +1,11 @@
 import { LIVE } from 'fiorejs';
-import { owner, runIn } from './tracking.js';
+import { owner, own } from './tracking.js';
 import { attach } from './dom.js';
 
 /**
  * @template T
  * @typedef {import('./signal.js').Signal<T>} Signal
  */
-
-/** @typedef {import('./tracking.js').Owner} Owner */
 
 /**
  * A live value that shows the branch of the first case the signal's value matches, or the other branch when none does.
@@ -59,10 +57,9 @@ export class When {
     let shown;
     /** @type {A | B | undefined} */
     let value;
-    /** @type {Owner} */
-    let scope = { owned: [] };
-    const stopBranch = () => scope.owned.splice(0).forEach((stopOwned) => stopOwned());
-    owner?.owned.push(stopBranch);
+    /** Stops what the shown branch created. */
+    let stopBranch = () => {};
+    owner?.owned.push(() => stopBranch());
 
     attach(
       () => {
@@ -73,9 +70,10 @@ export class When {
         if (index !== shown) {
           stopBranch();
           shown = index;
-          scope = { owned: [] };
           const branch = this._cases[index];
-          value = branch ? runIn(null, scope, branch[1]) : runIn(null, scope, this._otherwise);
+          /** @type {() => A | B} */
+          const render = branch ? branch[1] : this._otherwise;
+          ({ value, stop: stopBranch } = own(render));
         }
         return value;
       },

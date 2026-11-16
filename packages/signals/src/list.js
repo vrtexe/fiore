@@ -1,13 +1,11 @@
 import { LIVE } from 'fiorejs';
-import { owner, runIn } from './tracking.js';
+import { owner, own } from './tracking.js';
 import { attach } from './dom.js';
 
 /**
  * @template T
  * @typedef {import('./signal.js').Signal<T>} Signal
  */
-
-/** @typedef {import('./tracking.js').Owner} Owner */
 
 /**
  * @typedef {{ first: Node | null, last: Node | null, stop: () => void, pass: number }} Row
@@ -19,29 +17,6 @@ import { attach } from './dom.js';
  */
 export function itemKey(item) {
   return typeof item === 'object' && item !== null && 'key' in item ? item.key : undefined;
-}
-
-/**
- * A signal of a list with its key, waiting for `map`.
- * @template T
- */
-export class Keyed {
-  /**
-   * @param {Signal<readonly T[]>} source
-   * @param {(item: T) => unknown} key
-   */
-  constructor(source, key) {
-    this._source = source;
-    this._key = key;
-  }
-
-  /**
-   * Renders the list and reuses the rows of items whose key it has seen.
-   * @param {(item: T, index: number) => Node} render
-   */
-  map(render) {
-    return new List(this._source, render, this._key);
-  }
 }
 
 /**
@@ -138,17 +113,9 @@ export class List {
  * @returns {Row}
  */
 function createRow(render) {
-  /** @type {Owner} */
-  const scope = { owned: [] };
-  const stop = () => scope.owned.splice(0).forEach((stopOwned) => stopOwned());
-  try {
-    const node = runIn(null, scope, render);
-    // A fragment empties when it is inserted, so the row keeps its first and last node; a live child between them can
-    // change the nodes in between.
-    const fragment = node.nodeType === Node.DOCUMENT_FRAGMENT_NODE;
-    return { first: fragment ? node.firstChild : node, last: fragment ? node.lastChild : node, stop, pass: 0 };
-  } catch (error) {
-    stop();
-    throw error;
-  }
+  const { value: node, stop } = own(render);
+  // A fragment empties when it is inserted, so the row keeps its first and last node; a live child between them can
+  // change the nodes in between.
+  const fragment = node.nodeType === Node.DOCUMENT_FRAGMENT_NODE;
+  return { first: fragment ? node.firstChild : node, last: fragment ? node.lastChild : node, stop, pass: 0 };
 }

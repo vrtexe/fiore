@@ -89,27 +89,54 @@ export function runIn(computation, nextOwner, fn) {
 export function runTracked(computation, nextOwner, fn) {
   const previous = computation.sources;
   computation.sources = new Set();
-  let completed = false;
+  /** @type {T} */
+  let result;
   try {
-    const result = runIn(computation, nextOwner, fn);
-    completed = true;
-    return result;
-  } finally {
-    if (completed) {
-      unsubscribe(
-        computation,
-        [...previous].filter((source) => !computation.sources.has(source)),
-      );
-    } else {
-      // A run that threw may have stopped before reading its sources; it keeps following them, and a computed among
-      // them that is still dirty passes its next change on, so the next change runs it again.
-      for (const source of previous) {
-        if (!computation.sources.has(source)) {
-          computation.sources.add(source);
-          source.missed = true;
-        }
+    result = runIn(computation, nextOwner, fn);
+  } catch (error) {
+    // A run that threw may have stopped before reading its sources; it keeps following them, and a computed among
+    // them that is still dirty passes its next change on, so the next change runs it again.
+    for (const source of previous) {
+      if (!computation.sources.has(source)) {
+        computation.sources.add(source);
+        source.missed = true;
       }
     }
+    throw error;
+  }
+  unsubscribe(
+    computation,
+    [...previous].filter((source) => !computation.sources.has(source)),
+  );
+  return result;
+}
+
+/**
+ * Stops what an owner created, in the order it was created, and empties the owner.
+ * @param {Owner} scope
+ */
+export function stopOwned(scope) {
+  for (const stop of scope.owned.splice(0)) {
+    stop();
+  }
+}
+
+/**
+ * Runs `fn` with a new owner, outside any tracking, and returns its value with the function that stops what it
+ * created. If `fn` throws, what it created is stopped.
+ * @template T
+ * @param {() => T} fn
+ * @returns {{ value: T, stop: () => void }}
+ */
+export function own(fn) {
+  /** @type {Owner} */
+  const scope = { owned: [] };
+  const stop = () => stopOwned(scope);
+  try {
+    return { value: runIn(null, scope, fn), stop };
+  } catch (error) {
+    stop();
+    throw error;
   }
 }
 
@@ -210,7 +237,7 @@ function createEffect(fn, phase) {
    * throws does not keep this effect from running; its error is thrown like an error of the run.
    */
   function reset() {
-    scope.owned.splice(0).forEach((stopOwned) => stopOwned());
+    stopOwned(scope);
     const done = cleanup;
     cleanup = undefined;
     try {
@@ -248,16 +275,7 @@ function createEffect(fn, phase) {
  * @returns {() => void}
  */
 export function root(fn) {
-  /** @type {Owner} */
-  const scope = { owned: [] };
-  const dispose = () => scope.owned.splice(0).forEach((stop) => stop());
-  try {
-    runIn(null, scope, fn);
-  } catch (error) {
-    dispose();
-    throw error;
-  }
-  return dispose;
+  return own(fn).stop;
 }
 
 /**
