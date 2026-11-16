@@ -815,3 +815,36 @@ test('a cyclic value merged into a cyclic property ends instead of looping', () 
   assert.equal(el.cfg.mode, 'on');
   assert.equal(el.cfg.self, input, 'the second visit assigns the value whole');
 });
+
+test('a live list renders, replaces and empties many rows, keeping static siblings in place', () => {
+  const rows = (prefix, count) => Array.from({ length: count }, (_, i) => span({ children: `${prefix}${i}` }));
+  const content = signal([]);
+  const el = div({ children: ['<', content, '>'] });
+
+  const first = rows('a', 500);
+  content.set(first);
+  assert.equal(el.children.length, 500);
+  assert.equal(el.children[0], first[0]);
+  assert.equal(el.textContent.startsWith('<a0a1'), true);
+  assert.equal(el.textContent.endsWith('a499>'), true);
+
+  const second = rows('b', 300);
+  content.set(second);
+  assert.deepEqual([...el.children], second);
+  assert.equal(el.textContent.startsWith('<b0'), true);
+  assert.equal(el.textContent.endsWith('b299>'), true);
+
+  content.set([]);
+  assert.equal(html(el), '&lt;&gt;');
+});
+
+test('a live list in an only child renders and replaces many rows', () => {
+  const rows = (prefix, count) => Array.from({ length: count }, (_, i) => span({ children: `${prefix}${i}` }));
+  const content = signal(rows('a', 400));
+  const el = div({ children: content });
+  assert.equal(el.childNodes.length, 400);
+
+  const next = rows('b', 200);
+  content.set(next);
+  assert.deepEqual([...el.childNodes], next);
+});

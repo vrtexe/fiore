@@ -674,7 +674,7 @@ export function resource(source, fetcher) {
 }
 
 /**
- * @typedef {{ first: Node | null, last: Node | null, stop: () => void }} Row
+ * @typedef {{ first: Node | null, last: Node | null, stop: () => void, pass: number }} Row
  */
 
 /**
@@ -733,18 +733,24 @@ class List {
     /** @type {Map<unknown, Row[]>} Rows by key; a repeated key keeps one row per occurrence. */
     let rows = new Map();
 
+    /** Counts the passes; a row marked with the current pass is shown, so a repeated key takes the next row. */
+    let pass = 0;
+
     owner?.owned.push(() => {
       const old = rows;
       rows = new Map();
-      [...old.values()].flat().forEach((row) => row.stop());
+      for (const list of old.values()) {
+        for (const row of list) {
+          row.stop();
+        }
+      }
     });
 
     attach(
       () => {
+        pass++;
         /** @type {Map<unknown, Row[]>} */
         const next = new Map();
-        /** @type {Map<unknown, number>} */
-        const taken = new Map();
         /** @type {Row[]} */
         const created = [];
         /** @type {Node[]} */
@@ -752,14 +758,12 @@ class List {
         try {
           this._source.get().forEach((item, index) => {
             const id = this._key(item);
-            const used = taken.get(id) ?? 0;
-            let row = rows.get(id)?.[used];
-            if (row) {
-              taken.set(id, used + 1);
-            } else {
+            let row = rows.get(id)?.find((candidate) => candidate.pass !== pass);
+            if (!row) {
               row = createRow(() => this._render(item, index));
               created.push(row);
             }
+            row.pass = pass;
             const list = next.get(id);
             if (list) {
               list.push(row);
@@ -776,12 +780,13 @@ class List {
           throw error;
         }
 
-        const kept = new Set([...next.values()].flat());
         const old = rows;
         rows = next;
-        for (const row of [...old.values()].flat()) {
-          if (!kept.has(row)) {
-            row.stop();
+        for (const list of old.values()) {
+          for (const row of list) {
+            if (row.pass !== pass) {
+              row.stop();
+            }
           }
         }
         return nodes;
@@ -863,7 +868,7 @@ function createRow(render) {
     // A fragment empties when it is inserted, so the row keeps its first and last node; a live child between them can
     // change the nodes in between.
     const fragment = node.nodeType === Node.DOCUMENT_FRAGMENT_NODE;
-    return { first: fragment ? node.firstChild : node, last: fragment ? node.lastChild : node, stop };
+    return { first: fragment ? node.firstChild : node, last: fragment ? node.lastChild : node, stop, pass: 0 };
   } catch (error) {
     stop();
     throw error;
