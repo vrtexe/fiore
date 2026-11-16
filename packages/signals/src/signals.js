@@ -101,13 +101,22 @@ class Signal {
 let current = null;
 /** @type {Owner | null} */
 let owner = null;
-/** @typedef {{ id: number, run(): void, stop(): void }} Queued */
+/**
+ * An effect as the flush sees it: `queued` while it waits, and how often it ran in the flush numbered `flush`.
+ * @typedef {{ id: number, queued: boolean, flush: number, runs: number, run(): void, stop(): void }} Queued
+ */
 
-/** @type {[Set<Queued>, Set<Queued>, Set<Queued>]} Effects waiting for the flush, by phase: pre, normal, post. */
-const queues = [new Set(), new Set(), new Set()];
-/** True while a flush is queued as a microtask. */
+/** @type {[Queued[], Queued[], Queued[]]} Effects waiting for the flush, by phase: pre, normal, post. */
+const queues = [[], [], []];
+/** Whether an effect joined a queue out of creation order, so the queue is sorted before it runs. */
+const unsorted = [false, false, false];
+/** True while work waits for the flush. */
 let scheduled = false;
+/** True while the microtask that flushes is queued; a flush() before it runs leaves it nothing to do. */
+let task = false;
 let flushing = false;
+/** Numbers flushes, so an effect can count its runs per flush. */
+let flushes = 0;
 /** @type {{ error: unknown } | undefined} The first error of the running flush. */
 let failure;
 /** @type {{ resolve(): void, reject(error: unknown): void }[]} The tick() promises waiting for the flush. */
@@ -133,11 +142,31 @@ function notify(source) {
   }
 }
 
-/** Queues a flush on a microtask, unless one is queued or running; a running flush takes new work itself. */
-function schedule() {
-  if (!scheduled && !flushing) {
-    scheduled = true;
+/**
+ * Queues an effect for the flush once, and the flush on a microtask unless it is queued or running; a running flush
+ * takes new work itself.
+ * @param {Queued} node
+ * @param {0 | 1 | 2} phase
+ */
+function enqueue(node, phase) {
+  if (node.queued) {
+    return;
+  }
+  node.queued = true;
+  const queue = queues[phase];
+  const last = queue[queue.length - 1];
+  if (last && last.id > node.id) {
+    unsorted[phase] = true;
+  }
+  queue.push(node);
+  if (scheduled || flushing) {
+    return;
+  }
+  scheduled = true;
+  if (!task) {
+    task = true;
     queueMicrotask(() => {
+      task = false;
       if (scheduled) {
         settle(true);
       }
@@ -179,18 +208,31 @@ export function tick() {
 function settle(queued) {
   scheduled = false;
   flushing = true;
-  /** @type {Map<Queued, number>} */
-  const runs = new Map();
+  const flush = ++flushes;
   try {
-    for (let queue = queues.find((q) => q.size > 0); queue; queue = queues.find((q) => q.size > 0)) {
-      for (const node of [...queue].sort((a, b) => a.id - b.id)) {
-        // Run only what is still queued: an earlier effect may have stopped it, or it ran and was queued again.
-        if (!queue.delete(node)) {
+    for (;;) {
+      const phase = firstPhase();
+      if (phase === -1) {
+        break;
+      }
+      // Work queued while this batch runs goes to a new queue, for the next round.
+      const batch = queues[phase];
+      queues[phase] = [];
+      if (unsorted[phase]) {
+        unsorted[phase] = false;
+        batch.sort((a, b) => a.id - b.id);
+      }
+      for (const node of batch) {
+        // An effect stopped since it was queued is skipped.
+        if (!node.queued) {
           continue;
         }
-        const count = (runs.get(node) ?? 0) + 1;
-        runs.set(node, count);
-        if (count > MAX_RUNS) {
+        node.queued = false;
+        if (node.flush !== flush) {
+          node.flush = flush;
+          node.runs = 0;
+        }
+        if (++node.runs > MAX_RUNS) {
           // Only the looping effect stops; the others still run.
           fail(new Error(`An effect ran more than ${MAX_RUNS} times in one flush; it probably sets a signal it reads.`));
           node.stop();
@@ -216,6 +258,14 @@ function settle(queued) {
   if (result && !(queued && waiting.length > 0)) {
     throw result.error;
   }
+}
+
+/**
+ * The first phase with queued effects, or -1.
+ * @returns {0 | 1 | 2 | -1}
+ */
+function firstPhase() {
+  return queues[0].length > 0 ? 0 : queues[1].length > 0 ? 1 : queues[2].length > 0 ? 2 : -1;
 }
 
 /**
@@ -531,6 +581,9 @@ function createEffect(fn, phase) {
   /** @type {Computation & Queued & { dirty: boolean, seen: Computed<unknown>[] | undefined, versions: number[] | undefined, count: number }} */
   const node = {
     id: nextId++,
+    queued: false,
+    flush: 0,
+    runs: 0,
     sources: new Set(),
     /** True when a signal it read changed for certain, false when only computeds said they may have changed. */
     dirty: false,
@@ -547,8 +600,7 @@ function createEffect(fn, phase) {
       if (!maybe) {
         node.dirty = true;
       }
-      queues[phase].add(node);
-      schedule();
+      enqueue(node, phase);
     },
     run() {
       if (stopped) {
@@ -598,7 +650,7 @@ function createEffect(fn, phase) {
 
   function stop() {
     stopped = true;
-    queues[phase].delete(node);
+    node.queued = false;
     reset();
     untrackSources(node);
     node.seen = undefined;
@@ -609,8 +661,7 @@ function createEffect(fn, phase) {
   owner?.owned.push(stop);
   if (phase === 2) {
     node.dirty = true;
-    queues[phase].add(node);
-    schedule();
+    enqueue(node, phase);
   } else {
     node.run();
   }
