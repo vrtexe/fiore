@@ -406,6 +406,17 @@ test('objects without a prototype are replaced, not merged into', () => {
   assert.notEqual(el.bag, bare);
 });
 
+test('a live value under an inline handler prop binds the handler', () => {
+  const calls = [];
+  const handler = signal(() => calls.push('first'));
+  const el = div({ props: { onclick: handler } });
+  el.click();
+  handler.set(() => calls.push('second'));
+  el.click();
+
+  assert.deepEqual(calls, ['first', 'second']);
+});
+
 test('nested keys that start with on are still bound', () => {
   const step = signal('2');
   const el = div({ props: { dataset: { onboardingStep: step } } });

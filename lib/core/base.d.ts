@@ -29,9 +29,9 @@ export function isLive(value: unknown): value is LiveValue<unknown>;
 /**
  * Adds the listeners of an `on` map: a function, or an object with `handler` and `options`.
  * @param {Element} element
- * @param {object | null | undefined} eventData
+ * @param {object} eventData
  */
-export function attachEventListener(element: Element, eventData: object | null | undefined): void;
+export function attachEventListener(element: Element, eventData: object): void;
 /** @import { BaseElement, Children, LiveValue } from '../types/base.dom.d.ts' */
 /** The key of the method that makes a value live; global, so live values work across copies of fiorejs. */
 export const LIVE: unique symbol;

@@ -793,24 +793,6 @@ function resume(binding) {
 }
 
 /**
- * Files the binding under its anchor, so the observer finds it when the anchor is added or removed.
- * @param {Binding} binding
- */
-function follow(binding) {
-  let set = bindings.get(binding.anchor);
-  if (!set) {
-    set = new Set();
-    bindings.set(binding.anchor, set);
-  }
-  set.add(binding);
-}
-
-/** @param {Binding} binding */
-function forget(binding) {
-  bindings.get(binding.anchor)?.delete(binding);
-}
-
-/**
  * Binds `read` to an element: `apply` gets its value now and whenever a signal it read changes, while its anchor is in
  * the document.
  * @param {() => unknown} read
@@ -823,11 +805,17 @@ function attach(read, apply, context) {
     anchor: context.kind === 'child' ? context.anchor : context.element,
     start: () => runIn(null, null, () => effect(() => apply(read()))),
   };
-  follow(binding);
+  // Filed under its anchor, so the observer finds it when the anchor is added or removed.
+  let set = bindings.get(binding.anchor);
+  if (!set) {
+    set = new Set();
+    bindings.set(binding.anchor, set);
+  }
+  set.add(binding);
   binding.stop = binding.start();
   // The surrounding effect or list row ends the binding for good when it reruns or is removed.
   owner?.owned.push(() => {
-    forget(binding);
+    bindings.get(binding.anchor)?.delete(binding);
     binding.stop?.();
     binding.stop = undefined;
   });
