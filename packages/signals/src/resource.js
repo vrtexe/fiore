@@ -55,12 +55,15 @@ class Resource extends Signal {
     new Promise((resolve) => resolve(untrack(() => this._load(input, { signal: own.signal })))).then(
       (result) => {
         if (this._controller === own) {
+          // A finished load is not aborted when the next one starts.
+          this._controller = undefined;
           this._value.set(result);
           this.loading.set(false);
         }
       },
       (reason) => {
         if (this._controller === own) {
+          this._controller = undefined;
           this.error.set(reason);
           this.loading.set(false);
           // A failed load that nothing reads would otherwise go unnoticed.

@@ -468,7 +468,7 @@ test('signals under on* names bind, and functions under them are callbacks that 
   const step = state('a');
   const calls = [];
   const onConfirm = () => calls.push('confirm');
-  const box = div({ props: { onConfirm, dataset: { onboarding: step } }, attrs: { online: step } });
+  const box = div({ props: { onConfirm, dataset: { onboarding: step } }, attrs: { 'on-line': step } });
   document.body.append(box);
 
   step.set('b');
@@ -477,7 +477,7 @@ test('signals under on* names bind, and functions under them are callbacks that 
   assert.equal(box.onConfirm, onConfirm);
   assert.deepEqual(calls, []);
   assert.equal(box.dataset.onboarding, 'b');
-  assert.equal(box.getAttribute('online'), 'b');
+  assert.equal(box.getAttribute('on-line'), 'b');
   box.remove();
 });
 
@@ -2104,5 +2104,49 @@ test('a case branch that failed to build is built again, and fails again, when i
 
   assert.equal(builds, 2);
   assert.match(String(again[0]), /render b failed/);
+  host.remove();
+});
+
+test('resource does not abort a load that has already finished', async () => {
+  const id = state(1);
+  const { calls, fetcher } = manual();
+  const user = resource(id, fetcher);
+  calls[0].resolve('one');
+  await tick();
+  assert.equal(user.get(), 'one');
+
+  id.set(2);
+  flush();
+
+  assert.equal(calls[0].signal.aborted, false);
+  assert.equal(calls.length, 2);
+});
+
+test('after a case fails, switching back builds the earlier case again, and it stays live', async () => {
+  const mode = state('a');
+  const n = state(1);
+  let buildsA = 0;
+  const host = div([
+    '[',
+    mode.case('a', () => (buildsA++, span(n))).case('b', () => {
+      throw new Error('render b failed');
+    }),
+    ']',
+  ]);
+  document.body.append(host);
+  await tick();
+
+  await reported(() => mode.set('b'));
+  assert.equal(host.textContent, '[1]');
+  mode.set('a');
+  host.remove();
+  await tick();
+  document.body.append(host);
+  await tick();
+  n.set(7);
+  flush();
+
+  assert.equal(buildsA, 2);
+  assert.equal(host.textContent, '[7]');
   host.remove();
 });
