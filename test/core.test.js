@@ -29,6 +29,12 @@ function signal(value) {
 }
 
 const contexts = [];
+const html = (el) => el.innerHTML.replaceAll('<!---->', '');
+const region = (marker) => {
+  const nodes = [];
+  for (let node = marker.nextSibling; node.nodeType !== 8; node = node.nextSibling) nodes.push(node);
+  return nodes;
+};
 use({
   name: 'test-signals',
   bind(value, apply, context) {
@@ -65,7 +71,7 @@ test('attributes keep 0 and empty strings, drop false and null, and keep "false"
 test('children accept strings, numbers, nodes and arrays', () => {
   const el = div({ children: ['a', document.createElement('b'), 'c'] });
 
-  assert.equal(el.innerHTML, 'a<b></b>c');
+  assert.equal(html(el), 'a<b></b>c');
   assert.equal(div({ children: 'only' }).textContent, 'only');
 });
 
@@ -101,13 +107,13 @@ test('a bound child can switch between nodes, lists and nothing', () => {
   const el = div({ children: ['[', content, ']'] });
 
   content.set([document.createElement('i'), 'x']);
-  assert.equal(el.innerHTML, '[<i></i>x]');
+  assert.equal(html(el), '[<i></i>x]');
 
   content.set(null);
-  assert.equal(el.innerHTML, '[]');
+  assert.equal(html(el), '[]');
 
   content.set(document.createElement('b'));
-  assert.equal(el.innerHTML, '[<b></b>]');
+  assert.equal(html(el), '[<b></b>]');
 });
 
 test('a bound child keeps and reorders nodes it returns again', () => {
@@ -117,11 +123,11 @@ test('a bound child keeps and reorders nodes it returns again', () => {
   const focusLike = b;
 
   rows.set([c, a, b]);
-  assert.equal(el.innerHTML, '&lt;<c></c><a></a><b></b>&gt;');
+  assert.equal(html(el), '&lt;<c></c><a></a><b></b>&gt;');
   assert.equal(el.querySelector('b'), focusLike);
 
   rows.set([a]);
-  assert.equal(el.innerHTML, '&lt;<a></a>&gt;');
+  assert.equal(html(el), '&lt;<a></a>&gt;');
 });
 
 test('registering a plugin name again replaces the earlier plugin', () => {
@@ -256,7 +262,7 @@ test('a plugin that binds a child without applying it yet still gets a place', (
 
   applyLater('hello');
 
-  assert.equal(el.innerHTML, 'hellob');
+  assert.equal(html(el), 'hellob');
 });
 
 test('a text node passed in by the caller is not overwritten, also inside a fragment', () => {
@@ -314,10 +320,10 @@ test('a node repeated in a bound list is kept once and later updates still work'
   const el = div({ children: rows });
 
   rows.set([a, b, a]);
-  assert.equal(el.innerHTML, '<a></a><b></b>');
+  assert.equal(html(el), '<a></a><b></b>');
   rows.set([b, a]);
   rows.set(null);
-  assert.equal(el.innerHTML, '');
+  assert.equal(html(el), '');
 });
 
 test('moveBefore is used for moves when the browser has it', () => {
@@ -421,13 +427,13 @@ test('a very deep bound array does not overflow the stack', () => {
   assert.equal(div({ children: signal(deep) }).textContent, 'x');
 });
 
-test('plugins can read the nodes a child currently occupies', () => {
+test('plugins get the comment before the nodes of a child', () => {
   let context;
   const marker = { isMarker: true };
   use({ name: 'nodes', bind: (value, apply, ctx) => value === marker && ((context = ctx), apply('hi'), true) });
   div({ children: marker });
 
-  assert.equal(context.nodes()[0].data, 'hi');
+  assert.equal(context.marker.nextSibling.data, 'hi');
 });
 
 test('a plain object with a nodeType key does not break a live child', () => {
@@ -447,10 +453,33 @@ test('an insert that throws leaves the slot as it was, and later updates still a
   const outer = div({ children: el });
 
   assert.throws(() => content.set([b, 'new', outer]));
-  assert.equal(el.innerHTML, '&lt;<a></a><b></b>&gt;');
 
   content.set('d');
   assert.equal(el.textContent, '<d>');
+});
+
+test('a live text child keeps updating after normalize() merges its text with its neighbours', () => {
+  const count = signal('one');
+  const el = div({ children: ['Count: ', count, '!'] });
+
+  el.normalize();
+  count.set('two');
+
+  assert.equal(el.textContent, 'Count: two!');
+});
+
+test('a live child inside a fragment that is the value of another live child keeps updating', () => {
+  const inner = signal('a');
+  const fragment = document.createDocumentFragment();
+  fragment.append(...div({ children: [inner, 'x'] }).childNodes);
+  const outer = signal(fragment);
+  const el = div({ children: ['[', outer, ']'] });
+
+  inner.set('b');
+  assert.equal(el.textContent, '[bx]');
+
+  outer.set('gone');
+  assert.equal(el.textContent, '[gone]');
 });
 
 test('a node that moves to another bound child leaves the first one working', () => {
@@ -522,7 +551,7 @@ test('bound children stay correct under random updates that move nodes between t
     const message = `step ${step}`;
     assert.deepEqual(tokens(one.childNodes), ['[', ...text(expected[0]), '|', ...text(expected[1]), ']'], message);
     assert.deepEqual(tokens(two.childNodes), ['(', ...text(expected[2]), ')'], message);
-    slots.forEach((slot, i) => assert.deepEqual(tokens(slot.nodes()), text(expected[i]), message));
+    slots.forEach((slot, i) => assert.deepEqual(tokens(region(slot.marker)), text(expected[i]), message));
   }
 });
 

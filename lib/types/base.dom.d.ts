@@ -48,8 +48,8 @@ export type BindContext =
   | {
       element: BaseElement;
       kind: 'child';
-      /** The nodes the child currently occupies; they can move to another parent, for example from a fragment. */
-      nodes(): readonly ChildNode[];
+      /** The comment before the nodes of the child; it moves with them, for example out of a fragment. */
+      marker: Comment;
     };
 
 export type Plugin = {
