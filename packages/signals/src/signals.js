@@ -281,15 +281,21 @@ class Computed extends Signal {
     this.missed = false;
     /** @type {(() => void)[]} */
     this.owned = [];
+    /** True while the computed runs, so a change during its own run still reaches its readers. */
+    this._running = false;
+    /** Set when an input changes during the current run, so that run is not cached. */
+    this._changed = false;
   }
 
   stale() {
-    // Already dirty means the readers heard of the change, unless one of them failed before reading it again.
-    if (!this._result && !this.missed) {
+    // Already dirty means the readers heard of the change, unless one of them failed before reading it again, or the
+    // change came during this computed's own run.
+    if (!this._result && !this.missed && !this._running) {
       return;
     }
     this.missed = false;
     this._result = undefined;
+    this._changed = this._running;
     for (const sub of this.subs) {
       sub.stale();
     }
@@ -308,14 +314,21 @@ class Computed extends Signal {
     let result = this._result;
     if (!result) {
       this.owned.splice(0).forEach((stopOwned) => stopOwned());
+      this._running = true;
+      this._changed = false;
       try {
         // Without a reader the computed releases right after this read, so what the run creates belongs to the caller.
         result = { value: runTracked(this, this.subs.size > 0 ? this : owner, this._fn) };
       } catch (error) {
         this.owned.splice(0).forEach((stopOwned) => stopOwned());
         result = { error };
+      } finally {
+        this._running = false;
       }
-      this._result = result;
+      // An input changed during the run: the readers were told, so the next read runs again instead of using this.
+      if (!this._changed) {
+        this._result = result;
+      }
     }
     if (this.subs.size === 0) {
       this.release();
