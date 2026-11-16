@@ -123,7 +123,7 @@ div(open.if(() => Details())); // nothing while closed
 div(count.computed((n) => n > 10).if(() => em('many')));
 ```
 
-Both branches are functions, so only the shown branch is built. It is built once and rebuilt only when the truthiness flips, so `count.if(...)` does not rebuild when `count` goes from 1 to 2. When the branch changes, the bindings and effects the old branch created stop. For a condition other than truthiness, derive it first with `signal.computed(...)`.
+Both branches are functions, so only the shown branch is built. It is built once and rebuilt only when the truthiness flips, so `count.if(...)` does not rebuild when `count` goes from 1 to 2. When the branch changes, the bindings and effects the old branch created stop. For a condition other than truthiness, derive it first with `signal.computed(...)`. A branch returns text, nodes or nothing; to show a live value in a branch, put it in an element: `.else(() => span(user.computed(...)))`.
 
 ## Lists
 
