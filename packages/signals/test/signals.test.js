@@ -113,7 +113,7 @@ test('read accepts plain values, signals and getters', () => {
   assert.equal(read(() => count.get() + 1), 3);
 });
 
-test('signals and getters bind to properties, attributes and children', () => {
+test('signals and computed values bind to properties, attributes and children', () => {
   const name = state('Ada');
   const onclick = () => 'clicked';
   const field = input({ props: { value: name, onclick }, attrs: { title: computed(() => `Name: ${name.get()}`) } });
@@ -127,7 +127,7 @@ test('signals and getters bind to properties, attributes and children', () => {
   assert.equal(label.textContent, 'Hello Grace');
 });
 
-test('a getter child stops the bindings of what it replaced', () => {
+test('a computed child stops the bindings of what it replaced', () => {
   const show = state(true);
   const count = state(1);
   const panel = div({ children: computed(() => (show.get() ? span({ children: count }) : 'hidden')) });
@@ -1226,6 +1226,7 @@ test('for() without key fields matches rows by position and does not throw', () 
 
   assert.doesNotThrow(() => items.set([{ n: 3 }, { n: 4 }, { n: 5 }]));
   assert.equal(list.children.length, 3);
+  assert.doesNotThrow(() => items.set([null, { n: 6 }]));
 });
 
 test('computed(fn) on a signal derives from its value', () => {
@@ -1270,4 +1271,42 @@ test('a computed read without a reader leaves what it builds to the caller', () 
   count.set(2);
 
   assert.equal(node.textContent, '2');
+});
+
+test('a computed stops what it built when it loses its readers', () => {
+  const count = state(1);
+  const view = computed(() => span(count));
+  let node;
+  const stop = effect(() => {
+    node = view.get();
+  });
+
+  stop();
+  count.set(2);
+
+  assert.equal(node.textContent, '1');
+});
+
+test('a computed that throws stops what its run built', () => {
+  const count = state(1);
+  const fail = state(false);
+  let made;
+  const view = computed(() => {
+    made = span(count);
+    if (fail.get()) throw new Error('boom');
+    return made;
+  });
+  effect(() => {
+    try {
+      view.get();
+    } catch {
+      // The error is cached like a value; this test only looks at what the failed run built.
+    }
+  });
+
+  fail.set(true);
+  const orphan = made;
+  count.set(2);
+
+  assert.equal(orphan.textContent, '1');
 });

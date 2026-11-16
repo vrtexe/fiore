@@ -24,7 +24,7 @@ class Signal {
    * @param {import('fiorejs/type/base.dom.d.ts').BindContext} context
    */
   [LIVE](apply, context) {
-    bind(() => this.get(), apply, context);
+    attach(() => this.get(), apply, context);
   }
 
   /**
@@ -48,7 +48,9 @@ class Signal {
 
   /**
    * Renders a list and reuses the rows of items it has seen; the item itself is the key.
-   * @param {(item: any, index: number) => Node} render
+   * @template U
+   * @this {Signal<readonly U[]>}
+   * @param {(item: U, index: number) => Node} render
    */
   map(render) {
     return new List(this, render, (item) => item);
@@ -56,9 +58,11 @@ class Signal {
 
   /**
    * Keys the rows of a list by `item.key`, or by what `key` returns.
-   * @param {(item: any) => unknown} [key]
+   * @template U
+   * @this {Signal<readonly U[]>}
+   * @param {(item: U) => unknown} [key]
    */
-  for(key = (item) => item.key) {
+  for(key = itemKey) {
     return new Keyed(this, key);
   }
 }
@@ -308,6 +312,7 @@ class Computed extends Signal {
         // Without a reader the computed releases right after this read, so what the run creates belongs to the caller.
         result = { value: runTracked(this, this.subs.size > 0 ? this : owner, this._fn) };
       } catch (error) {
+        this.owned.splice(0).forEach((stopOwned) => stopOwned());
         result = { error };
       }
       this._result = result;
@@ -551,11 +556,22 @@ export function resource(source, fetcher) {
  * @typedef {{ first: Node | null, last: Node | null, stop: () => void }} Row
  */
 
-/** A signal of a list with its key, waiting for `map`. */
+/**
+ * The default list key: the item's `key` field.
+ * @param {unknown} item
+ */
+function itemKey(item) {
+  return typeof item === 'object' && item !== null && 'key' in item ? item.key : undefined;
+}
+
+/**
+ * A signal of a list with its key, waiting for `map`.
+ * @template T
+ */
 class Keyed {
   /**
-   * @param {Signal<readonly unknown[]>} source
-   * @param {(item: any) => unknown} key
+   * @param {Signal<readonly T[]>} source
+   * @param {(item: T) => unknown} key
    */
   constructor(source, key) {
     this._source = source;
@@ -564,7 +580,7 @@ class Keyed {
 
   /**
    * Renders the list and reuses the rows of items whose key it has seen.
-   * @param {(item: any, index: number) => Node} render
+   * @param {(item: T, index: number) => Node} render
    */
   map(render) {
     return new List(this._source, render, this._key);
@@ -574,12 +590,13 @@ class Keyed {
 /**
  * A live list: every binding keeps its own rows by key and only renders new items. `index` is the item's index when its
  * row was created; a reused row keeps it.
+ * @template T
  */
 class List {
   /**
-   * @param {Signal<readonly unknown[]>} source
-   * @param {(item: any, index: number) => Node} render
-   * @param {(item: any) => unknown} key
+   * @param {Signal<readonly T[]>} source
+   * @param {(item: T, index: number) => Node} render
+   * @param {(item: T) => unknown} key
    */
   constructor(source, render, key) {
     this._source = source;
@@ -601,7 +618,7 @@ class List {
       [...old.values()].flat().forEach((row) => row.stop());
     });
 
-    bind(
+    attach(
       () => {
         /** @type {Map<unknown, Row[]>} */
         const next = new Map();
@@ -800,7 +817,7 @@ function forget(binding) {
  * @param {(value: unknown) => void} apply
  * @param {import('fiorejs/type/base.dom.d.ts').BindContext} context
  */
-function bind(read, apply, context) {
+function attach(read, apply, context) {
   /** @type {Binding} */
   const binding = {
     anchor: context.kind === 'child' ? context.anchor : context.element,

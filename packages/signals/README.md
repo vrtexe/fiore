@@ -109,7 +109,7 @@ Price({ amount: computed(() => total.get() * 1.081) });
 
 ## Lists
 
-`signal.map(render)` renders a list from a signal of an array and reuses the rows of items it has seen before, so it only renders new items. The item itself is the key. When items are replaced by copies, key the list: `signal.for().map(render)` keys rows by `item.key`, and `signal.for((item) => item.id).map(render)` by what the function returns. A key that appears more than once gets one row per occurrence; items without a `key` field all get the key `undefined` and are matched by position. A row can be a node or a fragment. When the order changes, only the rows that are out of place are moved, so a focused input in an unmoved row keeps its focus; browsers with `moveBefore` keep it in moved rows too. If `render` throws, the error is reported and the list keeps the rows it had, but stops updating like any binding that throws.
+`signal.map(render)` renders a list from a signal of an array and reuses the rows of items it has seen before, so it only renders new items. The item itself is the key. When items are replaced by copies, key the list: `signal.for().map(render)` keys rows by `item.key`, and `signal.for((item) => item.id).map(render)` by what the function returns. A key that appears more than once gets one row per occurrence; items without a `key` field all get the key `undefined` and are matched by position, so such a row keeps showing the item it was created for. A row can be a node or a fragment. When the order changes, only the rows that are out of place are moved, so a focused input in an unmoved row keeps its focus; browsers with `moveBefore` keep it in moved rows too. If `render` throws, the error is reported and the list keeps the rows it had, but stops updating like any binding that throws.
 
 A list is a live value, so pass it directly as the children. Each place it is bound keeps its own rows. Inside a computed child, give it its own element: `computed(() => (show.get() ? ul(todos.map(render)) : null))`; rows are then reused only while that computed does not recalculate. `render` gets the item's index at the time its row is created.
 
@@ -163,6 +163,8 @@ Bindings are stopped automatically:
 - a live child among other children keeps its place between two comments, so it pauses and resumes correctly also when its nodes are moved, for example out of a JSX fragment; a live child that is the only child follows its element
 
 Removal and insertion are detected with a `MutationObserver` on the document, so elements inside a shadow root are not paused.
+
+A page that loads two copies of `@fiorejs/signals` can bind signals from both, but a `computed` or `effect` only tracks signals from its own copy.
 
 An element that is created but never inserted keeps its bindings for as long as its signals live. Bindings are held weakly, so once the element and its signals are no longer referenced, everything can be garbage-collected.
 
