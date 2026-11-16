@@ -656,7 +656,7 @@ export const plugin = {
 
     /** @type {Binding} */
     const binding = {
-      anchor: context.kind === 'child' ? context.marker : context.element,
+      anchor: context.kind === 'child' ? context.anchor : context.element,
       start: () => runIn(null, null, () => effect(() => apply(getter()))),
     };
     follow(binding);

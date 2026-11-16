@@ -439,13 +439,31 @@ test('a very deep bound array does not overflow the stack', () => {
   assert.equal(div({ children: signal(deep) }).textContent, 'x');
 });
 
-test('plugins get the comment before the nodes of a child', () => {
-  let context;
-  const marker = { __proto__: { isMarker: true } };
-  use({ name: 'nodes', bind: (value, apply, ctx) => value === marker && ((context = ctx), apply('hi'), true) });
-  div({ children: marker });
+test('plugins get the comment before the nodes of a child as its anchor, or the element for an only child', () => {
+  const before = contexts.length;
+  const only = div({ children: signal('a') });
+  div({ children: ['<', signal('b')] });
+  const [lone, withSibling] = contexts.slice(before);
 
-  assert.equal(context.marker.nextSibling.data, 'hi');
+  assert.equal(lone.anchor, only);
+  assert.equal(withSibling.anchor.nodeType, 8);
+  assert.equal(withSibling.anchor.nextSibling.data, 'b');
+});
+
+test('an only live child fills the element without markers', () => {
+  const content = signal('a');
+  const el = div({ children: content });
+  assert.equal(el.childNodes.length, 1);
+
+  content.set([span(), span()]);
+  assert.equal(el.innerHTML, '<span></span><span></span>');
+
+  content.set('b');
+  assert.equal(el.innerHTML, 'b');
+
+  el.replaceChildren();
+  content.set('c');
+  assert.equal(el.innerHTML, 'c', 'the element bounds the child, so it is filled again');
 });
 
 test('a plain object with a nodeType key does not break a live child', () => {
@@ -503,7 +521,7 @@ test('a live child that no plugin binds is shown as text and leaves no markers',
 
 test('a live child taken out of its element ignores later updates', () => {
   const content = signal('a');
-  const el = div({ children: content });
+  const el = div({ children: ['<', content] });
   el.replaceChildren();
 
   assert.doesNotThrow(() => content.set([span()]));
@@ -589,7 +607,7 @@ test('bound children stay correct under random updates that move nodes between t
     const message = `step ${step}`;
     assert.deepEqual(tokens(one.childNodes), ['[', ...text(expected[0]), '|', ...text(expected[1]), ']'], message);
     assert.deepEqual(tokens(two.childNodes), ['(', ...text(expected[2]), ')'], message);
-    slots.forEach((slot, i) => assert.deepEqual(tokens(region(slot.marker)), text(expected[i]), message));
+    slots.forEach((slot, i) => assert.deepEqual(tokens(region(slot.anchor)), text(expected[i]), message));
   }
 });
 

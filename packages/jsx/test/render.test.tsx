@@ -320,6 +320,23 @@ test('plain values, getters and signals with the same name end up in the same pl
   }
 });
 
+test('a lone live child of a fragment keeps updating after the fragment is inserted', () => {
+  const listeners: ((value: unknown) => void)[] = [];
+  const live = Object.create({ isTestLive: true });
+  use({
+    name: 'test-fragment',
+    bind: (value, apply) => value === live && (apply('a'), listeners.push(apply), true),
+  });
+  try {
+    const host = (<div>{(<>{live}</>) as unknown as Child}</div>) as HTMLDivElement;
+    listeners.forEach((apply) => apply('b'));
+
+    assert.equal(host.textContent, 'b');
+  } finally {
+    use({ name: 'test-fragment', bind: () => false });
+  }
+});
+
 test('a key inside a spread object is ignored', () => {
   const props = { key: 'k', class: 'a' };
   const item = (<li {...props}>x</li>) as HTMLLIElement;

@@ -48,8 +48,8 @@ export type BindContext =
   | {
       element: BaseElement;
       kind: 'child';
-      /** The comment before the nodes of the child; it moves with them, for example out of a fragment. */
-      marker: Comment;
+      /** The comment before the nodes of the child, or the element when the child is its only child. */
+      anchor: Node;
     };
 
 export type Plugin = {

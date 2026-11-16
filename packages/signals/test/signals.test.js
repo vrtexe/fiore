@@ -491,7 +491,7 @@ test('a function in an on* attribute or prop is never called as a binding, in an
 test('a live child built elsewhere pauses when the place it moved to is removed', async () => {
   const count = state(1);
   let reads = 0;
-  const holder = div({ children: () => (reads++, count.get()) });
+  const holder = div({ children: ['Count: ', () => (reads++, count.get())] });
   const section = div();
   section.append(...holder.childNodes);
   document.body.append(section);
