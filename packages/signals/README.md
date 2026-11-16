@@ -190,4 +190,10 @@ An element that is created but never inserted keeps its bindings for as long as 
 
 - A computed that returns a nested object, such as `style: computed(() => ({ color }))`, merges that object into the element on every update and never clears a key that disappears from it. Bind each key on its own instead: `style: { color: computed(() => ...) }`.
 - There is no `batch()` yet: outside an effect, every `set()` runs its effects immediately.
+- There is no equality cutoff yet: when a signal changes, everything that reads a computed derived from it runs again, even if the computed's value stayed the same. For text bindings this rewrites the same text; avoid expensive work in effects that read such a computed.
+- Methods must be called on the signal: `count.set(1)` works, but a detached `const { set } = count; set(1)` does not. Pass `(value) => count.set(value)` where a function is needed.
+- `resource().loading` and `resource().error` are signals you can set at runtime, although the types describe them as read-only; setting them yourself confuses the resource.
+- A list or condition that throws while it updates keeps the nodes it had and stops updating, like any binding that throws; the update is not rolled back.
+- A live property whose value is an object that contains more live values (`style: computed(() => ({ color: computed(...) }))`) binds each level one call deeper, so thousands of such levels can overflow the stack. Plain nested objects and arrays have no such limit.
+- Two copies of `@fiorejs/signals` on one page bind each other's signals, but a `computed` or `effect` only tracks signals from its own copy. Two copies of fiorejs's type declarations can also make TypeScript reject a signal as a live value, because the `LIVE` symbol type differs between the copies; make sure the project resolves `fiorejs` once.
 - `refetch()` on a resource whose effect or list row has gone away still starts a load; call it only while the resource is in use.
