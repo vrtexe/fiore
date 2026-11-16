@@ -32,7 +32,7 @@ export default function signals() {
   // 5. Typing into a state updates everything that reads it.
   const name = state('Ada');
   const greeting = name.computed((value) => `Hello, ${value || 'stranger'}!`);
-  const nameField = input.props({ value: name }).on({ input: (event) => name.set(event.currentTarget.value) }).create();
+  const nameField = input.props({ value: name }).attrs({ 'aria-label': 'Name' }).on({ input: (event) => name.set(event.currentTarget.value) }).create();
 
   return flow('signals', 'Signals', 'state holds a value, computed derives one lazily and caches it, effect runs again when what it read changes. Watch the logs to see what reruns.', [
     card('state, computed and effect', counter, [action('+1', () => count.update((value) => value + 1)), action('Set to 0', () => count.set(0))], runs),

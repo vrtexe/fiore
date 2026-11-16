@@ -100,12 +100,12 @@ Bindings follow the document, without any component tree:
 
 ### 7. Async: resource (`flows/resource.js`)
 
-`resource(source, fetcher)` loads a value whenever `source` changes. The fake server answers after a random delay and fails for user 4.
+`resource(source, fetcher)` loads a value whenever `source` changes. The fake server answers after a random delay and fails for user 5.
 
 What to look at:
 
-- **Next three quickly.** Three loads start; the older ones are aborted (see the log), and only the last result is shown.
-- **loading and error.** Both are signals; the card shows them next to the name. Go to user 4 to see an error.
+- **Next three quickly.** Three writes in one click would share one flush and start one load, so the button calls `flush()` after each: three loads start, the older ones are aborted (see the log), and only the last result is shown.
+- **loading and error.** Both are signals; the card shows them next to the name. Go to user 5 to see an error.
 - **Refetch** loads the current user again; **Rename locally** sets the value with `mutate` without loading.
 
 ### 8. The live protocol (`flows/live-protocol.js`)
