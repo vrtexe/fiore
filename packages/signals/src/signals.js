@@ -79,8 +79,8 @@ class Signal {
 }
 
 /**
- * @typedef {{ subs: Set<Computation>, release?(): void, missed?: boolean }} Source
- * @typedef {{ sources: Set<Source>, stale(): void }} Computation
+ * @typedef {{ subs: Set<Computation>, version: number, release?(): void, missed?: boolean }} Source
+ * @typedef {{ sources: Set<Source>, stale(maybe?: boolean): void, saw?(source: Computed<unknown>): void }} Computation
  * @typedef {{ owned: (() => void)[] }} Owner
  */
 
@@ -106,7 +106,7 @@ function track(source) {
 /** @param {Source} source */
 function notify(source) {
   for (const sub of source.subs) {
-    sub.stale();
+    sub.stale(false);
   }
   flush();
 }
@@ -232,6 +232,8 @@ class State extends Signal {
     this._value = value;
     /** @type {Set<Computation>} */
     this.subs = new Set();
+    /** Counts changes, so a reader can tell whether this signal changed since it last read it. */
+    this.version = 0;
   }
 
   get() {
@@ -244,6 +246,7 @@ class State extends Signal {
     forbidInComputed();
     if (!Object.is(next, this._value)) {
       this._value = next;
+      this.version++;
       notify(this);
     }
   }
@@ -266,6 +269,7 @@ class State extends Signal {
     try {
       fn(this._value);
     } finally {
+      this.version++;
       notify(this);
     }
   }
@@ -305,6 +309,10 @@ class Computed extends Signal {
     this._running = false;
     /** Set when an input changes during the current run, so that run is not cached. */
     this._changed = false;
+    /** Counts recalculations that gave a different value or error, so readers can skip a run when nothing changed. */
+    this.version = 0;
+    /** @type {{ value: T } | { error: unknown } | undefined} The last result, kept to compare with the next one. */
+    this._previous = undefined;
   }
 
   stale() {
@@ -316,8 +324,9 @@ class Computed extends Signal {
     this.missed = false;
     this._result = undefined;
     this._changed = this._running;
+    // The readers only learn that this value may have changed; they check its version before they run again.
     for (const sub of this.subs) {
-      sub.stale();
+      sub.stale(true);
     }
   }
 
@@ -345,6 +354,10 @@ class Computed extends Signal {
       } finally {
         this._running = false;
       }
+      if (!sameResult(this._previous, result)) {
+        this.version++;
+      }
+      this._previous = result;
       // An input changed during the run: the readers were told, so the next read runs again instead of using this.
       if (!this._changed) {
         this._result = result;
@@ -353,11 +366,25 @@ class Computed extends Signal {
     if (this.subs.size === 0) {
       this.release();
     }
+    // An effect remembers the version it read, so it can skip a later run if this value did not change.
+    current?.saw?.(this);
     if ('error' in result) {
       throw result.error;
     }
     return result.value;
   }
+}
+
+/**
+ * Whether two results of a computed are the same value (Object.is) or the same error.
+ * @param {{ value: unknown } | { error: unknown } | undefined} previous
+ * @param {{ value: unknown } | { error: unknown }} next
+ */
+function sameResult(previous, next) {
+  if (!previous) {
+    return false;
+  }
+  return 'value' in previous ? 'value' in next && Object.is(previous.value, next.value) : 'error' in next && Object.is(previous.error, next.error);
 }
 
 /**
@@ -382,14 +409,36 @@ export function effect(fn) {
   let stopped = false;
   /** @type {Owner} */
   const scope = { owned: [] };
-  /** @type {Computation & { run(): void, stop(): void }} */
+  /** @type {Computation & { run(): void, stop(): void, dirty: boolean, seen: Computed<unknown>[] | undefined, versions: number[] | undefined, count: number }} */
   const node = {
     sources: new Set(),
-    stale: () => pending.add(node),
+    /** True when a signal it read changed for certain, false when only computeds said they may have changed. */
+    dirty: false,
+    /** The computeds the last run read and their versions then; created on the first computed read, reused after. */
+    seen: undefined,
+    versions: undefined,
+    count: 0,
+    saw(source) {
+      const i = node.count++;
+      (node.seen ??= [])[i] = source;
+      (node.versions ??= [])[i] = source.version;
+    },
+    stale: (maybe) => {
+      if (!maybe) {
+        node.dirty = true;
+      }
+      pending.add(node);
+    },
     run() {
       if (stopped) {
         return;
       }
+      // Only computeds may have changed: run again only if one of them recalculated to a different value.
+      if (!node.dirty && node.seen && node.versions && node.count > 0 && unchanged(node.seen, node.versions, node.count)) {
+        return;
+      }
+      node.dirty = false;
+      node.count = 0;
       reset();
       try {
         const result = runTracked(node, scope, fn);
@@ -401,6 +450,11 @@ export function effect(fn) {
       // Stopped by its error or during its own run: undo what the run set up.
       if (stopped) {
         stop();
+        return;
+      }
+      if (node.seen && node.versions) {
+        node.seen.length = node.count;
+        node.versions.length = node.count;
       }
     },
     stop,
@@ -426,6 +480,9 @@ export function effect(fn) {
     pending.delete(node);
     reset();
     untrackSources(node);
+    node.seen = undefined;
+    node.versions = undefined;
+    node.count = 0;
   }
 
   owner?.owned.push(stop);
@@ -444,6 +501,37 @@ export function effect(fn) {
     flush();
   }
   return stop;
+}
+
+/**
+ * Whether none of the computeds changed since their versions were recorded; each is brought up to date first.
+ * @param {Computed<unknown>[]} seen
+ * @param {number[]} versions
+ * @param {number} count
+ */
+function unchanged(seen, versions, count) {
+  // Reads without a running computation or owner, like untrack, without allocating a closure per check.
+  const previous = current;
+  const previousOwner = owner;
+  current = null;
+  owner = null;
+  try {
+    for (let i = 0; i < count; i++) {
+      const source = /** @type {Computed<unknown>} */ (seen[i]);
+      try {
+        source.get();
+      } catch {
+        // An error is a result of the computed like a value; its version says whether it changed.
+      }
+      if (source.version !== versions[i]) {
+        return false;
+      }
+    }
+    return true;
+  } finally {
+    current = previous;
+    owner = previousOwner;
+  }
 }
 
 /**

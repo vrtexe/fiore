@@ -1508,3 +1508,80 @@ test('what a branch builds stops when the branch changes', () => {
 
   assert.deepEqual(seen, [0, 'stopped', 1, 'stopped']);
 });
+
+test('an effect that reads a computed does not rerun when the computed keeps its value', () => {
+  const user = state({ name: 'Ada', age: 36 });
+  const name = user.computed((value) => value.name);
+  let runs = 0;
+  effect(() => {
+    name.get();
+    runs++;
+  });
+
+  user.set({ ...user.get(), age: 37 });
+  assert.equal(runs, 1);
+
+  user.set({ ...user.get(), name: 'Grace' });
+  assert.equal(runs, 2);
+});
+
+test('a chain of computeds stops at the first one that keeps its value', () => {
+  const count = state(1);
+  const positive = count.computed((value) => value > 0);
+  const label = positive.computed((value) => (value ? 'positive' : 'not positive'));
+  const seen = [];
+  effect(() => seen.push(label.get()));
+
+  count.set(2);
+  count.set(3);
+  count.set(-1);
+
+  assert.deepEqual(seen, ['positive', 'not positive']);
+});
+
+test('an effect that reads a state and a computed reruns when the state changes', () => {
+  const a = state(1);
+  const b = state(1);
+  const parity = b.computed((value) => value % 2);
+  const seen = [];
+  effect(() => seen.push(`${a.get()}:${parity.get()}`));
+
+  a.set(2);
+  b.set(3);
+
+  assert.deepEqual(seen, ['1:1', '2:1']);
+});
+
+test('a computed that starts throwing reruns its readers, and recovers', () => {
+  const input = state('{"a":1}');
+  const parsed = input.computed((text) => JSON.parse(text).a);
+  const seen = [];
+  effect(() => {
+    try {
+      seen.push(parsed.get());
+    } catch {
+      seen.push('error');
+    }
+  });
+
+  input.set('not json');
+  input.set('{"a":1}');
+
+  assert.deepEqual(seen, [1, 'error', 1]);
+});
+
+test('a binding to a computed is not reapplied when the computed keeps its value', async () => {
+  const user = state({ name: 'Ada', age: 36 });
+  const el = span(user.computed((value) => value.name));
+  let writes = 0;
+  new MutationObserver((records) => (writes += records.length)).observe(el, { characterData: true, childList: true, subtree: true });
+
+  user.set({ ...user.get(), age: 37 });
+  await tick();
+  assert.equal(writes, 0);
+
+  user.set({ ...user.get(), name: 'Grace' });
+  await tick();
+  assert.equal(writes, 1);
+  assert.equal(el.textContent, 'Grace');
+});
