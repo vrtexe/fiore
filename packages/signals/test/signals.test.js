@@ -1372,29 +1372,14 @@ test('a computed whose run changes a signal it read through an effect shows the 
   assert.equal(el.textContent, '3');
 });
 
-test('a computed that writes a signal it read shows the value after the write', () => {
-  const page = state(9);
-  const last = state(4);
-  const el = span(
-    page.computed((value) => {
-      if (value > last.get()) page.set(last.get());
-      return String(value);
-    }),
-  );
-
-  assert.equal(el.textContent, '4');
-  page.set(7);
-  assert.equal(el.textContent, '4');
-});
-
 test('an error from a computed run that changed a signal it read is not cached, so the reader recovers', () => {
   const s = state(0);
   const c = computed(() => {
     const value = s.get();
-    if (value === 0) {
-      s.set(1);
-      throw new Error('first');
-    }
+    effect(() => {
+      if (s.get() === 0) s.set(1);
+    });
+    if (value === 0) throw new Error('first');
     return `ok${value}`;
   });
   const seen = [];
@@ -1422,7 +1407,9 @@ test('a computed run that changed a signal it read stops what it built; only the
       alive++;
       return () => alive--;
     });
-    if (value < 1) s.set(value + 1);
+    effect(() => {
+      if (s.get() < 1) s.set(s.get() + 1);
+    });
     return value;
   });
   const stop = effect(() => c.get());
@@ -1436,22 +1423,27 @@ test('a computed run that changed a signal it read stops what it built; only the
   assert.equal(alive, 0);
 });
 
-test('a computed that writes a signal it read on every run is stopped by the loop limit, and signals keep working', async () => {
+test('a computed that sets a signal throws, while effects and untrack inside it may still write', () => {
   const s = state(0);
-  let runs = 0;
-  const c = computed(() => {
-    runs++;
-    const value = s.get();
-    s.set(value + 1);
-    return value;
-  });
+
+  assert.throws(() => computed(() => s.set(1)).get(), /A computed cannot set a signal/);
+  assert.throws(() => computed(() => s.update((value) => value + 1)).get(), /A computed cannot set a signal/);
+  assert.throws(() => computed(() => s.mutate(() => {})).get(), /A computed cannot set a signal/);
+  assert.equal(s.get(), 0);
+
+  computed(() => untrack(() => s.set(2))).get();
+  assert.equal(s.get(), 2);
+});
+
+test('a computed bound to the DOM that sets a signal is reported once, and signals keep working', async () => {
+  const s = state(0);
   const errors = await reported(() => {
-    effect(() => c.get());
+    span(computed(() => s.set(1)));
   });
 
   assert.equal(errors.length, 1);
-  assert.match(String(errors[0].message), /more than 100 times/);
-  assert.ok(runs <= 205, `runs are bounded, got ${runs}`);
+  assert.match(String(errors[0].message), /A computed cannot set a signal/);
+  assert.equal(s.get(), 0);
 
   const t = state(1);
   const seen = [];
