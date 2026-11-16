@@ -1,6 +1,6 @@
 {
   "name": "@fiorejs/create",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Create a fiorejs app with Vite, TypeScript and JSX: npm create @fiorejs",
   "license": "MIT",
   "author": "vrtexe",
