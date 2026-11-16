@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>fiorejs playground</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./style.css" />
+    <script type="importmap">
+      {
+        "imports": {
+          "fiorejs": "/lib/html.js",
+          "fiorejs/svg": "/lib/svg.js",
+          "fiorejs/math": "/lib/math.js",
+          "@fiorejs/signals": "/packages/signals/src/signals.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <header class="top">
+      <h1>fiorejs playground</h1>
+      <p>Each section runs the working tree's <code>lib/</code> and <code>packages/signals/src</code>. Reload after a code change. See <code>demo/README.md</code> for what to try.</p>
+      <nav id="nav"></nav>
+    </header>
+    <main id="app"></main>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
