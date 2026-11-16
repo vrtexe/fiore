@@ -35,6 +35,7 @@ const doubled: number = read(computed(() => 2));
 void doubled;
 
 ul({ children: state(['a', 'b']).map((item) => li({ children: item })) });
+ul({ children: [li('head'), state(['a', 'b']).map((item) => li(item))] });
 ul({ children: state([{ id: 1 }]).for((item) => item.id).map((item) => li({ children: String(item.id) })) });
 const doubledName: number = state(2).computed((value) => value * 2).get();
 void doubledName;

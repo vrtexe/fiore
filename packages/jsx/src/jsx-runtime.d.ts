@@ -5,7 +5,7 @@ import type { SVGEventMapOf } from 'fiorejs/type/svg.dom.d.ts';
 
 type ChildValue = Node | string | number | bigint | boolean | null | undefined | ChildValue[];
 
-/** A child: a value, a live value from a plugin such as @fiorejs/signals, or a list of children. */
+/** A child: a value, a live value such as a signal from @fiorejs/signals, or a list of children. */
 export type Child = Live<ChildValue> | Child[];
 
 type Listener<T extends Element, E> =

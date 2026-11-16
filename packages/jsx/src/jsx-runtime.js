@@ -46,8 +46,8 @@ function settable(proto, name) {
 }
 
 /**
- * Decides whether a prop is set as a property rather than an attribute, from its name alone, so a plain value, a
- * getter and a signal always end up in the same place.
+ * Decides whether a prop is set as a property rather than an attribute, from its name alone, so a plain value and a
+ * live value always end up in the same place.
  * Built-in elements: camel-case names such as textContent or className and the lower-case state properties such as
  * value and checked are properties where the element has them; every other name is an attribute, so null removes it
  * and width="50%" keeps its meaning. A custom element may be defined after its first use and keep class fields off
