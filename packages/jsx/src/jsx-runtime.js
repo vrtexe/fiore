@@ -180,9 +180,13 @@ export function jsx(type, props) {
  * @returns {DocumentFragment}
  */
 export function Fragment({ children }) {
+  const items = flatten(children);
+  // A second item keeps a lone live child between markers instead of filling the div, so it still updates after the
+  // range moves its nodes out.
+  items.push(null);
   // A range moves the nodes in one step; spreading them as arguments overflows for very long lists.
   const range = document.createRange();
-  range.selectNodeContents(element('div')(flatten(children)));
+  range.selectNodeContents(element('div')(items));
   return range.extractContents();
 }
 
