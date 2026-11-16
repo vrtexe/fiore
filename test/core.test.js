@@ -306,6 +306,34 @@ test('false keeps the attribute only for aria-*, data-* and enumerated attribute
   assert.equal(shape.hasAttribute('stroke-dasharray'), false);
 });
 
+test('nested plain objects are merged after the other keys of their level', () => {
+  const order = [];
+  const probe = {
+    set inner(value) {
+      order.push('nested');
+    },
+  };
+  const proto = window.HTMLElement.prototype;
+  Object.defineProperty(proto, 'probe', { get: () => probe, configurable: true });
+  Object.defineProperty(proto, 'flat', { set: () => order.push('flat'), configurable: true });
+  try {
+    div({ props: { probe: { inner: 1 }, flat: 2 } });
+  } finally {
+    delete proto.probe;
+    delete proto.flat;
+  }
+
+  assert.deepEqual(order, ['flat', 'nested']);
+});
+
+test('a later undefined in the builder replaces an earlier value', () => {
+  assert.equal(div.props({ title: 'a' }).props({ title: undefined }).create().title, '');
+});
+
+test('a nested children array is not flattened', () => {
+  assert.equal(div({ children: [['a', 'b'], 'c'] }).textContent, 'a,bc');
+});
+
 test('undefined props leave the property unchanged', () => {
   assert.equal(div({ props: { title: undefined } }).title, '');
 });
@@ -532,6 +560,25 @@ test('an only live child reorders its nodes in place', () => {
 
   content.set([b, d, a]);
   assert.deepEqual([...el.childNodes], [b, d, a]);
+});
+
+test('a live text replaced by another node, as page translation does, still updates', () => {
+  const count = signal('one');
+  const only = signal('one');
+  const el = div({ children: ['Count: ', count] });
+  const lone = div({ children: only });
+  for (const host of [el, lone]) {
+    const text = [...host.childNodes].find((node) => node.nodeType === 3 && node.data === 'one');
+    const font = document.createElement('font');
+    font.textContent = 'ONE';
+    text.replaceWith(font);
+  }
+
+  count.set('two');
+  only.set('two');
+
+  assert.equal(el.textContent, 'Count: two');
+  assert.equal(lone.textContent, 'two');
 });
 
 test('a live child taken out of its element ignores later updates', () => {
