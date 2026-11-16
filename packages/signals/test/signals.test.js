@@ -1777,3 +1777,246 @@ test('a binding to a computed is not reapplied when the computed keeps its value
   assert.equal(writes, 1);
   assert.equal(el.textContent, 'Grace');
 });
+
+test('writes are batched: readers rerun once in the flush, not on each write', () => {
+  const count = state(0);
+  const runs = [];
+  effect(() => runs.push(count.get()));
+  const el = div(count);
+
+  count.set(1);
+  count.set(2);
+  assert.deepEqual(runs, [0]);
+  assert.equal(el.textContent, '0');
+
+  flush();
+  assert.deepEqual(runs, [0, 2]);
+  assert.equal(el.textContent, '2');
+});
+
+test('the flush runs on its own in a microtask', async () => {
+  const count = state(0);
+  const el = div(count);
+
+  count.set(1);
+  await flushed();
+
+  assert.equal(el.textContent, '1');
+});
+
+test('reads return the new value before the flush', () => {
+  const count = state(1);
+  const double = count.computed((n) => n * 2);
+  effect(() => double.get());
+
+  count.set(2);
+
+  assert.equal(count.get(), 2);
+  assert.equal(double.get(), 4);
+});
+
+test('a flush runs a parent effect before its child, and a child replaced by the rerun does not run', () => {
+  const count = state(0);
+  const log = [];
+  // The child subscribes before its parent reads, so it is notified first; creation order still runs the parent first.
+  effect(() => {
+    effect(() => log.push(`child${count.get()}`));
+    log.push(`parent${count.get()}`);
+  });
+
+  count.set(1);
+  flush();
+
+  assert.deepEqual(log, ['child0', 'parent0', 'child1', 'parent1']);
+});
+
+test('a flush runs pre effects, then effects and bindings, then post effects', () => {
+  const count = state(0);
+  const log = [];
+  effect.post(() => log.push(`post${count.get()}`));
+  const el = div(computed(() => (log.push(`binding${count.get()}`), String(count.get()))));
+  effect(() => log.push(`effect${count.get()}`));
+  effect.pre(() => log.push(`pre${count.get()}`));
+  assert.deepEqual(log, ['binding0', 'effect0', 'pre0']);
+
+  flush();
+  assert.deepEqual(log, ['binding0', 'effect0', 'pre0', 'post0']);
+
+  log.length = 0;
+  count.set(1);
+  flush();
+  assert.deepEqual(log, ['pre1', 'binding1', 'effect1', 'post1']);
+  assert.equal(el.textContent, '1');
+});
+
+test('a write in a post effect goes back to the pre effects in the same flush', () => {
+  const count = state(0);
+  const doubled = state(0);
+  const log = [];
+  effect.pre(() => log.push(`pre${doubled.get()}`));
+  effect.post(() => doubled.set(count.get() * 2));
+  flush();
+  log.length = 0;
+
+  count.set(2);
+  flush();
+
+  assert.deepEqual(log, ['pre4']);
+});
+
+test('an effect that reruns more than 100 times in one flush is stopped and the flush throws', () => {
+  const count = state(0);
+  effect(() => {
+    if (count.get() > 0) count.set(count.get() + 1);
+  });
+  const seen = [];
+  effect(() => seen.push(count.get()));
+
+  count.set(1);
+  assert.throws(() => flush(), /ran more than 100 times in one flush/);
+  assert.equal(seen.at(-1), count.get());
+
+  count.set(1000);
+  flush();
+  assert.equal(seen.at(-1), 1000);
+});
+
+test('every effect runs when one throws; the flush throws the first error and reports the others', async () => {
+  const count = state(0);
+  const seen = [];
+  effect(() => {
+    if (count.get() > 0) throw new Error('first');
+  });
+  effect(() => {
+    if (count.get() > 0) throw new Error('second');
+  });
+  effect(() => seen.push(count.get()));
+
+  const errors = [];
+  const previous = globalThis.reportError;
+  globalThis.reportError = (error) => errors.push(error);
+  try {
+    count.set(1);
+    assert.throws(() => flush(), /first/);
+  } finally {
+    globalThis.reportError = previous;
+  }
+
+  assert.deepEqual(seen, [0, 1]);
+  assert.equal(errors.length, 1);
+  assert.match(String(errors[0]), /second/);
+});
+
+test('a waiting tick() rejects with the error of the flush', async () => {
+  const count = state(0);
+  effect(() => {
+    if (count.get() > 0) throw new Error('flush failed');
+  });
+
+  count.set(1);
+
+  await assert.rejects(flushed(), /flush failed/);
+});
+
+test('tick() resolves at once when nothing waits', async () => {
+  let resolved = false;
+  flushed().then(() => (resolved = true));
+  await Promise.resolve();
+
+  assert.equal(resolved, true);
+});
+
+test('flush() inside a running flush does nothing', () => {
+  const count = state(0);
+  const other = state(0);
+  const log = [];
+  effect(() => {
+    if (count.get() > 0) {
+      other.set(count.get());
+      flush();
+      log.push('after nested flush');
+    }
+  });
+  effect(() => log.push(`other${other.get()}`));
+  log.length = 0;
+
+  count.set(1);
+  flush();
+
+  assert.deepEqual(log, ['after nested flush', 'other1']);
+});
+
+test('root() returns a function that stops the effects and bindings created in it', () => {
+  const count = state(0);
+  const seen = [];
+  let el;
+  const dispose = root(() => {
+    effect(() => seen.push(count.get()));
+    el = div(count);
+  });
+
+  dispose();
+  count.set(1);
+  flush();
+
+  assert.deepEqual(seen, [0]);
+  assert.equal(el.textContent, '0');
+});
+
+test('a root created in an effect outlives the rerun of that effect', () => {
+  const count = state(0);
+  const tracked = state(0);
+  const seen = [];
+  effect(() => {
+    count.get();
+    if (seen.length === 0) {
+      root(() => effect(() => seen.push(tracked.get())));
+    }
+  });
+
+  count.set(1);
+  flush();
+  tracked.set(1);
+  flush();
+
+  assert.deepEqual(seen, [0, 1]);
+});
+
+test('root() stops what it created and rethrows when its function throws', () => {
+  const count = state(0);
+  const seen = [];
+
+  assert.throws(
+    () =>
+      root(() => {
+        effect(() => seen.push(count.get()));
+        throw new Error('root failed');
+      }),
+    /root failed/,
+  );
+  count.set(1);
+  flush();
+
+  assert.deepEqual(seen, [0]);
+});
+
+test('a binding stopped by its root does not resume when its element is inserted again', async () => {
+  const count = state(0);
+  let el;
+  const dispose = root(() => {
+    el = div(count);
+  });
+  document.body.append(el);
+  await tick();
+
+  dispose();
+  el.remove();
+  await tick();
+  document.body.append(el);
+  await tick();
+  count.set(1);
+  flush();
+
+  assert.equal(el.textContent, '0');
+  el.remove();
+});

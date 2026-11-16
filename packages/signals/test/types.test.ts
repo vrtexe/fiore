@@ -1,5 +1,5 @@
 import { div, input, li, span, ul } from 'fiorejs';
-import { classList, computed, read, resource, state, type Reactive } from '@fiorejs/signals';
+import { classList, computed, effect, flush, read, resource, root, state, tick, type Reactive } from '@fiorejs/signals';
 // @ts-expect-error the brand is not exported
 import { SIGNAL } from '@fiorejs/signals';
 void SIGNAL;
@@ -63,3 +63,16 @@ div(['x', state(0).if(() => span('some'))]);
 div(state(0).case(0, () => 'none').case((n) => n > 10, () => span('many')).else(() => 'some'));
 // @ts-expect-error a case value has the signal's type
 state(0).case('zero', () => 'none');
+
+const stopPre: () => void = effect.pre(() => () => {});
+const stopPost: () => void = effect.post(() => {});
+void stopPre;
+void stopPost;
+const flushed: void = flush();
+void flushed;
+const settled: Promise<void> = tick();
+void settled;
+const dispose: () => void = root(() => {});
+void dispose;
+// @ts-expect-error root takes a function without arguments
+root((x: number) => x);
