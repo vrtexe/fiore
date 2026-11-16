@@ -238,16 +238,16 @@ test('textContent and innerHTML props are kept when there are no children', () =
   assert.equal(div({ props: { innerHTML: '<b>x</b>' } }).innerHTML, '<b>x</b>');
 });
 
-test('inline handler attributes are never set or bound, in any case; other on* names are', () => {
+test('inline handler attributes are never set or bound, in any case; hyphenated on-* names are', () => {
   const before = contexts.length;
   const el = div({
-    attrs: { onclick: signal('go()'), OnClick: signal('go()'), online: signal('yes'), title: signal('t') },
+    attrs: { onclick: signal('go()'), OnClick: signal('go()'), 'on-line': signal('yes'), title: signal('t') },
     props: { onclick: () => {} },
   });
 
-  assert.deepEqual(contexts.slice(before).map((context) => context.name), ['online', 'title']);
+  assert.deepEqual(contexts.slice(before).map((context) => context.name), ['on-line', 'title']);
   assert.equal(el.hasAttribute('onclick'), false);
-  assert.equal(el.getAttribute('online'), 'yes');
+  assert.equal(el.getAttribute('on-line'), 'yes');
 });
 
 test('a live child that is not applied yet still gets a place', () => {
@@ -867,12 +867,17 @@ test('a lone live child of a fragment keeps updating after the fragment is inser
   assert.equal(html(host), 'before2after');
 });
 
-test('inline handlers without a property, onfocusin and onfocusout, are never set either', () => {
-  const el = input.attrs({ onfocusin: 'window.ran = 1', ONFOCUSOUT: 'window.ran = 2', online: 'yes' }).create();
+test('every attribute named on followed by letters is skipped, also without an element property', () => {
+  const names = { onfocusin: 'a()', ONFOCUSOUT: 'a()', onunload: 'a()', ongesturestart: 'a()', online: 'yes', 'on-line': 'yes' };
+  const el = input.attrs(names).create();
+  const drawing = svg.svg.attrs(names).create();
 
-  assert.equal(el.hasAttribute('onfocusin'), false);
-  assert.equal(el.hasAttribute('onfocusout'), false);
-  assert.equal(el.getAttribute('online'), 'yes');
+  for (const node of [el, drawing]) {
+    for (const name of ['onfocusin', 'onfocusout', 'onunload', 'ongesturestart', 'online']) {
+      assert.equal(node.hasAttribute(name), false, `${node.localName} ${name}`);
+    }
+    assert.equal(node.getAttribute('on-line'), 'yes');
+  }
 });
 
 test('a plain call reads only the own keys of its data object', () => {

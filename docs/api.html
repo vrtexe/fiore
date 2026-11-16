@@ -1008,7 +1008,7 @@ svg.circle.<span class="fn">attrs</span>({ r<span class="punc">:</span> <span cl
                 </tr>
                 <tr>
                   <td><code>attrs(map)</code></td>
-                  <td>Attributes, set with <code>setAttribute</code>. Inline event handlers such as <code>onclick</code>, in any case, are ignored.</td>
+                  <td>Attributes, set with <code>setAttribute</code>. Every name that is <code>on</code> followed by letters only, such as <code>onclick</code>, in any case, is ignored.</td>
                   <td>Merge: later keys win, and <code>null</code> removes an earlier value.</td>
                 </tr>
                 <tr>
@@ -1098,9 +1098,10 @@ button.<span class="fn">with</span>(card).<span class="fn">props</span>({ type<s
             <code>setAttribute(key, value)</code> for each entry. <code>null</code>, <code>undefined</code> and
             <code>false</code> leave the attribute out; every other value, including <code>0</code> and <code>''</code>, is set.
             <code>aria-*</code>, <code>data-*</code>, <code>contenteditable</code>, <code>draggable</code> and <code>spellcheck</code>
-            keep <code>false</code> as <code>"false"</code>. Inline event handlers such as <code>onclick</code>, in any case,
-            are ignored, so no handler string is ever run; use <code>on</code> for listeners. Other names that start with
-            <code>on</code>, such as <code>online</code>, are set. Repeated <code>attrs</code> calls on a builder merge:
+            keep <code>false</code> as <code>"false"</code>. Every name that is <code>on</code> followed by letters only, such as
+            <code>onclick</code> or <code>onunload</code>, in any case, is ignored, so no handler string is ever run; use
+            <code>on</code> for listeners. A hyphenated name such as <code>on-tap</code> is set. Never take attribute names
+            from untrusted data. Repeated <code>attrs</code> calls on a builder merge:
             later keys win, and <code>null</code> removes an earlier value.
           </p>
           <pre class="code"><code>input
