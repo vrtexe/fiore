@@ -125,6 +125,16 @@ import math from 'fiorejs/math';
 
 The [MDN](https://developer.mozilla.org/en-US/docs/Web/API) documentation of each element applies to its props and attributes. TypeScript declarations are included.
 
+### Fragments
+
+`fragment(children)` returns a `DocumentFragment` of the children, for a group of nodes without a wrapping element. It takes the same children as a tag, live values included; a live child of a fragment keeps updating after the fragment is inserted.
+
+```js
+import { fragment, dl, dt, dd } from 'fiorejs';
+
+dl.create(terms.map((term) => fragment([dt(term.name), dd(term.text)])));
+```
+
 ### Events
 
 Each element accepts the events of its own event map, so `body` takes window events such as `popstate`, and `video` takes media events such as `encrypted`. In a listener, `this` and `event.currentTarget` are typed as the element.
@@ -183,7 +193,7 @@ class Observed {
 span(new Observed(clock));
 ```
 
-`context.kind` is `'property'`, `'attribute'` or `'child'`, and `context.element` is the element being built. Properties and attributes come with `context.name`; properties also carry `context.path`, the full key path such as `['style', 'color']`. A child comes with `context.anchor`, a node that stays in the document as long as the child does. A child that is the only item of `children` fills the element, and its anchor is the element. Any other child lives between two empty comments, and its anchor is the first one; the comments move with its nodes, for example out of a fragment, and show in `childNodes` and `innerHTML`, but not in `children`, `textContent` or CSS selectors. An only child belongs to its element: if code moves its nodes to another parent, later updates still go to the element, and nodes that other code adds to the element, for example in `also()`, are removed at its next update; give it a sibling in both cases.
+`context.kind` is `'property'`, `'attribute'` or `'child'`, and `context.element` is the element being built. Properties and attributes come with `context.name`; properties also carry `context.path`, the full key path such as `['style', 'color']`. A child comes with `context.anchor`, a node that stays in the document as long as the child does. A child that is the only item of `children` fills the element, and its anchor is the element; in a `fragment()` it keeps the comments. Any other child lives between two empty comments, and its anchor is the first one; the comments move with its nodes, for example out of a fragment, and show in `childNodes` and `innerHTML`, but not in `children`, `textContent` or CSS selectors. An only child belongs to its element: if code moves its nodes to another parent, later updates still go to the element, and nodes that other code adds to the element, for example in `also()`, are removed at its next update; give it a sibling in both cases.
 
 Only values with a `[LIVE]` method are live. A plain function is a callback, never a getter, in props, attributes and children alike; strings, numbers, booleans, nodes and plain objects without `[LIVE]` are static. Attributes that are inline event handlers of the element, such as `onclick` in any case, are never set or bound, because the browser runs their text as script; other names such as `online` are. As a prop, a handler can be a live value whose value is a function: `props: { onclick: handler }` swaps the handler when `handler` changes. Listeners belong in `on`. A live child that has not called `apply` yet keeps an empty place until it does. A node that one live child places can be taken over by another live child, which then owns it; a node from a live child that is passed as a static child of another element is moved there without its live child being told, so give each node one owner.
 

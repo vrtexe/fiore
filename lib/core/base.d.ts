@@ -11,10 +11,16 @@ export function assignProperties(element: Element, props: object | null | undefi
  */
 export function setAttributes(element: Element, attributes: object | null | undefined): void;
 /**
- * @param {BaseElement} element
+ * Builds a fragment of children, for a group of nodes without a wrapping element.
+ * @param {Children} children
+ * @returns {DocumentFragment}
+ */
+export function fragment(children: Children): DocumentFragment;
+/**
+ * @param {BaseElement | DocumentFragment} element
  * @param {Children|undefined|null} children
  */
-export function replaceChildren(element: BaseElement, children: Children | undefined | null): void;
+export function replaceChildren(element: BaseElement | DocumentFragment, children: Children | undefined | null): void;
 /**
  * Whether the value is live: an object or a function with a [LIVE] method.
  * @param {unknown} value
@@ -30,6 +36,6 @@ export function attachEventListener(element: Element, eventData: object): void;
 /** @import { BaseElement, Children, LiveValue } from '../types/base.dom.d.ts' */
 /** The key of the method that makes a value live; global, so live values work across copies of fiorejs. */
 export const LIVE: unique symbol;
-import type { BaseElement } from '../types/base.dom.d.ts';
 import type { Children } from '../types/base.dom.d.ts';
+import type { BaseElement } from '../types/base.dom.d.ts';
 import type { LiveValue } from '../types/base.dom.d.ts';

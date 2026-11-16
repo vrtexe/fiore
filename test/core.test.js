@@ -11,7 +11,7 @@ const { default: math } = await import('../lib/math.js');
 const { default: svg } = await import('../lib/svg.js');
 const { assignProperties } = await import('../lib/core/base.js');
 const { deprecatedElement } = await import('../lib/core/html.js');
-const { option, select, span } = await import('../lib/html.js');
+const { option, select, span, fragment } = await import('../lib/html.js');
 
 /** Minimal signal used to exercise live values: it records the context it is bound with. */
 const signalPrototype = {
@@ -847,4 +847,22 @@ test('a live list in an only child renders and replaces many rows', () => {
   const next = rows('b', 200);
   content.set(next);
   assert.deepEqual([...el.childNodes], next);
+});
+
+test('fragment() returns a fragment of its children, flattened, with empty values skipped', () => {
+  const result = fragment(['a', [span('b'), [null, 1]], false, undefined]);
+
+  assert.equal(result.nodeType, 11);
+  const host = div();
+  host.append(result);
+  assert.equal(host.innerHTML, 'a<span>b</span>1');
+});
+
+test('a lone live child of a fragment keeps updating after the fragment is inserted', () => {
+  const count = signal(1);
+  const host = div(['before', fragment([count]), 'after']);
+
+  count.set(2);
+
+  assert.equal(html(host), 'before2after');
 });

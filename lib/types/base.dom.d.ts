@@ -46,7 +46,8 @@ export type BindContext =
     }
   | { element: BaseElement; kind: 'attribute'; name: string }
   | {
-      element: BaseElement;
+      /** The element, or the fragment, the child is built into. */
+      element: BaseElement | DocumentFragment;
       kind: 'child';
       /** The comment before the nodes of the child, or the element when the child is its only child. */
       anchor: Node;
