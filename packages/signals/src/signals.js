@@ -463,7 +463,7 @@ export function classList(entries) {
  * @extends {Signal<unknown>}
  */
 class Resource extends Signal {
-  /** @param {(value: any, info: { signal: AbortSignal }) => unknown} load */
+  /** @param {(value: unknown, info: { signal: AbortSignal }) => unknown} load */
   constructor(load) {
     super();
     this._load = load;

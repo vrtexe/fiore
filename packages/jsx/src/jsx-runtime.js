@@ -89,28 +89,6 @@ function hasSetter(proto, name) {
   return false;
 }
 
-/**
- * Flattens nested children with a stack instead of recursion and drops null, undefined and booleans.
- * @param {unknown} children
- * @returns {any[]}
- */
-function flatten(children) {
-  /** @type {unknown[]} */
-  const items = [];
-  const stack = [children];
-  while (stack.length > 0) {
-    const item = stack.pop();
-    if (Array.isArray(item)) {
-      for (let i = item.length - 1; i >= 0; i--) {
-        stack.push(item[i]);
-      }
-    } else if (item != null && typeof item !== 'boolean') {
-      items.push(item);
-    }
-  }
-  return items;
-}
-
 /** @param {unknown} error */
 function report(error) {
   if (typeof globalThis.reportError === 'function') {
@@ -142,7 +120,7 @@ export function jsx(type, props) {
   const definition =
     type.includes('-') && typeof customElements !== 'undefined' ? customElements.get(type) : undefined;
   /** @type {Record<string, any>} */
-  const data = { props: {}, attrs: {}, on: {}, children: flatten(children) };
+  const data = { props: {}, attrs: {}, on: {}, children };
 
   for (const [name, value] of Object.entries(rest)) {
     // A key inside a spread object is ignored like a key written on the element.
@@ -180,13 +158,11 @@ export function jsx(type, props) {
  * @returns {DocumentFragment}
  */
 export function Fragment({ children }) {
-  const items = flatten(children);
-  // A second item keeps a lone live child between markers instead of filling the div, so it still updates after the
-  // range moves its nodes out.
-  items.push(null);
   // A range moves the nodes in one step; spreading them as arguments overflows for very long lists.
   const range = document.createRange();
-  range.selectNodeContents(element('div')(items));
+  // The null keeps a lone live child between markers instead of filling the div, so it still updates after the range
+  // moves its nodes out.
+  range.selectNodeContents(element('div')([children, null]));
   return range.extractContents();
 }
 

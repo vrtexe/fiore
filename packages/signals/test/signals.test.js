@@ -1310,3 +1310,48 @@ test('a computed that throws stops what its run built', () => {
 
   assert.equal(orphan.textContent, '1');
 });
+
+test('a computed read in a list row without a reader gives what it builds to the row', () => {
+  const cleanups = [];
+  const label = computed(() => {
+    effect(() => () => cleanups.push('stopped'));
+    return 'x';
+  });
+  const items = state(['a']);
+  div({ children: items.map((item) => span(label.get() + item)) });
+
+  items.set([]);
+
+  assert.deepEqual(cleanups, ['stopped']);
+});
+
+test('a list inside a computed stops its rows when the computed stops showing it', () => {
+  const show = state(true);
+  const cleanups = [];
+  const rows = state(['a', 'b']).map((item) => {
+    effect(() => () => cleanups.push(item));
+    return span(item);
+  });
+  div({ children: show.computed((visible) => (visible ? div(rows) : null)) });
+
+  show.set(false);
+
+  assert.deepEqual(cleanups.toSorted(), ['a', 'b']);
+});
+
+test('a list inside a computed that recalculates renders its rows again and stops the old ones', () => {
+  const step = state(0);
+  const cleanups = [];
+  let renders = 0;
+  const rows = state(['a', 'b']).map((item) => {
+    renders++;
+    effect(() => () => cleanups.push(item));
+    return span(item);
+  });
+  div({ children: step.computed(() => div(rows)) });
+
+  step.set(1);
+
+  assert.equal(cleanups.length, 2);
+  assert.equal(renders, 4);
+});
