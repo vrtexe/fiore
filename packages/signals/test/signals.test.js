@@ -1355,3 +1355,34 @@ test('a list inside a computed that recalculates renders its rows again and stop
   assert.equal(cleanups.length, 2);
   assert.equal(renders, 4);
 });
+
+test('a computed whose run changes a signal it read through an effect shows the latest value', () => {
+  const s = state(0);
+  const el = span(
+    computed(() => {
+      const value = s.get();
+      effect(() => {
+        if (s.get() < 3) s.set(s.get() + 1);
+      });
+      return String(value);
+    }),
+  );
+
+  assert.equal(s.get(), 3);
+  assert.equal(el.textContent, '3');
+});
+
+test('a computed that writes a signal it read shows the value after the write', () => {
+  const page = state(9);
+  const last = state(4);
+  const el = span(
+    page.computed((value) => {
+      if (value > last.get()) page.set(last.get());
+      return String(value);
+    }),
+  );
+
+  assert.equal(el.textContent, '4');
+  page.set(7);
+  assert.equal(el.textContent, '4');
+});
