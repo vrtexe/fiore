@@ -55,7 +55,7 @@ Every tag is a function with builder methods:
 | `also(fn)` | A function that gets the created element, after the listeners. The element is not in the document yet, so focusing or measuring does not work there. | Add callbacks, run in order. |
 | `create(children)` | The children, like the `children` key: a node, a string, a number, or an array of these. Creates the element and returns it. | |
 
-Children are nodes, strings, numbers or an array of these; an array is one level deep, and a nested array is not flattened. `null`, `undefined`, `true` and `false` are skipped, so `user.isAdmin && badge()` works.
+Children are nodes, strings, numbers or arrays of these, nested as deep as you like, so `[title, items.map(row)]` works. `null`, `undefined`, `true` and `false` are skipped, so `user.isAdmin && badge()` works.
 
 Each method returns a new builder and leaves the old one unchanged, and the top level of each map is copied when you call the method; nested objects such as `style` are used as they are when the element is created. A builder can therefore serve as a template:
 

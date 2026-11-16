@@ -6,11 +6,6 @@
  */
 export function assignProperties(element: Element, props: object | null | undefined, late?: boolean): void;
 /**
- * @param {unknown} value
- * @returns {value is Record<string, unknown>}
- */
-export function isPlainObject(value: unknown): value is Record<string, unknown>;
-/**
  * @param {Element} element
  * @param {object | null | undefined} attributes
  */

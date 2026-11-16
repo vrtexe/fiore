@@ -64,7 +64,7 @@ The name alone decides, never the value, so `width="50%"` stays an attribute and
 
 ### Live values
 
-A prop or child can be a live value, such as a signal from [@fiorejs/signals](https://github.com/vrtexe/fiore/tree/main/packages/signals). A live value goes where a plain value with the same name goes, so a signal holding `null` removes the `title` attribute just like `title={null}`. A function is never live: `class={() => ...}` passes the function itself, so write a derived value as `class={computed(() => ...)}`. On a custom element a function prop is therefore always a callback.
+A prop or child can be a live value, such as a signal from [@fiorejs/signals](https://github.com/vrtexe/fiore/tree/main/packages/signals). On built-in elements a live value goes where a plain value with the same name goes, so a signal holding `null` removes the `title` attribute just like `title={null}`. On a custom element an object value, which includes every live value, goes to the property of that name, so bind an attribute such as `class` or `aria-label` with a plain value or set it in code. A function is never live: `class={() => ...}` passes the function itself, so write a derived value as `class={computed(() => ...)}`. On a custom element a function prop is therefore always a callback.
 
 Everything after `on` is used as the event name, exactly as written, so custom events work the same way as built-in ones: `oncart-add` listens to `cart-add`. A listener can also be an object with `handler` and `options`, which go to `addEventListener`:
 

@@ -316,8 +316,12 @@ test('a later undefined in the builder replaces an earlier value', () => {
   assert.equal(div.props({ title: 'a' }).props({ title: undefined }).create().title, '');
 });
 
-test('a nested children array is not flattened', () => {
-  assert.equal(div({ children: [['a', 'b'], 'c'] }).textContent, 'a,bc');
+test('nested children arrays are flattened, as in live values', () => {
+  const [b, c] = ['b', 'c'].map((tag) => document.createElement(tag));
+  const el = div({ children: ['a', [b, [c, null, 'd']], false] });
+
+  assert.equal(el.innerHTML, 'a<b></b><c></c>d');
+  assert.equal(div([[signal('only')]]).childNodes.length, 1, 'a lone live child inside nested arrays fills the element');
 });
 
 test('undefined props leave the property unchanged', () => {
