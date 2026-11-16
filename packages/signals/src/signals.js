@@ -649,8 +649,7 @@ function forget(binding) {
 export const plugin = {
   name: 'fiorejs-signals',
   bind(value, apply, context) {
-    const isListener = context.kind !== 'child' && /^on/i.test(context.name);
-    if (!isSignal(value) && (typeof value !== 'function' || isListener)) {
+    if (!isSignal(value) && typeof value !== 'function') {
       return false;
     }
     const getter = isSignal(value) ? () => value.get() : /** @type {() => unknown} */ (value);
