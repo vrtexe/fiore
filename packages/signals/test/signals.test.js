@@ -2077,3 +2077,32 @@ test('resource clears its error when its source becomes inactive', async () => {
   assert.equal(data.error.get(), undefined);
   assert.equal(data.loading.get(), false);
 });
+
+test('a case branch that failed to build is built again, and fails again, when its element comes back', async () => {
+  const mode = state('a');
+  let builds = 0;
+  const host = div([
+    '[',
+    mode.case('a', () => span('A')).case('b', () => {
+      builds++;
+      throw new Error('render b failed');
+    }),
+    ']',
+  ]);
+  document.body.append(host);
+  await tick();
+
+  const first = await reported(() => mode.set('b'));
+  assert.equal(first.length, 1);
+  host.remove();
+  await tick();
+
+  const again = await reported(async () => {
+    document.body.append(host);
+    await tick();
+  });
+
+  assert.equal(builds, 2);
+  assert.match(String(again[0]), /render b failed/);
+  host.remove();
+});

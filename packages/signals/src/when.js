@@ -68,12 +68,14 @@ export class When {
           typeof match === 'function' ? match(current) : Object.is(match, current),
         );
         if (index !== shown) {
+          // Cleared first, so a branch that fails to build is built again on the next run instead of showing the old one.
+          shown = undefined;
           stopBranch();
-          shown = index;
           const branch = this._cases[index];
           /** @type {() => A | B} */
           const render = branch ? branch[1] : this._otherwise;
           ({ value, stop: stopBranch } = own(render));
+          shown = index;
         }
         return value;
       },
