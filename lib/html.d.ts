@@ -1,4 +1,5 @@
 export { element };
+export { blueprint } from "./core/blueprint.js";
 /**
  * @template T
  * @typedef {import('./types/base.dom.d.ts').LiveValue<T>} LiveValue
