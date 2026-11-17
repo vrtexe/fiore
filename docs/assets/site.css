@@ -7,7 +7,8 @@
   --surface-2: #151a20;
   --ink: #f4f2ec;
   --muted: #c9cdc6;
-  --faint: #8a928b;
+  --text: #e3e5e0;
+  --faint: #a4aba4;
   --line: rgba(244, 242, 236, 0.1);
   --line-strong: rgba(244, 242, 236, 0.18);
   --accent: #b8f26d;
@@ -60,7 +61,6 @@ body {
   font-family: var(--sans);
   font-size: 16px;
   line-height: 1.65;
-  -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
 }
 
@@ -227,7 +227,8 @@ pre {
 .docs-nav a {
   padding: 5px 0;
   font-size: 14px;
-  color: var(--muted);
+  font-weight: 450;
+  color: var(--text);
   transition: color 140ms ease;
 }
 
@@ -258,7 +259,7 @@ h1 {
   max-width: 62ch;
   margin: 20px 0 0;
   font-size: 18px;
-  color: var(--muted);
+  color: var(--text);
 }
 
 .docs-source {
@@ -300,7 +301,8 @@ h3 {
 .docs-main p {
   max-width: 72ch;
   margin: 0 0 16px;
-  color: var(--muted);
+  font-weight: 450;
+  color: var(--text);
 }
 
 .docs-main p strong,
@@ -314,7 +316,8 @@ h3 {
   max-width: 72ch;
   margin: 0 0 18px;
   padding-left: 22px;
-  color: var(--muted);
+  font-weight: 450;
+  color: var(--text);
 }
 
 .docs-main li {
@@ -324,13 +327,15 @@ h3 {
 .docs-main code {
   padding: 1px 5px;
   border-radius: 4px;
-  background: rgba(244, 242, 236, 0.07);
+  border: 1px solid var(--line-strong);
+  background: rgba(244, 242, 236, 0.12);
   font-size: 0.9em;
   color: var(--ink);
 }
 
 .docs-main pre code {
   padding: 0;
+  border: 0;
   background: none;
   font-size: inherit;
   color: inherit;
@@ -340,7 +345,7 @@ h3 {
   margin: 20px 0 22px;
   padding: 20px;
   overflow-x: auto;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: 12px;
   background: var(--surface);
   font-size: 13px;
@@ -367,11 +372,12 @@ h3 {
 .note {
   margin: 20px 0;
   padding: 16px 18px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--accent);
   border-radius: 10px;
-  background: rgba(244, 242, 236, 0.03);
+  background: var(--surface-2);
   font-size: 14.5px;
-  color: var(--muted);
+  color: var(--text);
 }
 
 .note strong {
@@ -381,7 +387,7 @@ h3 {
 .table-wrap {
   margin: 18px 0 22px;
   overflow-x: auto;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   border-radius: 12px;
 }
 
