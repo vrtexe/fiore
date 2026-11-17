@@ -8,7 +8,7 @@ Signals for [fiorejs](https://github.com/vrtexe/fiore). Bind a signal to a prope
 npm install fiorejs @fiorejs/signals
 ```
 
-Signals carry the live-value method fiorejs looks for, so there is no setup step.
+Signals carry the live-value method fiorejs looks for, so there is no setup step. The [signals reference](https://vrtexe.github.io/fiore/signals.html) on the documentation site covers the same ground as this README, with a page section per topic.
 
 ## Usage
 
