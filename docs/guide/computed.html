@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Derived values: fiore</title>
+    <meta name="description" content="computed(fn), signal.computed and signal.with: lazy, cached values derived from other signals, and why a computed must not write." />
+    <link rel="canonical" href="https://vrtexe.github.io/fiore/guide/computed.html" />
+    <meta name="theme-color" content="#0a0c0f" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="../assets/site.css" />
+    <script type="module" src="../assets/docs.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <nav class="nav-links" aria-label="Main">
+          <a href="../index.html">Home</a>
+          <a href="../tutorial/">Tutorial</a>
+          <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
+          <a href="../api.html">API</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+        </nav>
+        <a class="btn" href="../tutorial/">Try it</a>
+      </div>
+    </header>
+
+    <div class="wrap docs-layout">
+      <aside class="docs-side">
+        <nav class="docs-nav" aria-label="Documentation" data-nav></nav>
+      </aside>
+
+      <main class="docs-main" id="main">
+        <header class="docs-head">
+          <h1>Derived values</h1>
+          <p class="docs-lead">A computed value is a signal whose value is calculated from other signals. It is calculated when something reads it, kept while something depends on it, and recalculated after an input changed.</p>
+        </header>
+
+        <section id="computed">
+          <h2>computed(fn)</h2>
+          <p>
+            <code>computed(fn)</code> returns a read-only signal. Every signal that <code>fn</code> reads
+            with <code>get()</code> becomes an input. It reads like any signal and can be bound to the DOM
+            or read by an effect.
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { state, computed, effect, flush } from '@fiorejs/signals';
+
+const price = state(10);
+const quantity = state(2);
+const total = computed(() =&gt; price.get() * quantity.get());
+
+effect(() =&gt; console.log('total', total.get())); // logs "total 20"
+
+price.set(20);
+flush(); // logs "total 40"</code></pre>
+          <p>
+            When a signal has one input, <code>signal.computed(fn)</code> is shorter. It passes the value
+            of the signal to <code>fn</code>: <code>price.computed((p) => p * 2)</code>.
+          </p>
+        </section>
+
+        <section id="lazy">
+          <h2>Laziness and caching</h2>
+          <p>
+            A computed does no work until it is read. After the first read it keeps its value while an
+            effect or a binding reads it, and it calculates again on the next read after an input changed.
+            While nothing reads it from an effect or a binding, it does not stay subscribed to its inputs
+            and is recalculated on every read.
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { state, computed, effect } from '@fiorejs/signals';
+
+const price = state(10);
+const total = computed(() =&gt; {
+  console.log('calculating');
+  return price.get() * 2;
+});
+
+total.get(); // logs "calculating"
+total.get(); // logs "calculating" again: nothing depends on it yet
+
+effect(() =&gt; total.get()); // logs "calculating"; from now on the value is kept
+total.get();               // cached, logs nothing</code></pre>
+          <p>
+            A reader of a computed also runs only when the value changed (<code>Object.is</code>). With
+            <code>user.computed((u) => u.name)</code>, a binding does not update when another field of
+            <code>user</code> changes, because the name is the same.
+          </p>
+        </section>
+
+        <section id="errors">
+          <h2>Errors</h2>
+          <p>
+            If <code>fn</code> throws, the computed keeps the error like a value and throws it on every
+            read until an input changes. A reader that catches the error stays subscribed, so it runs again
+            and recovers when the input changes.
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { state, computed, effect, flush } from '@fiorejs/signals';
+
+const text = state('{"id": 1}');
+const parsed = computed(() =&gt; JSON.parse(text.get()));
+
+effect(() =&gt; {
+  try {
+    console.log('id', parsed.get().id);
+  } catch {
+    console.log('invalid JSON');
+  }
+});
+
+text.set('{');
+flush(); // logs "invalid JSON"
+text.set('{"id": 2}');
+flush(); // logs "id 2"</code></pre>
+        </section>
+
+        <section id="no-writes">
+          <h2>No writes inside a computed</h2>
+          <p>
+            A computed derives a value, so it must not set signals. Calling <code>set</code>,
+            <code>update</code> or <code>mutate</code> while a computed runs throws, because a write to its
+            own inputs would loop.
+          </p>
+          <p>
+            To correct a value, derive the corrected one, or correct it where it is set. To react to a
+            change by writing somewhere else, use an <a href="effects.html">effect</a> or an event handler.
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { state, computed } from '@fiorejs/signals';
+
+const page = state(5);
+const last = state(3);
+
+// Wrong: throws "A computed cannot set a signal"
+const broken = computed(() =&gt; {
+  if (page.get() &gt; last.get()) page.set(last.get());
+  return page.get();
+});
+
+// Right: derive the page that is shown
+const shown = computed(() =&gt; Math.min(page.get(), last.get()));
+
+try {
+  broken.get();
+} catch (error) {
+  console.log(error.message);
+}
+console.log(shown.get()); // 3</code></pre>
+        </section>
+
+        <section id="with">
+          <h2>signal.with</h2>
+          <p>
+            <code>signal.with(fn)</code> calls <code>fn</code> with the signal and returns the result. It
+            adds nothing to the signal. Its use is naming a reusable step, so it reads left to right in a
+            chain.
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { state } from '@fiorejs/signals';
+
+const todos = state([
+  { text: 'Write docs', done: true },
+  { text: 'Publish', done: false },
+]);
+
+const open = (list) =&gt; list.computed((items) =&gt; items.filter((item) =&gt; !item.done));
+const count = (list) =&gt; list.computed((items) =&gt; items.length);
+
+console.log(todos.with(open).with(count).get()); // 1</code></pre>
+          <p>
+            Each step returns a signal, so the result is a computed that follows <code>todos</code>. See
+            <a href="../signals.html#computed">the reference</a> for the exact rules of computed values.
+          </p>
+        </section>
+
+        <nav class="pager" aria-label="Pages" data-pager></nav>
+      </main>
+    </div>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <p class="footer-note">MIT licensed. Source on GitHub.</p>
+        <div class="footer-links">
+          <a href="https://www.npmjs.com/package/fiorejs">npm</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+          <a href="https://github.com/vrtexe/fiore/issues">Issues</a>
+          <a href="https://github.com/vrtexe/fiore/releases">Releases</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

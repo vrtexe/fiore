@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Fragments: fiore</title>
+    <meta name="description" content="fragment() groups nodes without a wrapping element. When to use it and how it behaves when inserted." />
+    <link rel="canonical" href="https://vrtexe.github.io/fiore/guide/fragments.html" />
+    <meta name="theme-color" content="#0a0c0f" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="../assets/site.css" />
+    <script type="module" src="../assets/docs.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <nav class="nav-links" aria-label="Main">
+          <a href="../index.html">Home</a>
+          <a href="../tutorial/">Tutorial</a>
+          <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
+          <a href="../api.html">API</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+        </nav>
+        <a class="btn" href="../tutorial/">Try it</a>
+      </div>
+    </header>
+
+    <div class="wrap docs-layout">
+      <aside class="docs-side">
+        <nav class="docs-nav" aria-label="Documentation" data-nav></nav>
+      </aside>
+
+      <main class="docs-main" id="main">
+        <header class="docs-head">
+          <h1>Fragments</h1>
+          <p class="docs-lead">
+            <code>fragment(children)</code> returns a <code>DocumentFragment</code> that holds the children. Use it when a function must return several nodes and a wrapping element would break the markup.
+          </p>
+        </header>
+
+        <section id="fragment">
+          <h2>Creating a fragment</h2>
+          <p>
+            <code>fragment</code> is exported by <code>fiorejs</code>. It takes the same children as
+            a tag: nodes, text, numbers and arrays, with <code>null</code>, <code>undefined</code> and
+            booleans skipped. It returns a native <code>DocumentFragment</code>:
+          </p>
+          <pre class="code" tabindex="0"><code class="language-js">import { dd, dl, dt, fragment } from 'fiorejs';
+
+const terms = [
+  { name: 'Prop', text: 'A property of the element.' },
+  { name: 'Attribute', text: 'An attribute in the markup.' },
+];
+
+const list = dl(terms.map((term) =&gt; fragment([dt(term.name), dd(term.text)])));
+
+document.body.append(list);
+console.log(list.children.length);
+// 4
+          </code></pre>
+          <p>
+            <code>fragment</code> calls <code>document.createDocumentFragment()</code>, so it needs
+            a global <code>document</code>, as every tag does. In a test under Node, run it with a DOM
+            such as jsdom.
+          </p>
+          <p>
+            Each fragment is empty once it is inserted: its children move into the parent, and only
+            they remain. The <code>dl</code> above holds four elements, with no wrapper between
+            them.
+          </p>
+        </section>
+
+        <section id="when">
+          <h2>When to use it</h2>
+          <p>
+            Use a fragment when you need to return or pass around a group of nodes, and the group has
+            no element of its own. Typical cases:
+          </p>
+          <ul>
+            <li>A function that returns a row of cells, a pair such as <code>dt</code> and <code>dd</code>, or several siblings.</li>
+            <li>A parent that only allows certain children, such as <code>tr</code> inside <code>tbody</code> or <code>li</code> inside <code>ul</code>, where an extra <code>div</code> is invalid.</li>
+            <li>A list of nodes you want to insert with one DOM call.</li>
+          </ul>
+          <pre class="code" tabindex="0"><code class="language-js">import { fragment, td, tr } from 'fiorejs';
+
+function cells(user) {
+  return fragment([td(user.name), td(user.role)]);
+}
+
+const row = tr(cells({ name: 'Ada', role: 'Engineer' }));
+
+document.body.append(row);
+console.log(row.children.length);
+// 2
+          </code></pre>
+          <p>
+            You do not need a fragment for an array. An array of children is already accepted
+            anywhere a child is, and arrays flatten; see <a href="children.html#nesting">Children</a>.
+            Reach for <code>fragment</code> when the value has to be one node, for example the return
+            value of a component that other code appends.
+          </p>
+        </section>
+
+        <section id="insert">
+          <h2>Inserting a fragment</h2>
+          <p>
+            A fragment can be appended, inserted or used as a child. Its nodes move into the new
+            parent, and the fragment itself is left empty, as with any <code>DocumentFragment</code>.
+            Do not hold on to the fragment to reach its nodes later. Keep references to the nodes, or
+            to the parent:
+          </p>
+          <pre class="code" tabindex="0"><code class="language-js">import { fragment, li, ul } from 'fiorejs';
+
+const items = fragment([li('one'), li('two')]);
+console.log(items.childNodes.length);
+
+const list = ul.create(items);
+
+console.log(items.childNodes.length, list.children.length);
+// 2
+// 0 2
+          </code></pre>
+        </section>
+
+        <section id="live">
+          <h2>Live children</h2>
+          <p>
+            A fragment takes live values, such as signals, like any other parent. A live child of a
+            fragment keeps updating after the fragment is inserted. Because a fragment empties when it
+            is inserted, a live child in a fragment always sits between two empty comment nodes, which
+            mark where it lives; they move with its nodes. See
+            <a href="binding.html">Binding to the DOM</a> for how updates work.
+          </p>
+          <pre class="code" tabindex="0"><code class="language-js">import { fragment, p, strong } from 'fiorejs';
+import { state } from '@fiorejs/signals';
+
+const count = state(1);
+const note = fragment([strong('Count: '), count]);
+
+const box = p.create(note);
+document.body.append(box);
+console.log(box.innerHTML);
+
+count.set(2);
+await Promise.resolve();
+console.log(box.innerHTML);
+          </code></pre>
+          <p>
+            The signal updates on a microtask, so the second log runs after one
+            <code>await</code>. Outside a <code>fragment</code>, a live child that is the only child
+            of an element needs no comments at all.
+          </p>
+          <p>
+            Next: <a href="svg-math.html">SVG and MathML</a>.
+          </p>
+        </section>
+
+        <nav class="pager" aria-label="Pages" data-pager></nav>
+      </main>
+    </div>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <p class="footer-note">MIT licensed. Source on GitHub.</p>
+        <div class="footer-links">
+          <a href="https://www.npmjs.com/package/fiorejs">npm</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+          <a href="https://github.com/vrtexe/fiore/issues">Issues</a>
+          <a href="https://github.com/vrtexe/fiore/releases">Releases</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

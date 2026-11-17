@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>SVG and MathML: fiore</title>
+    <meta name="description" content="Create SVG and MathML elements with fiorejs/svg and fiorejs/math: separate modules, the right namespaces, and element() per namespace." />
+    <link rel="canonical" href="https://vrtexe.github.io/fiore/guide/svg-math.html" />
+    <meta name="theme-color" content="#0a0c0f" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="../assets/site.css" />
+    <script type="module" src="../assets/docs.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <nav class="nav-links" aria-label="Main">
+          <a href="../index.html">Home</a>
+          <a href="../tutorial/">Tutorial</a>
+          <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
+          <a href="../api.html">API</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+        </nav>
+        <a class="btn" href="../tutorial/">Try it</a>
+      </div>
+    </header>
+
+    <div class="wrap docs-layout">
+      <aside class="docs-side">
+        <nav class="docs-nav" aria-label="Documentation" data-nav></nav>
+      </aside>
+
+      <main class="docs-main" id="main">
+        <header class="docs-head">
+          <h1>SVG and MathML</h1>
+          <p class="docs-lead">
+            SVG and MathML elements live in their own XML namespaces, so they have their own modules: <code>fiorejs/svg</code> and <code>fiorejs/math</code>. They work like the HTML tags, with the same builder and the same children.
+          </p>
+        </header>
+
+        <section id="svg">
+          <h2>SVG</h2>
+          <p>
+            <code>fiorejs/svg</code> exports a function for each SVG element. Each one calls
+            <code>document.createElementNS</code> with the SVG namespace and returns the native
+            element, typed as an <code>SVGElement</code> subtype such as
+            <code>SVGCircleElement</code>:
+          </p>
+          <pre class="code" tabindex="0"><code class="language-js">import { circle, g, svg } from 'fiorejs/svg';
+
+const icon = svg
+  .attrs({ viewBox: '0 0 24 24', width: '48', height: '48', 'aria-hidden': 'true' })
+  .create(
+    g.attrs({ fill: 'none', stroke: 'currentColor', 'stroke-width': '2' }).create([
+      circle.attrs({ cx: '12', cy: '12', r: '9' }).create(),
+    ]),
+  );
+
+document.body.append(icon);
+console.log(icon.namespaceURI);
+// http://www.w3.org/2000/svg
+          </code></pre>
+          <p>
+            SVG geometry and presentation values are attributes, so use <code>attrs</code> for
+            <code>viewBox</code>, <code>cx</code>, <code>d</code> and <code>fill</code>. Hyphenated
+            names such as <code>stroke-width</code> are written as they appear in the markup. Set the
+            class with <code>attrs({ class: '...' })</code>, because <code>className</code> is a
+            read-only object on SVG elements. The <code>style</code> prop works as on HTML elements.
+          </p>
+        </section>
+
+        <section id="names">
+          <h2>Names that clash with HTML</h2>
+          <p>
+            <code>a</code>, <code>style</code>, <code>script</code> and <code>title</code> exist in
+            both modules, and <code>switch</code> is exported as <code>switch_</code>. When you
+            use both, import one module as a namespace, or rename on import:
+          </p>
+          <pre class="code" tabindex="0"><code class="language-js">import { a, div } from 'fiorejs';
+import * as svg from 'fiorejs/svg';
+
+const link = a.props({ href: '/' }).create(
+  svg.svg.attrs({ viewBox: '0 0 10 10' }).create(svg.title('Home')),
+);
+
+document.body.append(div(link));
+console.log(link.firstChild.namespaceURI, link.firstChild.firstChild.namespaceURI);
+// http://www.w3.org/2000/svg http://www.w3.org/2000/svg
+          </code></pre>
+          <p>
+            The default export of <code>fiorejs/svg</code> is an object of all the tags, so
+            <code>import svg from 'fiorejs/svg'</code> gives the same result.
+          </p>
+        </section>
+
+        <section id="math">
+          <h2>MathML</h2>
+          <p>
+            <code>fiorejs/math</code> works the same way with the MathML namespace. Its names follow
+            the MathML elements: <code>math</code>, <code>mi</code>, <code>mn</code>,
+            <code>mo</code>, <code>mfrac</code>, <code>msup</code> and the others.
+          </p>
+          <pre class="code" tabindex="0"><code class="language-js">import { mfrac, mi, mn, mo, math, msup, mrow } from 'fiorejs/math';
+
+const formula = math.create(
+  mrow([
+    mi('x'),
+    mo('='),
+    mfrac([mn(1), msup([mi('y'), mn(2)])]),
+  ]),
+);
+
+document.body.append(formula);
+console.log(formula.namespaceURI);
+// http://www.w3.org/1998/Math/MathML
+          </code></pre>
+          <p>
+            The export <code>a</code> of <code>fiorejs/math</code> is deprecated, because
+            <code>a</code> is not a MathML element. Wrap the math in an HTML <code>a</code>, or set
+            an <code>href</code> attribute.
+          </p>
+        </section>
+
+        <section id="element">
+          <h2>element() per namespace</h2>
+          <p>
+            Every module exports its own <code>element</code>, which creates elements in its
+            namespace. The <code>element</code> from <code>fiorejs</code> makes HTML elements, the
+            one from <code>fiorejs/svg</code> makes SVG elements, and the one from
+            <code>fiorejs/math</code> makes MathML elements. Use the right one for the element you
+            want: <code>element('title')</code> from the HTML module is the document title, not an
+            SVG one.
+          </p>
+          <pre class="code" tabindex="0"><code class="language-js">import { element as html } from 'fiorejs';
+import { element as svg } from 'fiorejs/svg';
+import { element as math } from 'fiorejs/math';
+
+const nodes = [html('title'), svg('title'), math('mi')];
+
+console.log(nodes.map((tag) =&gt; tag().namespaceURI).join('\n'));
+          </code></pre>
+          <p>
+            Each result carries a different namespace: the XHTML namespace for the first, the SVG
+            namespace for the second and the MathML namespace for the third.
+          </p>
+        </section>
+
+        <section id="mixing">
+          <h2>Mixing the three</h2>
+          <p>
+            Nodes from different namespaces can be children of each other, because they are all DOM
+            nodes. An HTML page puts an <code>svg</code> or a <code>math</code> element anywhere
+            HTML elements fit, and <code>foreignObject</code> holds HTML inside SVG. Create each
+            node with the tag of its own namespace, and the browser renders it correctly. <code>fragment</code> is exported by <code>fiorejs</code> only, and it takes nodes of any namespace. See
+            <a href="fragments.html">Fragments</a>.
+          </p>
+          <p>
+            The full list of tags is in the <a href="../api.html">API reference</a>. Next, the
+            reactivity chapter starts with <a href="signals.html">Signals</a>.
+          </p>
+        </section>
+
+        <nav class="pager" aria-label="Pages" data-pager></nav>
+      </main>
+    </div>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <p class="footer-note">MIT licensed. Source on GitHub.</p>
+        <div class="footer-links">
+          <a href="https://www.npmjs.com/package/fiorejs">npm</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+          <a href="https://github.com/vrtexe/fiore/issues">Issues</a>
+          <a href="https://github.com/vrtexe/fiore/releases">Releases</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

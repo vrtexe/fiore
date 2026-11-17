@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Styling: fiore</title>
+    <meta name="description" content="Style fiore elements with classes, live class lists, style objects, CSS custom properties and reusable modifiers." />
+    <link rel="canonical" href="https://vrtexe.github.io/fiore/guide/styling.html" />
+    <meta name="theme-color" content="#0a0c0f" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="../assets/site.css" />
+    <script type="module" src="../assets/docs.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <nav class="nav-links" aria-label="Main">
+          <a href="../index.html">Home</a>
+          <a href="../tutorial/">Tutorial</a>
+          <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
+          <a href="../api.html">API</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+        </nav>
+        <a class="btn" href="../tutorial/">Try it</a>
+      </div>
+    </header>
+
+    <div class="wrap docs-layout">
+      <aside class="docs-side">
+        <nav class="docs-nav" aria-label="Documentation" data-nav></nav>
+      </aside>
+
+      <main class="docs-main" id="main">
+        <header class="docs-head">
+          <h1>Styling</h1>
+          <p class="docs-lead">
+            fiore does not ship a styling system. You write CSS in your own files and connect it to elements with
+            classes, inline styles and custom properties, each of which can follow a signal.
+          </p>
+        </header>
+
+        <section id="classes">
+          <h2>className and the class attribute</h2>
+          <p>
+            For HTML elements, <code>className</code> in <code>props</code> and <code>class</code> in <code>attrs</code> do the same job.
+            Use the property in HTML. On SVG elements <code>className</code> is a read-only object in the DOM, so set the
+            <code>class</code> attribute there. Both accept a string, and both accept the result of
+            <code>classList</code>:
+          </p>
+          <pre class="code" tabindex="0"><code class="language-js">import { div } from 'fiorejs';
+import { circle, svg } from 'fiorejs/svg';
+import { classList, state } from '@fiorejs/signals';
+
+const active = state(false);
+const enabled = state(true);
+
+document.body.append(
+  div.props({ className: 'card wide' }).create('Property'),
+  div.attrs({ class: 'card wide' }).create('Attribute'),
+  div.props({ className: classList(['card', { active, disabled: () =&gt; !enabled.get() }]) }).create('Live classes'),
+  svg.create(circle.attrs({ class: classList({ hot: active }), r: 5 }).create()),
+);
+
+active.set(true);</code></pre>
+          <p>
+            <code>classList</code> takes strings, which are always on, and objects whose keys are on while their value is
+            truthy. A value can be a boolean, a signal or a getter. A condition computed from a signal must be a getter or
+            a <code>computed</code>: <code>{ disabled: !enabled.get() }</code> is evaluated once, when the object is created.
+            See <a href="../signals.html#classlist">classList</a>.
+          </p>
+        </section>
+
+        <section id="style-objects">
+          <h2>Style objects and live values</h2>
+          <p>
+            The <code>style</code> prop is an object of camel-case style properties. It is merged into the element's
+            <code>style</code>, so a static object sets each property once. A value in the object can be a signal or
+            a computed, and then that property follows it:
+          </p>
+          <pre class="code" tabindex="0"><code class="language-js">import { div, p } from 'fiorejs';
+import { computed, state } from '@fiorejs/signals';
+
+const progress = state(30);
+const hue = state(200);
+
+document.body.append(
+  div
+    .props({
+      style: {
+        width: computed(() =&gt; `${progress.get()}%`),
+        backgroundColor: computed(() =&gt; `hsl(${hue.get()} 70% 50%)`),
+        height: '8px',
+      },
+    })
+    .create(),
+  p.props({ style: { color: 'red', fontWeight: 'bold' } }).create('Static style object'),
+);
+
+progress.set(80);</code></pre>
+          <p>
+            Bind each property on its own, as above. A computed that returns a whole style object merges that object
+            on every update and never clears a key that is missing from the next one. Numbers are not
+            converted to pixels, so write <code>`${n}px`</code>, as the width does.
+          </p>
+        </section>
+
+        <section id="custom-properties">
+          <h2>CSS custom properties</h2>
+          <p>
+            A custom property such as <code>--accent</code> cannot be assigned through the <code>style</code> object, because
+            the browser only reads custom properties through <code>style.setProperty()</code>. Put them in the
+            <code>style</code> attribute instead. A computed string makes the attribute live, and
+            <code>also()</code> runs code on the created element for a one-off call:
+          </p>
+          <pre class="code" tabindex="0"><code class="language-js">import { div } from 'fiorejs';
+import { computed, state } from '@fiorejs/signals';
+
+const accent = state('#b8f26d');
+
+document.body.append(
+  div.attrs({ class: 'panel', style: computed(() =&gt; `--accent: ${accent.get()}; --gap: 12px`) }).create('Themed panel'),
+  div.attrs({ style: '--accent: tomato' }).also((element) =&gt; element.style.setProperty('--gap', '4px')).create('Static'),
+);
+
+accent.set('#6dd5f2');</code></pre>
+          <p>
+            The live <code>style</code> attribute is replaced as a whole when the signal changes, which is right for a
+            small set of variables. Your stylesheet then uses <code>var(--accent)</code> as usual, so one signal can
+            theme a whole subtree.
+          </p>
+        </section>
+
+        <section id="modifiers">
+          <h2>Reusable modifiers with with()</h2>
+          <p>
+            <code>with(fn)</code> passes the builder to a function that returns a builder. Such a function is a style
+            modifier: it can be applied to any tag, combined with others, or made conditional.
+          </p>
+          <pre class="code" tabindex="0"><code class="language-js">import { button, div } from 'fiorejs';
+
+const card = (builder) =&gt; builder.props({ className: 'card', style: { padding: '16px' } });
+const bordered = (builder) =&gt; builder.attrs({ 'data-bordered': '' });
+const when = (condition, modifier) =&gt; (builder) =&gt; (condition ? modifier(builder) : builder);
+const isAdmin = true;
+
+document.body.append(
+  div.with(card).with(bordered).create('Settings'),
+  div.with(card).with(when(isAdmin, (b) =&gt; b.attrs({ 'data-admin': '' }))).create('Admin tools'),
+  button.with(card).props({ type: 'button' }).create('A button with the same card'),
+);</code></pre>
+          <p>
+            Modifiers apply from left to right and each returns a new builder, so a modifier never changes the builder it
+            was used on. A repeated <code>props</code> call replaces an earlier <code>style</code> object, and a later
+            <code>className</code> replaces an earlier one. Keep one concern per modifier and give modifiers that need
+            to be combined different keys, or merge the styles in a single modifier. For the TypeScript type
+            of a modifier, see <a href="typescript.html#modifiers">TypeScript</a>.
+          </p>
+          <div class="note">
+            A function in <code>props</code> or <code>attrs</code> is a callback, never a getter. Write a value that
+            depends on a signal as <code>computed(() =&gt; …)</code>.
+          </div>
+        </section>
+
+        <nav class="pager" aria-label="Pages" data-pager></nav>
+      </main>
+    </div>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <p class="footer-note">MIT licensed. Source on GitHub.</p>
+        <div class="footer-links">
+          <a href="https://www.npmjs.com/package/fiorejs">npm</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+          <a href="https://github.com/vrtexe/fiore/issues">Issues</a>
+          <a href="https://github.com/vrtexe/fiore/releases">Releases</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

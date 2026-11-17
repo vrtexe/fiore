@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Conditional rendering: fiore</title>
+    <meta name="description" content="Show one of two branches with signal.if().else(), or many with signal.case().else(). Only the shown branch is built." />
+    <link rel="canonical" href="https://vrtexe.github.io/fiore/guide/conditions.html" />
+    <meta name="theme-color" content="#0a0c0f" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="../assets/site.css" />
+    <script type="module" src="../assets/docs.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <nav class="nav-links" aria-label="Main">
+          <a href="../index.html">Home</a>
+          <a href="../tutorial/">Tutorial</a>
+          <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
+          <a href="../api.html">API</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+        </nav>
+        <a class="btn" href="../tutorial/">Try it</a>
+      </div>
+    </header>
+
+    <div class="wrap docs-layout">
+      <aside class="docs-side">
+        <nav class="docs-nav" aria-label="Documentation" data-nav></nav>
+      </aside>
+
+      <main class="docs-main" id="main">
+        <header class="docs-head">
+          <h1>Conditional rendering</h1>
+          <p class="docs-lead">A component runs once, so a plain conditional in markup is decided once. <code>signal.if</code> and <code>signal.case</code> are the live versions: they switch between branches when the signal changes and build only the branch that is shown.</p>
+        </header>
+
+        <section id="why">
+          <h2>Why a plain conditional does not switch</h2>
+          <p>
+            In <code>div(open.get() ? a : b)</code>, <code>open.get()</code> is read once while the element
+            is created, so the result never changes. A live conditional is a value that fiorejs binds, like
+            any other signal.
+          </p>
+        </section>
+
+        <section id="if">
+          <h2>signal.if and else</h2>
+          <p>
+            <code>signal.if(then)</code> shows what <code>then</code> returns while the value of the signal
+            is truthy, and nothing otherwise. <code>.else(otherwise)</code> adds the other branch. Both
+            branches are functions, so only the shown branch is built.
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { div, em, p } from 'fiorejs';
+import { state, flush } from '@fiorejs/signals';
+
+const open = state(false);
+
+const details = () =&gt; {
+  console.log('build details');
+  return p('The details');
+};
+
+const view = div(open.if(details).else(() =&gt; em('closed')));
+document.body.append(view);
+console.log(view.innerHTML); // &lt;em&gt;closed&lt;/em&gt;, details was not built
+
+open.set(true);
+flush(); // logs "build details"
+console.log(view.innerHTML); // &lt;p&gt;The details&lt;/p&gt;</code></pre>
+          <p>
+            A branch is built once, when it is shown, and rebuilt only when the truthiness flips.
+            <code>count.if(...)</code> does not rebuild when <code>count</code> goes from 1 to 2. When the
+            branch changes, the bindings and effects the old branch created stop.
+          </p>
+          <p>
+            To branch on something derived, use a computed: <code>count.computed((n) => n &gt; 10).if(...)</code>.
+            Without <code>.else</code>, nothing is shown while the value is falsy.
+          </p>
+        </section>
+
+        <section id="branches">
+          <h2>What a branch returns</h2>
+          <p>
+            A branch returns text, a node or nothing. It does not track signals itself, since it runs once
+            when it is shown. To show a live value inside a branch, put it in an element:
+            <code>.else(() => span(user.computed((u) =&gt; u.name)))</code>.
+          </p>
+          <p>
+            A branch that throws while it is built keeps the nodes the binding had and stops updating, like
+            any binding that throws. The error is thrown at the end of the flush.
+          </p>
+        </section>
+
+        <section id="case">
+          <h2>signal.case and else</h2>
+          <p>
+            For more than two branches, <code>signal.case(match, render)</code> shows what
+            <code>render</code> returns while the value matches. A function as <code>match</code> is a test
+            on the value; any other value is compared with <code>Object.is</code>. Chain more cases, and add
+            <code>.else(otherwise)</code> for the rest. The first case that matches wins. Without
+            <code>.else</code>, nothing shows when no case matches.
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { div, em, span } from 'fiorejs';
+import { state, flush } from '@fiorejs/signals';
+
+const status = state('loading');
+
+const view = div(
+  status
+    .case('loading', () =&gt; span('Loading'))
+    .case('error', () =&gt; em('Something went wrong'))
+    .case((value) =&gt; value.startsWith('done'), () =&gt; span('Done'))
+    .else(() =&gt; null),
+);
+document.body.append(view);
+
+status.set('done: 3 rows');
+flush();
+console.log(view.textContent); // Done
+
+status.set('idle');
+flush();
+console.log(view.textContent); // empty: no case matches and else gives nothing</code></pre>
+          <p>
+            A branch is rebuilt only when another case wins. Moving from <code>'done: 3 rows'</code> to
+            <code>'done: 4 rows'</code> keeps the same branch. <code>.if(then)</code> is the case
+            <code>Boolean</code>, so <code>.if(then).case(...)</code> works too. To match a function value
+            itself, test it with <code>.case((value) =&gt; value === handler, ...)</code>.
+          </p>
+          <p>
+            See <a href="lists.html">Lists</a> for repeating content, and
+            <a href="../signals.html#conditions">the reference</a> for the exact rules.
+          </p>
+        </section>
+
+        <nav class="pager" aria-label="Pages" data-pager></nav>
+      </main>
+    </div>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <p class="footer-note">MIT licensed. Source on GitHub.</p>
+        <div class="footer-links">
+          <a href="https://www.npmjs.com/package/fiorejs">npm</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+          <a href="https://github.com/vrtexe/fiore/issues">Issues</a>
+          <a href="https://github.com/vrtexe/fiore/releases">Releases</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
