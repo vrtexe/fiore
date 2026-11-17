@@ -755,3 +755,73 @@ details[open] summary {
   font-weight: 600;
   text-decoration: none;
 }
+
+/* Builder / JSX switch: <html data-syntax> picks which [data-syntax] elements show. */
+html:not([data-syntax='jsx']) [data-syntax='jsx'],
+html[data-syntax='jsx'] [data-syntax='builder'] {
+  display: none !important;
+}
+
+.code-pair {
+  margin: 20px 0 22px;
+}
+
+.code-pair > .code {
+  margin: 0;
+  border-top-left-radius: 0;
+}
+
+.syntax-switch {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid rgba(244, 242, 236, 0.32);
+  border-bottom: 0;
+  border-radius: 10px 10px 0 0;
+  background: var(--surface);
+}
+
+.syntax-switch button {
+  padding: 4px 12px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.syntax-switch button[aria-pressed='true'] {
+  background: rgba(184, 242, 109, 0.16);
+  color: var(--accent);
+}
+
+.syntax-switch button:hover {
+  color: var(--ink);
+}
+
+.syntax-switch button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Reference entries in the side navigation open the long reference pages. */
+.docs-nav a.is-reference::after {
+  content: ' ↗';
+  color: var(--faint);
+}
+
+.nav-note {
+  margin: -4px 0 8px;
+  font-size: 12.5px;
+  color: var(--faint);
+}
+
+/* The reference pages lead back to the guide. */
+.docs-nav a.back-link {
+  margin-bottom: 14px;
+  color: var(--accent);
+  font-weight: 600;
+}

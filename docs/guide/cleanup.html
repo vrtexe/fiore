@@ -11,6 +11,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
     />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
     <link rel="stylesheet" href="../assets/site.css" />
     <script type="module" src="../assets/docs.js"></script>
   </head>
@@ -28,6 +29,7 @@
           <a href="../tutorial/">Tutorial</a>
           <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
           <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
           <a href="https://github.com/vrtexe/fiore">GitHub</a>
         </nav>
         <a class="btn" href="../tutorial/">Try it</a>
@@ -93,7 +95,8 @@ flush(); // logs "b bye" once, not twice</code></pre>
             it is created inside an effect, so call its function yourself. If <code>fn</code> throws, what
             it created is stopped.
           </p>
-<pre class="code" tabindex="0"><code class="language-js">import { div } from 'fiorejs';
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div } from 'fiorejs';
 import { root, state, effect, flush } from '@fiorejs/signals';
 
 const count = state(0);
@@ -110,6 +113,23 @@ dispose();
 count.set(2);
 flush(); // logs nothing; the div still shows 1
 console.log(document.body.textContent); // 1</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { root, state, effect, flush } from '@fiorejs/signals';
+
+const count = state(0);
+
+const dispose = root(() =&gt; {
+  effect(() =&gt; console.log('count is', count.get()));
+  document.body.append(&lt;div&gt;{count}&lt;/div&gt;);
+}); // logs "count is 0"
+
+count.set(1);
+flush(); // logs "count is 1"; the div shows 1
+
+dispose();
+count.set(2);
+flush(); // logs nothing; the div still shows 1
+console.log(document.body.textContent); // 1</code></pre>
+</div>
           <p>
             A binding stopped by a root stays stopped, also when its element is inserted again. Use a root
             for the whole app, or for a view you mount and unmount yourself.
@@ -125,7 +145,8 @@ console.log(document.body.textContent); // 1</code></pre>
             place between two comments, so it pauses and resumes also when its nodes are moved. A live child
             that is the only child follows its element.
           </p>
-<pre class="code" tabindex="0"><code class="language-js">import { span } from 'fiorejs';
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { span } from 'fiorejs';
 import { state, flush } from '@fiorejs/signals';
 
 const count = state(0);
@@ -142,6 +163,23 @@ console.log(label.textContent); // 0: paused
 document.body.append(label);
 await new Promise((resolve) =&gt; setTimeout(resolve));
 console.log(label.textContent); // 1: resumed with the current value</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state, flush } from '@fiorejs/signals';
+
+const count = state(0);
+const label = &lt;span&gt;{count}&lt;/span&gt;;
+document.body.append(label);
+
+label.remove();
+await new Promise((resolve) =&gt; setTimeout(resolve)); // let the observer see the removal
+
+count.set(1);
+flush();
+console.log(label.textContent); // 0: paused
+
+document.body.append(label);
+await new Promise((resolve) =&gt; setTimeout(resolve));
+console.log(label.textContent); // 1: resumed with the current value</code></pre>
+</div>
           <p>
             Pausing is not ownership. Content built outside any owner, for example
             <code>view = state(Home())</code>, is only paused when a live child replaces it and it leaves the

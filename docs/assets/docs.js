@@ -1,4 +1,5 @@
 import { highlight } from './highlight.js';
+import { mountSyntax } from './syntax.js';
 
 // Shared script of the documentation pages: the side navigation, previous/next links and code highlighting.
 // Pages live in docs/guide/; each has <nav data-nav>, <nav data-pager> and plain <pre><code class="language-js">.
@@ -51,6 +52,7 @@ const NAV = [
   },
   {
     group: 'Reference',
+    note: 'Every function and option on one page.',
     pages: [
       ['../api.html', 'API reference'],
       ['../signals.html', 'Signals reference'],
@@ -64,15 +66,22 @@ const flat = NAV.flatMap((group) => group.pages);
 
 const side = document.querySelector('[data-nav]');
 if (side) {
-  for (const { group, pages } of NAV) {
+  for (const { group, note, pages } of NAV) {
     const title = document.createElement('p');
     title.className = 'nav-group';
     title.textContent = group;
     side.append(title);
+    if (note) {
+      const text = document.createElement('p');
+      text.className = 'nav-note';
+      text.textContent = note;
+      side.append(text);
+    }
     for (const [slug, label] of pages) {
       const link = document.createElement('a');
       link.href = href(slug);
       link.textContent = label;
+      if (slug.endsWith('.html')) link.className = 'is-reference';
       if (slug === current) {
         link.className = 'is-active';
         link.setAttribute('aria-current', 'page');
@@ -97,4 +106,5 @@ if (pager && index >= 0) {
   add(flat[index + 1], 'next', 'Next');
 }
 
+mountSyntax();
 highlight();

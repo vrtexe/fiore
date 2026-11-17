@@ -11,6 +11,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
     />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
     <link rel="stylesheet" href="../assets/site.css" />
     <script type="module" src="../assets/docs.js"></script>
   </head>
@@ -28,6 +29,7 @@
           <a href="../tutorial/">Tutorial</a>
           <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
           <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
           <a href="https://github.com/vrtexe/fiore">GitHub</a>
         </nav>
         <a class="btn" href="../tutorial/">Try it</a>
@@ -54,7 +56,8 @@
             <code>p</code>, <code>button</code>, <code>input</code> and so on. A tag called with a
             string, a number or a node uses it as the children:
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { div, p, strong } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div, p, strong } from 'fiorejs';
 
 const box = div([p(['Hello, ', strong('fiore')]), p('Second paragraph')]);
 
@@ -62,11 +65,23 @@ document.body.append(box);
 console.log(box.outerHTML);
 // &lt;div&gt;&lt;p&gt;Hello, &lt;strong&gt;fiore&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;Second paragraph&lt;/p&gt;&lt;/div&gt;
           </code></pre>
-          <p>
-            Tags whose names are reserved words in JavaScript get a trailing underscore. The
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const box = (
+  &lt;div&gt;
+    &lt;p&gt;
+      Hello, &lt;strong&gt;fiore&lt;/strong&gt;
+    &lt;/p&gt;
+    &lt;p&gt;Second paragraph&lt;/p&gt;
+  &lt;/div&gt;
+);
+
+document.body.append(box);
+console.log(box.outerHTML);
+// &lt;div&gt;&lt;p&gt;Hello, &lt;strong&gt;fiore&lt;/strong&gt;&lt;/p&gt;&lt;p&gt;Second paragraph&lt;/p&gt;&lt;/div&gt;</code></pre>
+          </div>
+          <p data-syntax="builder">Tags whose names are reserved words in JavaScript get a trailing underscore. The
             <code>var</code> element is exported as <code>var_</code>, and <code>switch</code> in
-            the SVG module as <code>switch_</code>.
-          </p>
+            the SVG module as <code>switch_</code>.</p>
+          <p data-syntax="jsx">In JSX a lowercase tag name is an element and you import nothing. The names are the HTML names, so <code>&lt;var&gt;</code> needs no underscore. A name with a hyphen, such as <code>&lt;user-card&gt;</code>, is a custom element.</p>
         </section>
 
         <section id="return-values">
@@ -77,7 +92,8 @@ console.log(box.outerHTML);
             <code>input</code> returns <code>HTMLInputElement</code>, <code>canvas</code> returns
             <code>HTMLCanvasElement</code>, <code>a</code> returns <code>HTMLAnchorElement</code>.
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { canvas, input } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { canvas, input } from 'fiorejs';
 
 const field = input.props({ type: 'email' }).create();
 const surface = canvas.props({ width: 300, height: 150 }).create();
@@ -85,22 +101,29 @@ const surface = canvas.props({ width: 300, height: 150 }).create();
 console.log(field instanceof HTMLInputElement, surface instanceof HTMLCanvasElement);
 console.log(typeof surface.getContext);
           </code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const field = &lt;input type="email" /&gt;;
+const surface = &lt;canvas width="300" height="150" /&gt;;
+
+console.log(field instanceof HTMLInputElement, surface instanceof HTMLCanvasElement);
+console.log(typeof surface.getContext);</code></pre>
+          </div>
           <p>
             The same exact types check the props, the attributes and the listeners you pass, so
             <code>input.props({ valu: 'x' })</code> is a type error. See
             <a href="props-attrs.html">Props and attributes</a> and <a href="events.html">Events</a>.
           </p>
+          <p data-syntax="jsx">JSX is typed per element too, so <code>&lt;input valu="x" /&gt;</code> is a type error. The expression itself is typed as <code>Node</code>; cast it when you need the element type: <code>(&lt;input /&gt;) as HTMLInputElement</code>. At run time you get the exact native element.</p>
         </section>
 
         <section id="plain-calls">
           <h2>Plain calls</h2>
-          <p>
-            A tag called directly takes one argument. A plain object is the data object, with the
+          <p data-syntax="builder">A tag called directly takes one argument. A plain object is the data object, with the
             keys <code>props</code>, <code>attrs</code>, <code>on</code> and
             <code>children</code>. Anything else, such as a string, an array or a node, is the
-            children:
-          </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { p, strong } from 'fiorejs';
+            children:</p>
+          <p data-syntax="jsx">JSX has no data object. The props go on the tag and the children go between the tags; <a href="props-attrs.html">Props and attributes</a> explains how each prop is applied:</p>
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { p, strong } from 'fiorejs';
 
 const lead = p({
   props: { className: 'lead' },
@@ -111,24 +134,40 @@ const lead = p({
 
 document.body.append(lead);
           </code></pre>
-          <div class="note">
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const lead = (
+  &lt;p className="lead" title="Intro" onclick={() =&gt; console.log('clicked')}&gt;
+    Hello, &lt;strong&gt;fiore&lt;/strong&gt;
+  &lt;/p&gt;
+);
+
+document.body.append(lead);</code></pre>
+          </div>
+          <div class="note" data-syntax="builder">
             <strong>Data that is not yours.</strong> A plain object is always read as the data
             object. If a value comes from parsed JSON, storage or a message, pass it through
             <code>.create(value)</code> or <code>{ children: value }</code>. Otherwise an
             object such as <code>{ "props": { "innerHTML": "..." } }</code> sets
             properties instead of showing text.
           </div>
+          <div class="note" data-syntax="jsx">
+            <strong>Data that is not yours.</strong> Put a value between the tags and it is shown as
+            text. Do not spread an object whose keys come from users, as in
+            <code>&lt;div {...value} /&gt;</code>: a key such as <code>innerHTML</code> would set that
+            property.
+          </div>
         </section>
 
         <section id="builders">
           <h2>Builders</h2>
-          <p>
+          <p data-syntax="jsx">JSX has no builders. Everything a builder sets goes on the tag as props, and a reusable template is a component, a function that returns JSX; see <a href="components.html">Components and state</a>. The builder example below does the same as the JSX one:</p>
+          <p data-syntax="builder">
             A tag also starts a builder. <code>props</code>, <code>attrs</code>, <code>on</code>,
             <code>with</code>, <code>also</code> and <code>create</code> are methods of the tag
             itself, so <code>div.props(...)</code> needs no call before it. A builder records its
             settings and creates the element only at <code>.create()</code>:
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { button } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { button } from 'fiorejs';
 
 const save = button
   .props({ type: 'submit', className: 'primary' })
@@ -138,21 +177,29 @@ const save = button
 
 document.body.append(save);
           </code></pre>
-          <p>
-            Use a plain call for a static element with little configuration, and a builder when you
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const save = (
+  &lt;button type="submit" className="primary" aria-label="Save the form" onclick={() =&gt; console.log('save')}&gt;
+    Save
+  &lt;/button&gt;
+);
+
+document.body.append(save);</code></pre>
+          </div>
+          <p data-syntax="builder">Use a plain call for a static element with little configuration, and a builder when you
             need <code>props</code> and <code>attrs</code> apart, several listeners, or a reusable
-            template. <a href="builders.html">Builders</a> covers the methods in detail.
-          </p>
+            template. <a href="builders.html">Builders</a> covers the methods in detail.</p>
         </section>
 
         <section id="element">
           <h2>Elements by name</h2>
-          <p>
+          <p data-syntax="jsx">In JSX the tag name already is the element name, so <code>&lt;user-card&gt;</code> is a custom element and <code>&lt;tr&gt;</code> is a row. There is no <code>element()</code> to call.</p>
+          <p data-syntax="builder">
             <code>element(name)</code> returns the tag of any element by its name, with the same
             methods as a named export. It is useful when the name is data, or for an element that
             has no named export, such as a custom element:
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { element } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { element } from 'fiorejs';
 
 const card = element('user-card');
 const row = element('tr');
@@ -162,6 +209,11 @@ document.body.append(
   row({ children: 'a row outside a table' }),
 );
           </code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">document.body.append(
+  &lt;user-card name="Ada"&gt;Ada Lovelace&lt;/user-card&gt;,
+  &lt;tr&gt;a row outside a table&lt;/tr&gt;,
+);</code></pre>
+          </div>
           <p>
             <code>element('div')</code> returns a tag equivalent to <code>div</code>. The SVG and
             MathML modules export their own <code>element</code>, which creates elements in their
@@ -171,7 +223,8 @@ document.body.append(
 
         <section id="imports">
           <h2>Import styles</h2>
-          <p>
+          <p data-syntax="jsx">JSX needs no imports for tags. The example below shows the import styles of the builder.</p>
+          <p data-syntax="builder">
             Named imports from <code>fiorejs</code> are the usual style and let a bundler drop the
             tags you do not use. Each namespace is also available as a single object:
           </p>

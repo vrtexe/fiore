@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Signals: fiore</title>
+    <title>Signals reference: fiore</title>
     <meta
       name="description"
       content="Reference for @fiorejs/signals: state, computed, effects, the microtask flush, lists, conditions, resources and cleanup."
@@ -259,6 +259,12 @@
         font-size: 14px;
         color: var(--muted);
         transition: color 140ms ease;
+      }
+
+      .docs-nav a.back-link {
+        margin-bottom: 14px;
+        color: var(--accent);
+        font-weight: 600;
       }
 
       .docs-nav a:hover,
@@ -762,13 +768,14 @@
           <a class="is-current" href="signals.html" aria-current="page">Signals</a>
           <a href="https://github.com/vrtexe/fiore">GitHub</a>
         </nav>
-        <a class="btn" href="guide/quick-start.html">Get started</a>
+        <a class="btn" href="tutorial/">Try it</a>
       </div>
     </header>
 
     <div class="wrap docs-layout">
       <aside class="docs-side">
         <nav class="docs-nav" aria-label="Signals sections">
+          <a class="back-link" href="guide/quick-start.html">← Back to the docs</a>
           <p class="nav-group">Start</p>
           <a href="#overview">Overview</a>
           <a href="#install">Install and imports</a>
@@ -808,7 +815,7 @@
 
       <main class="docs-main" id="main">
         <header class="docs-head">
-          <h1>Signals</h1>
+          <h1>Signals reference</h1>
           <p class="docs-lead">
             <code>@fiorejs/signals</code> binds values to fiorejs elements, so only the places that use a value
             update when it changes. This page covers the primitives, when effects and bindings run, lists,
@@ -1095,7 +1102,7 @@ when.<span class="kw">else</span>(otherwise<span class="punc">:</span> () <span 
   <li>In <code>case</code>, a function is a test on the value; any other value is compared with <code>Object.is</code>. The first case that matches wins, and without <code>.else</code> nothing shows when none matches.</li>
   <li><code>.if(then)</code> is the case <code>Boolean</code>, so <code>.if(then).case(...)</code> works too.</li>
   <li>Branches are functions, so only the shown branch is built. It is built once and rebuilt only when another case wins; <code>count.if(...)</code> does not rebuild when <code>count</code> goes from 1 to 2.</li>
-  <li>When the branch changes, the bindings and effects the old branch created stop. A branch that throws is built again the next time its binding runs.</li>
+  <li>When the branch changes, the bindings and effects the old branch created stop. A branch that throws keeps the nodes the binding had and stops updating, like any binding that throws.</li>
   <li>A branch returns text, nodes or nothing. To show a live value in a branch, put it in an element: <code>.else(() =&gt; span(user.computed(...)))</code>.</li>
 </ul>
 
@@ -1252,7 +1259,7 @@ todos.<span class="fn">mutate</span>((list) <span class="punc">=&gt;</span> list
 
     <script>
       (() => {
-        const navLinks = [...document.querySelectorAll(".docs-nav a")];
+        const navLinks = [...document.querySelectorAll('.docs-nav a[href^="#"]')];
         const sections = navLinks
           .map((link) => document.querySelector(link.getAttribute("href")))
           .filter(Boolean);

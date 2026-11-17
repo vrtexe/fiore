@@ -11,6 +11,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
     />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
     <link rel="stylesheet" href="../assets/site.css" />
     <script type="module" src="../assets/docs.js"></script>
   </head>
@@ -28,6 +29,7 @@
           <a href="../tutorial/">Tutorial</a>
           <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
           <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
           <a href="https://github.com/vrtexe/fiore">GitHub</a>
         </nav>
         <a class="btn" href="../tutorial/">Try it</a>
@@ -72,11 +74,15 @@ npm run dev</code></pre>
             The defaults are Vite, TypeScript, JSX and signals. See
             <a href="create-project.html">Create a project</a> for every option.
           </p>
+          <p data-syntax="jsx">JSX is on by default, so the project is already set up for <code>@fiorejs/jsx</code> and you can write the examples of this site as JSX straight away.</p>
+          <p data-syntax="builder">Builders work with or without JSX, so you can answer no to the JSX question, or pass <code>--no-jsx</code>.</p>
         </section>
 
         <section id="existing-project">
           <h2>Add fiore to a project</h2>
-          <pre class="code" tabindex="0"><code>npm install fiorejs @fiorejs/signals</code></pre>
+          <pre class="code" tabindex="0" data-syntax="builder"><code>npm install fiorejs @fiorejs/signals</code></pre>
+          <pre class="code" tabindex="0" data-syntax="jsx"><code>npm install fiorejs @fiorejs/signals @fiorejs/jsx</code></pre>
+          <p data-syntax="jsx"><code>@fiorejs/jsx</code> is the JSX runtime. Point your compiler at it with <code>jsxImportSource</code>; <a href="jsx.html">JSX</a> shows the setting for each tool.</p>
           <p>
             Both packages are plain ES modules with TypeScript declarations and no runtime
             dependencies. <code>@fiorejs/signals</code> is optional; leave it out if the page does not
@@ -86,18 +92,24 @@ npm run dev</code></pre>
 
         <section id="first-element">
           <h2>Your first element</h2>
-          <p>
-            Every HTML tag is a function. Call it with the children, or start a builder with
+          <p data-syntax="builder">Every HTML tag is a function. Call it with the children, or start a builder with
             <code>props</code>, <code>attrs</code> or <code>on</code> and finish with
-            <code>create</code>. Either way you get the native element back:
-          </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { h1, p, button } from 'fiorejs';
+            <code>create</code>. Either way you get the native element back:</p>
+          <p data-syntax="jsx">Write the tag as markup. Each JSX expression creates its elements once and gives you the native DOM nodes back, with the same functions underneath:</p>
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { h1, p, button } from 'fiorejs';
 
 document.body.append(
   h1('Hello, fiore'),
   p('Elements are plain DOM nodes.'),
   button.on({ click: () => alert('Clicked') }).create('Click me'),
 );</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">document.body.append(
+  &lt;h1&gt;Hello, fiore&lt;/h1&gt;,
+  &lt;p&gt;Elements are plain DOM nodes.&lt;/p&gt;,
+  &lt;button onclick={() =&gt; alert('Clicked')}&gt;Click me&lt;/button&gt;,
+);</code></pre>
+          </div>
         </section>
 
         <section id="first-signal">
@@ -106,7 +118,8 @@ document.body.append(
             A signal holds a value. Put it where a child, a prop or an attribute goes, and that spot
             updates when the value changes. Nothing else re-renders:
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { button, p } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { button, p } from 'fiorejs';
 import { state } from '@fiorejs/signals';
 
 const count = state(0);
@@ -115,6 +128,15 @@ document.body.append(
   button.on({ click: () => count.update((n) => n + 1) }).create('Add one'),
   p(['Clicked ', count, ' times']),
 );</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state } from '@fiorejs/signals';
+
+const count = state(0);
+
+document.body.append(
+  &lt;button onclick={() =&gt; count.update((n) =&gt; n + 1)}&gt;Add one&lt;/button&gt;,
+  &lt;p&gt;Clicked {count} times&lt;/p&gt;,
+);</code></pre>
+          </div>
           <p>
             <code>count</code> is bound in the paragraph, so only that text changes on a click. The
             update runs on a microtask, after the click handler finishes.
@@ -125,7 +147,7 @@ document.body.append(
           <h2>Where to go next</h2>
           <ul>
             <li><a href="elements.html">Elements and tags</a> and <a href="builders.html">Builders</a> explain the core API.</li>
-            <li><a href="signals.html">Signals</a> starts the reactivity chapter.</li>
+            <li><a href="signals.html">Signals guide</a> starts the reactivity chapter.</li>
             <li><a href="components.html">Components and state</a> shows how to structure an app.</li>
             <li><a href="../api.html">API reference</a> and <a href="../signals.html">Signals reference</a> list everything.</li>
           </ul>

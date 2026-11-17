@@ -11,6 +11,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
     />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
     <link rel="stylesheet" href="../assets/site.css" />
     <script type="module" src="../assets/docs.js"></script>
   </head>
@@ -28,6 +29,7 @@
           <a href="../tutorial/">Tutorial</a>
           <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
           <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
           <a href="https://github.com/vrtexe/fiore">GitHub</a>
         </nav>
         <a class="btn" href="../tutorial/">Try it</a>
@@ -55,7 +57,8 @@
             element, typed as an <code>SVGElement</code> subtype such as
             <code>SVGCircleElement</code>:
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { circle, g, svg } from 'fiorejs/svg';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { circle, g, svg } from 'fiorejs/svg';
 
 const icon = svg
   .attrs({ viewBox: '0 0 24 24', width: '48', height: '48', 'aria-hidden': 'true' })
@@ -69,7 +72,20 @@ document.body.append(icon);
 console.log(icon.namespaceURI);
 // http://www.w3.org/2000/svg
           </code></pre>
-          <p>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const icon = (
+  &lt;svg viewBox="0 0 24 24" width="48" height="48" aria-hidden="true"&gt;
+    &lt;g fill="none" stroke="currentColor" stroke-width="2"&gt;
+      &lt;circle cx="12" cy="12" r="9" /&gt;
+    &lt;/g&gt;
+  &lt;/svg&gt;
+);
+
+document.body.append(icon);
+console.log(icon.namespaceURI);
+// http://www.w3.org/2000/svg</code></pre>
+          </div>
+          <p data-syntax="jsx">In JSX, <code>&lt;svg&gt;</code> and the tags inside it are created in the SVG namespace, and you import nothing. On an SVG element every prop except a listener and a <code>style</code> object is an attribute, so <code>viewBox</code>, <code>stroke-width</code> and <code>class</code> are written as they appear in the markup.</p>
+          <p data-syntax="builder">
             SVG geometry and presentation values are attributes, so use <code>attrs</code> for
             <code>viewBox</code>, <code>cx</code>, <code>d</code> and <code>fill</code>. Hyphenated
             names such as <code>stroke-width</code> are written as they appear in the markup. Set the
@@ -80,12 +96,14 @@ console.log(icon.namespaceURI);
 
         <section id="names">
           <h2>Names that clash with HTML</h2>
-          <p>
+          <p data-syntax="jsx">JSX has no import clash, but <code>a</code>, <code>script</code>, <code>style</code> and <code>title</code> always create HTML elements, also inside <code>&lt;svg&gt;</code>. For an SVG <code>title</code> or <code>a</code>, import it from <code>fiorejs/svg</code> and put the node in the markup:</p>
+          <p data-syntax="builder">
             <code>a</code>, <code>style</code>, <code>script</code> and <code>title</code> exist in
             both modules, and <code>switch</code> is exported as <code>switch_</code>. When you
             use both, import one module as a namespace, or rename on import:
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { a, div } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { a, div } from 'fiorejs';
 import * as svg from 'fiorejs/svg';
 
 const link = a.props({ href: '/' }).create(
@@ -96,6 +114,18 @@ document.body.append(div(link));
 console.log(link.firstChild.namespaceURI, link.firstChild.firstChild.namespaceURI);
 // http://www.w3.org/2000/svg http://www.w3.org/2000/svg
           </code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { title } from 'fiorejs/svg';
+
+const link = (
+  &lt;a href="/"&gt;
+    &lt;svg viewBox="0 0 10 10"&gt;{title('Home')}&lt;/svg&gt;
+  &lt;/a&gt;
+);
+
+document.body.append(&lt;div&gt;{link}&lt;/div&gt;);
+console.log(link.firstChild.namespaceURI, link.firstChild.firstChild.namespaceURI);
+// http://www.w3.org/2000/svg http://www.w3.org/2000/svg</code></pre>
+          </div>
           <p>
             The default export of <code>fiorejs/svg</code> is an object of all the tags, so
             <code>import svg from 'fiorejs/svg'</code> gives the same result.
@@ -104,6 +134,7 @@ console.log(link.firstChild.namespaceURI, link.firstChild.firstChild.namespaceUR
 
         <section id="math">
           <h2>MathML</h2>
+          <p data-syntax="jsx">JSX has no MathML tags: <code>&lt;math&gt;</code> and its children create HTML elements. Create MathML with <code>fiorejs/math</code>, as below, and put the nodes in JSX with braces: <code>&lt;p&gt;{formula}&lt;/p&gt;</code>.</p>
           <p>
             <code>fiorejs/math</code> works the same way with the MathML namespace. Its names follow
             the MathML elements: <code>math</code>, <code>mi</code>, <code>mn</code>,
@@ -111,7 +142,7 @@ console.log(link.firstChild.namespaceURI, link.firstChild.firstChild.namespaceUR
           </p>
           <pre class="code" tabindex="0"><code class="language-js">import { mfrac, mi, mn, mo, math, msup, mrow } from 'fiorejs/math';
 
-const formula = math.create(
+const formula = math(
   mrow([
     mi('x'),
     mo('='),
@@ -132,6 +163,7 @@ console.log(formula.namespaceURI);
 
         <section id="element">
           <h2>element() per namespace</h2>
+          <p data-syntax="jsx">This is builder-only. In JSX the tag decides: <code>&lt;svg&gt;</code> and its children are SVG, and every other tag is HTML.</p>
           <p>
             Every module exports its own <code>element</code>, which creates elements in its
             namespace. The <code>element</code> from <code>fiorejs</code> makes HTML elements, the
@@ -160,12 +192,12 @@ console.log(nodes.map((tag) =&gt; tag().namespaceURI).join('\n'));
             Nodes from different namespaces can be children of each other, because they are all DOM
             nodes. An HTML page puts an <code>svg</code> or a <code>math</code> element anywhere
             HTML elements fit, and <code>foreignObject</code> holds HTML inside SVG. Create each
-            node with the tag of its own namespace, and the browser renders it correctly. <code>fragment</code> is exported by <code>fiorejs</code> only, and it takes nodes of any namespace. See
+            node with the tag of its own namespace, and the browser renders it correctly. <code>fragment</code> is exported by <code>fiorejs</code> only, and it takes nodes of any namespace; in JSX the fragment is <code>&lt;&gt;...&lt;/&gt;</code>. See
             <a href="fragments.html">Fragments</a>.
           </p>
           <p>
             The full list of tags is in the <a href="../api.html">API reference</a>. Next, the
-            reactivity chapter starts with <a href="signals.html">Signals</a>.
+            reactivity chapter starts with <a href="signals.html">Signals guide</a>.
           </p>
         </section>
 

@@ -11,6 +11,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
     />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
     <link rel="stylesheet" href="../assets/site.css" />
     <script type="module" src="../assets/docs.js"></script>
   </head>
@@ -28,6 +29,7 @@
           <a href="../tutorial/">Tutorial</a>
           <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
           <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
           <a href="https://github.com/vrtexe/fiore">GitHub</a>
         </nav>
         <a class="btn" href="../tutorial/">Try it</a>
@@ -55,7 +57,8 @@
           <p>
             The result is a live value, so pass it directly as the children of an element.
           </p>
-<pre class="code" tabindex="0"><code class="language-js">import { ul, li } from 'fiorejs';
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { ul, li } from 'fiorejs';
 import { state, flush } from '@fiorejs/signals';
 
 const names = state(['Ada', 'Grace']);
@@ -69,6 +72,24 @@ document.body.append(list); // logs "render Ada", "render Grace"
 names.set([...names.get(), 'Linus']);
 flush(); // logs "render Linus" only
 console.log(list.children.length); // 3</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state, flush } from '@fiorejs/signals';
+
+const names = state(['Ada', 'Grace']);
+
+const list = (
+  &lt;ul&gt;
+    {names.map((name) =&gt; {
+      console.log('render', name);
+      return &lt;li&gt;{name}&lt;/li&gt;;
+    })}
+  &lt;/ul&gt;
+);
+document.body.append(list); // logs "render Ada", "render Grace"
+
+names.set([...names.get(), 'Linus']);
+flush(); // logs "render Linus" only
+console.log(list.children.length); // 3</code></pre>
+</div>
         </section>
 
         <section id="for">
@@ -82,7 +103,8 @@ console.log(list.children.length); // 3</code></pre>
             A row is rendered once, for the item it was created with. A copy with the same key reuses the
             row as it is, so fields that change must be signals.
           </p>
-<pre class="code" tabindex="0"><code class="language-js">import { ul, li } from 'fiorejs';
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { ul, li } from 'fiorejs';
 import { classList, state, flush } from '@fiorejs/signals';
 
 const todos = state([
@@ -102,6 +124,28 @@ todos.get()[0].done.set(true);                // no list work: only a class chan
 todos.set([{ id: 3, text: 'Release', done: state(false) }, ...todos.get()]);
 flush();                                      // logs "render Release at 0"
 console.log(list.children[1].className);      // done</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { classList, state, flush } from '@fiorejs/signals';
+
+const todos = state([
+  { id: 1, text: 'Write docs', done: state(false) },
+  { id: 2, text: 'Publish', done: state(false) },
+]);
+
+const list = (
+  &lt;ul&gt;
+    {todos.for((todo) =&gt; todo.id).map((todo, index) =&gt; {
+      console.log('render', todo.text, 'at', index);
+      return &lt;li class={classList({ done: todo.done })}&gt;{todo.text}&lt;/li&gt;;
+    })}
+  &lt;/ul&gt;
+);
+document.body.append(list);
+
+todos.get()[0].done.set(true);                // no list work: only a class changes
+todos.set([{ id: 3, text: 'Release', done: state(false) }, ...todos.get()]);
+flush();                                      // logs "render Release at 0"
+console.log(list.children[1].className);      // done</code></pre>
+</div>
         </section>
 
         <section id="order">
@@ -132,7 +176,8 @@ console.log(list.children[1].className);      // done</code></pre>
             field all have the key <code>undefined</code> and are matched by position, so such a row keeps
             showing the item it was created for. Give each item a stable key when its content can change.
           </p>
-<pre class="code" tabindex="0"><code class="language-js">import { ul, li } from 'fiorejs';
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { ul, li } from 'fiorejs';
 import { state, flush } from '@fiorejs/signals';
 
 const items = state([{ key: 'a' }, { key: 'a' }, { key: 'b' }]);
@@ -144,6 +189,18 @@ console.log(list.textContent); // a0a1b2
 items.set([{ key: 'b' }, { key: 'a' }, { key: 'a' }]);
 flush();
 console.log(list.textContent); // b2a0a1: rows moved, labels kept</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state, flush } from '@fiorejs/signals';
+
+const items = state([{ key: 'a' }, { key: 'a' }, { key: 'b' }]);
+
+const list = &lt;ul&gt;{items.for().map((item, index) =&gt; &lt;li&gt;{item.key}{index}&lt;/li&gt;)}&lt;/ul&gt;;
+document.body.append(list);
+console.log(list.textContent); // a0a1b2
+
+items.set([{ key: 'b' }, { key: 'a' }, { key: 'a' }]);
+flush();
+console.log(list.textContent); // b2a0a1: rows moved, labels kept</code></pre>
+</div>
         </section>
 
         <section id="performance">
@@ -157,7 +214,7 @@ console.log(list.textContent); // b2a0a1: rows moved, labels kept</code></pre>
           <p>
             If <code>render</code> throws, the list keeps the rows it had and stops updating, like any
             binding that throws. The error is thrown at the end of the flush. See
-            <a href="../signals.html#lists">the reference</a> for the full list rules.
+            <a href="../signals.html#lists">Signals reference</a> for the full list rules.
           </p>
         </section>
 

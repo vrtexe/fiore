@@ -11,6 +11,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
     />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
     <link rel="stylesheet" href="../assets/site.css" />
     <script type="module" src="../assets/docs.js"></script>
   </head>
@@ -28,6 +29,7 @@
           <a href="../tutorial/">Tutorial</a>
           <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
           <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
           <a href="https://github.com/vrtexe/fiore">GitHub</a>
         </nav>
         <a class="btn" href="../tutorial/">Try it</a>
@@ -50,17 +52,23 @@
           <p>
             A signal is a live value. fiorejs binds it to its current value in any of these places:
           </p>
-          <ul>
+          <ul data-syntax="builder">
             <li>as a child: <code>span(count)</code>, or one item of a children array;</li>
             <li>as a prop: <code>input.props({ value: name })</code>;</li>
             <li>as an attribute: <code>div.attrs({ class: computed(...) })</code>.</li>
           </ul>
-<pre class="code" tabindex="0"><code class="language-js">import { div, input, span } from 'fiorejs';
+          <ul data-syntax="jsx">
+            <li>as a child: <code>&lt;span&gt;{count}&lt;/span&gt;</code>, or one item among the children;</li>
+            <li>as a prop: <code>&lt;input value={name} /&gt;</code>;</li>
+            <li>as an attribute: <code>&lt;div class={computed(...)} /&gt;</code>. JSX decides by the prop name whether it is a property (<code>value</code>, <code>className</code>) or an attribute (<code>class</code>, <code>aria-label</code>), so there is no <code>props</code> and <code>attrs</code> split.</li>
+          </ul>
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div, input, span } from 'fiorejs';
 import { computed, state, flush } from '@fiorejs/signals';
 
 const name = state('Ada');
 
-const view = div.create([
+const view = div([
   input.props({ value: name }).create(),
   span(computed(() =&gt; `Hello, ${name.get()}`)),
 ]);
@@ -69,6 +77,22 @@ document.body.append(view);
 name.set('Grace');
 flush();
 console.log(view.querySelector('input').value, view.textContent); // Grace Hello, Grace</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { computed, state, flush } from '@fiorejs/signals';
+
+const name = state('Ada');
+
+const view = (
+  &lt;div&gt;
+    &lt;input value={name} /&gt;
+    &lt;span&gt;{computed(() =&gt; `Hello, ${name.get()}`)}&lt;/span&gt;
+  &lt;/div&gt;
+);
+document.body.append(view);
+
+name.set('Grace');
+flush();
+console.log(view.querySelector('input').value, view.textContent); // Grace Hello, Grace</code></pre>
+</div>
           <p>
             A binding runs once when the element is created and again after each change. A live child can
             return text, a node, a list of nodes or nothing.
@@ -81,7 +105,8 @@ console.log(view.querySelector('input').value, view.textContent); // Grace Hello
             A value inside a nested prop binds too, so each key of <code>style</code> can follow its own
             signal.
           </p>
-<pre class="code" tabindex="0"><code class="language-js">import { div } from 'fiorejs';
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div } from 'fiorejs';
 import { state, flush } from '@fiorejs/signals';
 
 const color = state('tomato');
@@ -93,15 +118,38 @@ document.body.append(box);
 color.set('teal');
 flush();
 console.log(box.style.color); // teal</code></pre>
-          <p>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state, flush } from '@fiorejs/signals';
+
+const color = state('tomato');
+const size = state('16px');
+
+const box = &lt;div style={{ color, fontSize: size }}&gt;Styled&lt;/div&gt;;
+document.body.append(box);
+
+color.set('teal');
+flush();
+console.log(box.style.color); // teal</code></pre>
+</div>
+          <p data-syntax="builder">
             Bindings start when the element is created. A builder used as a template, such as
             <code>const card = div.props({ title })</code>, binds once for every element its
             <code>create</code> makes.
           </p>
-          <div class="note">
+          <p data-syntax="jsx">
+            Bindings start when the element is created. A JSX expression creates its elements once, so a
+            component that returns one binds once for every call.
+          </p>
+          <div class="note" data-syntax="builder">
             <p>
               Bind each key on its own. A computed that returns an object, such as
               <code>style: computed(() => ({ color }))</code>, merges that object into the element on every
+              update and never clears a key that disappears from it.
+            </p>
+          </div>
+          <div class="note" data-syntax="jsx">
+            <p>
+              Bind each key on its own. A computed that returns an object, such as
+              <code>style={computed(() => ({ color }))}</code>, merges that object into the element on every
               update and never clears a key that disappears from it.
             </p>
           </div>
@@ -111,10 +159,11 @@ console.log(box.style.color); // teal</code></pre>
           <h2>Classes</h2>
           <p>
             <code>classList(entries)</code> builds a class string for <code>className</code> or the
-            <code>class</code> attribute. Strings are always on. The keys of an object are on while their
+            <code>class</code> attribute; in JSX, pass it to <code>class</code>. Strings are always on. The keys of an object are on while their
             value is truthy; a value can be a boolean, a signal or a getter.
           </p>
-<pre class="code" tabindex="0"><code class="language-js">import { div } from 'fiorejs';
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div } from 'fiorejs';
 import { classList, state, flush } from '@fiorejs/signals';
 
 const active = state(false);
@@ -127,14 +176,32 @@ active.set(true);
 enabled.set(false);
 flush();
 console.log(card.className); // card active disabled</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { classList, state, flush } from '@fiorejs/signals';
+
+const active = state(false);
+const enabled = state(true);
+
+const card = &lt;div class={classList(['card', { active, disabled: () =&gt; !enabled.get() }])} /&gt;;
+document.body.append(card);
+
+active.set(true);
+enabled.set(false);
+flush();
+console.log(card.className); // card active disabled</code></pre>
+</div>
         </section>
 
         <section id="functions">
           <h2>Functions are not live</h2>
-          <p>
+          <p data-syntax="builder">
             A function is never read as a live value. Wherever it appears in markup it is a callback, as
             in <code>on({ click: fn })</code>. Write a value derived from signals as
             <code>computed(() => ...)</code>.
+          </p>
+          <p data-syntax="jsx">
+            A function is never read as a live value. <code>onclick={fn}</code> is a listener, and
+            <code>class={() => ...}</code> passes the function itself instead of binding it. Write a value
+            derived from signals as <code>class={computed(() => ...)}</code>.
           </p>
           <p>
             The same rule applies to plain reads. <code>open.get() ? a : b</code> in markup is evaluated
@@ -151,7 +218,8 @@ console.log(card.className); // card active disabled</code></pre>
             computed. They stop before it recalculates and when nothing reads it any more, the same as
             inside an <a href="effects.html">effect</a>.
           </p>
-<pre class="code" tabindex="0"><code class="language-js">import { div, p } from 'fiorejs';
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div, p } from 'fiorejs';
 import { computed, effect, state, flush } from '@fiorejs/signals';
 
 const show = state(true);
@@ -170,6 +238,25 @@ show.set(false);
 flush();                         // the computed recalculates; the old effect and binding stop
 count.set(2);
 flush();                         // logs nothing</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { computed, effect, state, flush } from '@fiorejs/signals';
+
+const show = state(true);
+const count = state(0);
+
+const view = computed(() =&gt; {
+  if (!show.get()) return null;
+  effect(() =&gt; console.log('count is', count.get()));
+  return &lt;p&gt;{count}&lt;/p&gt;;
+});
+document.body.append(&lt;div&gt;{view}&lt;/div&gt;); // logs "count is 0"
+
+count.set(1);
+flush();                                 // logs "count is 1"
+show.set(false);
+flush();                                 // the computed recalculates; the old effect and binding stop
+count.set(2);
+flush();                                 // logs nothing</code></pre>
+</div>
           <p>
             The computed builds a new paragraph only when it recalculates, and the bindings of the old one stop then. For a choice between branches, <a href="conditions.html">Conditional rendering</a>
             builds only the branch that is shown and keeps it between changes. For the rest of the rules,

@@ -11,6 +11,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
     />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
     <link rel="stylesheet" href="../assets/site.css" />
     <script type="module" src="../assets/docs.js"></script>
   </head>
@@ -28,6 +29,7 @@
           <a href="../tutorial/">Tutorial</a>
           <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
           <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
           <a href="https://github.com/vrtexe/fiore">GitHub</a>
         </nav>
         <a class="btn" href="../tutorial/">Try it</a>
@@ -84,11 +86,12 @@ flush();                                // logs "effect sees 2", once</code></pr
             Use <code>flush()</code> when the next line needs the DOM, for example to focus or measure an
             element. In async code, <code>await tick()</code> waits for the flush instead.
           </p>
-<pre class="code" tabindex="0"><code class="language-js">import { div, input } from 'fiorejs';
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div, input } from 'fiorejs';
 import { state, flush, tick } from '@fiorejs/signals';
 
 const submitted = state(false);
-const field = input.create();
+const field = input();
 document.body.append(div(submitted.if(() =&gt; field)));
 
 console.log(field.isConnected); // false: the branch was not built yet
@@ -100,6 +103,22 @@ field.focus();
 submitted.set(false);
 await tick();
 console.log(field.isConnected); // false</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state, flush, tick } from '@fiorejs/signals';
+
+const submitted = state(false);
+const field = &lt;input /&gt;;
+document.body.append(&lt;div&gt;{submitted.if(() =&gt; field)}&lt;/div&gt;);
+
+console.log(field.isConnected); // false: the branch was not built yet
+submitted.set(true);
+flush();
+console.log(field.isConnected); // true: flush() applied the binding
+field.focus();
+
+submitted.set(false);
+await tick();
+console.log(field.isConnected); // false</code></pre>
+</div>
         </section>
 
         <section id="phases">
@@ -116,7 +135,8 @@ console.log(field.isConnected); // false</code></pre>
             A write during the flush queues more work, and the flush goes back to the first phase that has
             some. The first run of an <code>effect.post</code> waits for the next flush.
           </p>
-<pre class="code" tabindex="0"><code class="language-js">import { div } from 'fiorejs';
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div } from 'fiorejs';
 import { state, effect, flush, tick } from '@fiorejs/signals';
 
 const n = state(0);
@@ -130,6 +150,20 @@ effect.post(() =&gt; console.log('post', n.get(), 'DOM shows', box.textContent))
 await tick(); // logs "post 0 DOM shows 0": the post effect's first run
 n.set(1);
 flush();      // logs "pre 1", "effect 1", "post 1 DOM shows 1"</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state, effect, flush, tick } from '@fiorejs/signals';
+
+const n = state(0);
+const box = &lt;div&gt;{n}&lt;/div&gt;;
+document.body.append(box);
+
+effect.pre(() =&gt; console.log('pre', n.get()));      // logs "pre 0"
+effect(() =&gt; console.log('effect', n.get()));      // logs "effect 0"
+effect.post(() =&gt; console.log('post', n.get(), 'DOM shows', box.textContent));
+
+await tick(); // logs "post 0 DOM shows 0": the post effect's first run
+n.set(1);
+flush();      // logs "pre 1", "effect 1", "post 1 DOM shows 1"</code></pre>
+</div>
         </section>
 
         <section id="tests">
@@ -139,7 +173,8 @@ flush();      // logs "pre 1", "effect 1", "post 1 DOM shows 1"</code></pre>
             depend on microtasks. An error of an effect or binding is thrown by <code>flush()</code>, so a
             test fails on it instead of seeing an uncaught error later.
           </p>
-<pre class="code" tabindex="0"><code class="language-js">import assert from 'node:assert/strict';
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import assert from 'node:assert/strict';
 import { span } from 'fiorejs';
 import { state, flush } from '@fiorejs/signals';
 
@@ -150,10 +185,21 @@ count.update((n) =&gt; n + 1);
 assert.equal(view.textContent, '0'); // the binding has not run yet
 flush();
 assert.equal(view.textContent, '1');</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import assert from 'node:assert/strict';
+import { state, flush } from '@fiorejs/signals';
+
+const count = state(0);
+const view = &lt;span&gt;{count}&lt;/span&gt;;
+
+count.update((n) =&gt; n + 1);
+assert.equal(view.textContent, '0'); // the binding has not run yet
+flush();
+assert.equal(view.textContent, '1');</code></pre>
+</div>
           <p>
             An effect or binding that throws is stopped, the other effects of the flush still run, and the
             first error is thrown at the end. See <a href="effects.html#errors">Effects</a> for errors and
-            the 100-runs loop limit, and <a href="../signals.html#scheduling">the reference</a> for the exact
+            the 100-runs loop limit, and <a href="../signals.html#scheduling">Signals reference</a> for the exact
             rules.
           </p>
         </section>

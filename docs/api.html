@@ -261,6 +261,12 @@
         transition: color 140ms ease;
       }
 
+      .docs-nav a.back-link {
+        margin-bottom: 14px;
+        color: var(--accent);
+        font-weight: 600;
+      }
+
       .docs-nav a:hover,
       .docs-nav a.is-active {
         color: var(--accent);
@@ -758,13 +764,14 @@
           <a href="signals.html">Signals</a>
           <a href="https://github.com/vrtexe/fiore">GitHub</a>
         </nav>
-        <a class="btn" href="guide/quick-start.html">Get started</a>
+        <a class="btn" href="tutorial/">Try it</a>
       </div>
     </header>
 
     <div class="wrap docs-layout">
       <aside class="docs-side">
         <nav class="docs-nav" aria-label="API sections">
+          <a class="back-link" href="guide/quick-start.html">← Back to the docs</a>
           <p class="nav-group">Start</p>
           <a href="#overview">Overview</a>
           <a href="#install">Install and imports</a>
@@ -839,7 +846,7 @@ document.body.<span class="fn">appendChild</span>(card);</code></pre>
 
         <section id="install">
           <h2>Install and imports</h2>
-          <pre class="code" tabindex="0"><code>npm install -D fiorejs</code></pre>
+          <pre class="code" tabindex="0"><code>npm install fiorejs</code></pre>
           <p>
             The package is ESM. Each entry point maps to a module in <code>lib/</code>, and the
             package has no runtime dependencies.
@@ -897,9 +904,10 @@ document.body.<span class="fn">appendChild</span>(card);</code></pre>
           <p>Named, default and namespace imports are all available:</p>
           <pre class="code" tabindex="0"><code><span class="kw">import</span> { div, button } <span class="kw">from</span> <span class="str">'fiorejs'</span>;
 <span class="kw">import</span> html <span class="kw">from</span> <span class="str">'fiorejs'</span>;
-<span class="kw">import</span> { html, svg, math } <span class="kw">from</span> <span class="str">'fiorejs/global'</span>;
 
-html.<span class="fn">div</span>(<span class="str">'Default object'</span>);
+html.<span class="fn">div</span>(<span class="str">'Default object'</span>);</code></pre>
+          <pre class="code" tabindex="0"><code><span class="kw">import</span> { html, svg, math } <span class="kw">from</span> <span class="str">'fiorejs/global'</span>;
+
 svg.circle.<span class="fn">attrs</span>({ r<span class="punc">:</span> <span class="str">'8'</span> }).<span class="fn">create</span>();</code></pre>
         </section>
 
@@ -1125,7 +1133,7 @@ button.<span class="fn">with</span>(card).<span class="fn">props</span>({ type<s
           <pre class="code" tabindex="0"><code>input
   .<span class="fn">attrs</span>({
     type<span class="punc">:</span> <span class="str">'email'</span>,
-    required<span class="punc">:</span> <span class="str">'true'</span>,
+    required<span class="punc">:</span> <span class="kw">true</span>,
     <span class="str">'aria-label'</span><span class="punc">:</span> <span class="str">'Email address'</span>,
     class<span class="punc">:</span> <span class="str">'field'</span>,
   })
@@ -1650,7 +1658,7 @@ button.<span class="fn">with</span>(card).<span class="fn">props</span>({ type<s
                 <tr>
                   <td><code>Children</code></td>
                   <td><code>lib/types/base.dom.d.ts</code></td>
-                  <td><code>Child | Child[]</code>, where <code>Child</code> is <code>Node | string | number | boolean | null | undefined</code></td>
+                  <td><code>Child | Child[]</code>, where <code>Child</code> is <code>Node | string | number | bigint | boolean | null | undefined</code></td>
                 </tr>
                 <tr>
                   <td><code>ElementProps&lt;T&gt;</code></td>
@@ -1836,7 +1844,7 @@ button.<span class="fn">with</span>(card).<span class="fn">props</span>({ type<s
           }
         });
 
-        const navLinks = [...document.querySelectorAll(".docs-nav a")];
+        const navLinks = [...document.querySelectorAll('.docs-nav a[href^="#"]')];
         const sections = navLinks
           .map((link) => document.querySelector(link.getAttribute("href")))
           .filter(Boolean);

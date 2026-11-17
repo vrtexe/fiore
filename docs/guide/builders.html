@@ -11,6 +11,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
     />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
     <link rel="stylesheet" href="../assets/site.css" />
     <script type="module" src="../assets/docs.js"></script>
   </head>
@@ -28,6 +29,7 @@
           <a href="../tutorial/">Tutorial</a>
           <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
           <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
           <a href="https://github.com/vrtexe/fiore">GitHub</a>
         </nav>
         <a class="btn" href="../tutorial/">Try it</a>
@@ -68,6 +70,7 @@
               </tbody>
             </table>
           </div>
+          <p data-syntax="jsx">JSX has no builder methods. A prop on the tag takes the place of <code>props</code>, <code>attrs</code> and <code>on</code>, and JSX decides from the name of the prop which one it is; see <a href="props-attrs.html">Props and attributes</a> and <a href="events.html">Events</a>. The rest of this page describes the builder.</p>
           <pre class="code" tabindex="0"><code class="language-js">import { a } from 'fiorejs';
 
 const link = a
@@ -105,6 +108,7 @@ console.log(first.hasAttribute('aria-label'), third.hasAttribute('aria-label'));
             such as <code>style</code> are not copied; they are used as they are when the element is
             created, so do not change them between calls.
           </p>
+          <p data-syntax="jsx">This does not apply in JSX. A JSX expression creates its elements once, where it runs, and is not a template. For a reusable template write a component, a function of props that returns JSX; see <a href="components.html">Components and state</a>.</p>
         </section>
 
         <section id="with">
@@ -130,6 +134,7 @@ document.body.append(panel, action);
             type of the tag it is used on: <code>div.with(card).create()</code> is still an
             <code>HTMLDivElement</code>.
           </p>
+          <p data-syntax="jsx"><code>with</code> does not exist in JSX. Share settings with a component, or spread an object of props into the tag: <code>&lt;div {...shared}&gt;</code>.</p>
         </section>
 
         <section id="order">
@@ -151,6 +156,7 @@ document.body.append(panel, action);
             A listener is therefore never called for a prop set during creation, and a callback sees
             the finished element.
           </p>
+          <p data-syntax="jsx">JSX creates the element the same way: the props, then the attributes and the children, then <code>value</code>, <code>selectedIndex</code> and <code>checked</code>, and the listeners.</p>
         </section>
 
         <section id="late-props">
@@ -161,7 +167,8 @@ document.body.append(panel, action);
             <code>option</code>, and a range input clamps its value to <code>min</code> and
             <code>max</code>, which are attributes:
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { input, option, select } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { input, option, select } from 'fiorejs';
 
 const size = select.props({ value: 'M' }).create([option('S'), option('M'), option('L')]);
 const range = input.props({ type: 'range', value: '150' }).attrs({ max: '200' }).create();
@@ -171,6 +178,20 @@ console.log(range.value);
 // M 1
 // 150
           </code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const size = (
+  &lt;select value="M"&gt;
+    &lt;option&gt;S&lt;/option&gt;
+    &lt;option&gt;M&lt;/option&gt;
+    &lt;option&gt;L&lt;/option&gt;
+  &lt;/select&gt;
+);
+const range = &lt;input type="range" value="150" max="200" /&gt;;
+
+console.log(size.value, size.selectedIndex);
+console.log(range.value);
+// M 1
+// 150</code></pre>
+          </div>
           <p>
             Without the late assignment, the range would clamp <code>150</code> to the default
             maximum of 100 before the <code>max</code> attribute existed.
@@ -179,6 +200,7 @@ console.log(range.value);
 
         <section id="also">
           <h2>Running code on the element with also()</h2>
+          <p data-syntax="jsx">There is no <code>also</code> in JSX. A JSX expression is the element, so keep it in a variable: <code>const surface = &lt;canvas width="100" height="100" /&gt;;</code>. It is not in the document yet either.</p>
           <p>
             <code>also(fn)</code> gets the created element after the listeners are attached. The
             element is not in the document yet, so focusing or measuring does not work there:
