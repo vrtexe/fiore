@@ -1,0 +1,47 @@
+{
+  "name": "@fiorejs/signals-lite",
+  "version": "0.1.0",
+  "description": "Small, fast signals for fiorejs: state, computed, effects, a selector and a keyed list.",
+  "license": "MIT",
+  "author": "vrtexe",
+  "type": "module",
+  "sideEffects": false,
+  "keywords": [
+    "fiore",
+    "fiorejs",
+    "signals",
+    "reactivity",
+    "dom"
+  ],
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "default": "./src/index.js"
+    }
+  },
+  "files": [
+    "src"
+  ],
+  "scripts": {
+    "test": "node --test test/lite.test.js"
+  },
+  "peerDependencies": {
+    "fiorejs": "^2.0.0"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "homepage": "https://github.com/vrtexe/fiore/tree/main/packages/signals-lite#readme",
+  "bugs": {
+    "url": "https://github.com/vrtexe/fiore/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vrtexe/fiore.git",
+    "directory": "packages/signals-lite"
+  },
+  "devDependencies": {
+    "fiorejs": "file:../..",
+    "jsdom": "^31.0.1"
+  }
+}
