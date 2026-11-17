@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Tutorial: fiore</title>
+    <meta name="description" content="Learn fiore step by step in your browser: elements, builders, events and signals, with a live editor." />
+    <link rel="canonical" href="https://vrtexe.github.io/fiore/tutorial/" />
+    <meta name="theme-color" content="#0a0c0f" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="../assets/site.css" />
+    <link rel="stylesheet" href="tutorial.css" />
+    <script type="module" src="app.js"></script>
+  </head>
+  <body class="tutorial">
+    <a class="skip-link" href="#lesson">Skip to the lesson</a>
+
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <nav class="nav-links" aria-label="Main">
+          <a href="../index.html">Home</a>
+          <a class="is-current" href="./" aria-current="page">Tutorial</a>
+          <a href="../guide/quick-start.html">Docs</a>
+          <a href="../api.html">API</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+        </nav>
+      </div>
+    </header>
+
+    <div class="tut">
+      <section class="tut-lesson" id="lesson" aria-live="polite">
+        <div class="tut-picker">
+          <label for="tut-select">Lesson</label>
+          <select id="tut-select"></select>
+        </div>
+        <article class="tut-body docs-main" data-body></article>
+        <div class="tut-steps">
+          <button type="button" class="tut-btn" data-prev>Previous</button>
+          <button type="button" class="tut-btn tut-solve" data-solve>Solve</button>
+          <button type="button" class="tut-btn tut-next" data-next>Next</button>
+        </div>
+      </section>
+
+      <section class="tut-work" aria-label="Editor and preview">
+        <div class="tut-bar">
+          <span>main.js</span>
+          <button type="button" class="tut-link" data-reset>Reset</button>
+        </div>
+        <div class="tut-editor" data-editor></div>
+        <div class="tut-bar">
+          <span>Preview</span>
+          <span class="tut-status" data-status></span>
+        </div>
+        <iframe class="tut-preview" title="Preview" sandbox="allow-scripts allow-modals" data-preview></iframe>
+        <pre class="tut-console" data-console aria-label="Console"></pre>
+      </section>
+    </div>
+  </body>
+</html>

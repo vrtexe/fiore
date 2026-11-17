@@ -1,0 +1,202 @@
+/* The tutorial: lesson text on the left, editor, preview and console on the right. */
+body.tutorial {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tut {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(320px, 40%) 1fr;
+  border-top: 1px solid var(--line);
+}
+
+.tut-lesson {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  border-right: 1px solid var(--line);
+}
+
+.tut-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--line);
+  font-size: 13px;
+  color: var(--faint);
+}
+
+.tut-picker select {
+  flex: 1;
+  min-width: 0;
+  padding: 7px 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+
+.tut-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 24px 28px 32px;
+}
+
+.tut-body h1 {
+  margin: 0 0 6px;
+  font-size: 26px;
+  letter-spacing: -0.02em;
+}
+
+.tut-body .tut-chapter {
+  margin: 0 0 18px;
+  color: var(--accent);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tut-steps {
+  display: flex;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--line);
+}
+
+.tut-btn {
+  padding: 8px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.tut-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.tut-btn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.tut-solve {
+  margin-left: auto;
+}
+
+.tut-next {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.tut-work {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1.1fr) auto minmax(0, 1fr) auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+.tut-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 7px 14px;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-2);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--faint);
+}
+
+.tut-bar + .tut-editor + .tut-bar {
+  border-top: 1px solid var(--line);
+}
+
+.tut-link {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.tut-link:hover {
+  color: var(--accent);
+}
+
+.tut-status.is-error {
+  color: #ff8f80;
+}
+
+.tut-editor {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tut-editor .cm-editor {
+  height: 100%;
+  font-size: 13.5px;
+}
+
+.tut-preview {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+}
+
+.tut-console {
+  max-height: 120px;
+  margin: 0;
+  padding: 8px 14px;
+  overflow-y: auto;
+  border-top: 1px solid var(--line);
+  background: var(--bg);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+
+.tut-console:empty {
+  display: none;
+}
+
+.tut-console .is-error {
+  color: #ff8f80;
+}
+
+@media (max-width: 860px) {
+  body.tutorial {
+    height: auto;
+    overflow: visible;
+  }
+
+  .tut {
+    grid-template-columns: 1fr;
+  }
+
+  .tut-lesson {
+    border-right: 0;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .tut-work {
+    grid-template-rows: auto 360px auto 320px auto;
+  }
+}

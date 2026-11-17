@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Quick start: fiore</title>
+    <meta name="description" content="Build your first fiore page in a few minutes: elements, events and signals." />
+    <link rel="canonical" href="https://vrtexe.github.io/fiore/guide/quick-start.html" />
+    <meta name="theme-color" content="#0a0c0f" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="../assets/site.css" />
+    <script type="module" src="../assets/docs.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <nav class="nav-links" aria-label="Main">
+          <a href="../index.html">Home</a>
+          <a href="../tutorial/">Tutorial</a>
+          <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
+          <a href="../api.html">API</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+        </nav>
+        <a class="btn" href="../tutorial/">Try it</a>
+      </div>
+    </header>
+
+    <div class="wrap docs-layout">
+      <aside class="docs-side">
+        <nav class="docs-nav" aria-label="Documentation" data-nav></nav>
+      </aside>
+
+      <main class="docs-main" id="main">
+        <header class="docs-head">
+          <h1>Quick start</h1>
+          <p class="docs-lead">
+            fiore creates real DOM elements with one function per tag. Add
+            <code>@fiorejs/signals</code> and bound spots of the page update on their own. This page
+            gets you from nothing to a working counter in a few minutes.
+          </p>
+        </header>
+
+        <section id="try">
+          <h2>Try it without installing</h2>
+          <p>
+            The <a href="../tutorial/">interactive tutorial</a> runs fiore in your browser, with an
+            editor and a live preview for every lesson. It is the fastest way to learn the API.
+          </p>
+          <a class="try" href="../tutorial/">Open the tutorial →</a>
+        </section>
+
+        <section id="new-project">
+          <h2>Start a new project</h2>
+          <p>
+            <code>npm create @fiorejs</code> asks for the build tool, the language, JSX and signals,
+            then writes a ready project:
+          </p>
+          <pre class="code" tabindex="0"><code>npm create @fiorejs my-app
+cd my-app
+npm install
+npm run dev</code></pre>
+          <p>
+            The defaults are Vite, TypeScript, JSX and signals. See
+            <a href="create-project.html">Create a project</a> for every option.
+          </p>
+        </section>
+
+        <section id="existing-project">
+          <h2>Add fiore to a project</h2>
+          <pre class="code" tabindex="0"><code>npm install fiorejs @fiorejs/signals</code></pre>
+          <p>
+            Both packages are plain ES modules with TypeScript declarations and no runtime
+            dependencies. <code>@fiorejs/signals</code> is optional; leave it out if the page does not
+            need to update. See <a href="installation.html">Installation</a> for import maps and CDNs.
+          </p>
+        </section>
+
+        <section id="first-element">
+          <h2>Your first element</h2>
+          <p>
+            Every HTML tag is a function. Call it with the children, or start a builder with
+            <code>props</code>, <code>attrs</code> or <code>on</code> and finish with
+            <code>create</code>. Either way you get the native element back:
+          </p>
+          <pre class="code" tabindex="0"><code class="language-js">import { h1, p, button } from 'fiorejs';
+
+document.body.append(
+  h1('Hello, fiore'),
+  p('Elements are plain DOM nodes.'),
+  button.on({ click: () => alert('Clicked') }).create('Click me'),
+);</code></pre>
+        </section>
+
+        <section id="first-signal">
+          <h2>Make it update</h2>
+          <p>
+            A signal holds a value. Put it where a child, a prop or an attribute goes, and that spot
+            updates when the value changes. Nothing else re-renders:
+          </p>
+          <pre class="code" tabindex="0"><code class="language-js">import { button, p } from 'fiorejs';
+import { state } from '@fiorejs/signals';
+
+const count = state(0);
+
+document.body.append(
+  button.on({ click: () => count.update((n) => n + 1) }).create('Add one'),
+  p(['Clicked ', count, ' times']),
+);</code></pre>
+          <p>
+            <code>count</code> is bound in the paragraph, so only that text changes on a click. The
+            update runs on a microtask, after the click handler finishes.
+          </p>
+        </section>
+
+        <section id="next">
+          <h2>Where to go next</h2>
+          <ul>
+            <li><a href="elements.html">Elements and tags</a> and <a href="builders.html">Builders</a> explain the core API.</li>
+            <li><a href="signals.html">Signals</a> starts the reactivity chapter.</li>
+            <li><a href="components.html">Components and state</a> shows how to structure an app.</li>
+            <li><a href="../api.html">API reference</a> and <a href="../signals.html">Signals reference</a> list everything.</li>
+          </ul>
+        </section>
+
+        <nav class="pager" aria-label="Pages" data-pager></nav>
+      </main>
+    </div>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <p class="footer-note">MIT licensed. Source on GitHub.</p>
+        <div class="footer-links">
+          <a href="https://www.npmjs.com/package/fiorejs">npm</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+          <a href="https://github.com/vrtexe/fiore/issues">Issues</a>
+          <a href="https://github.com/vrtexe/fiore/releases">Releases</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
