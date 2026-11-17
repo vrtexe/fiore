@@ -11,6 +11,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
     />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
     <link rel="stylesheet" href="../assets/site.css" />
     <script type="module" src="../assets/docs.js"></script>
   </head>
@@ -28,9 +29,10 @@
           <a href="../tutorial/">Tutorial</a>
           <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
           <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
           <a href="https://github.com/vrtexe/fiore">GitHub</a>
         </nav>
-        <a class="btn" href="../tutorial/">Try it</a>
+        <a class="btn" href="quick-start.html">Quick start</a>
       </div>
     </header>
 
@@ -50,14 +52,21 @@
 
         <section id="element-types">
           <h2>Element types per tag</h2>
-          <p>
+          <p data-syntax="jsx">
+            In JSX, tags, attributes, properties and listeners are checked against the element: <code>maxLength</code> is a number on
+            an <code>input</code>, and <code>href</code> is rejected on one. In a listener, <code>event.currentTarget</code> is the
+            element, so <code>event.currentTarget.value</code> needs no cast. A JSX expression itself is typed as
+            <code>Node</code>, not as the element, so cast it with <code>as</code> when you need the element type.
+          </p>
+          <p data-syntax="builder">
             <code>input</code> returns <code>HTMLInputElement</code>, <code>div</code> returns <code>HTMLDivElement</code>, and the
             same holds for SVG and MathML tags, so you can use the created element without a cast.
             In <code>props</code>, the keys and value types come from the element: <code>maxLength</code> is a number on an input, and
             <code>href</code> is rejected on one. In <code>on</code>, the event type comes from the element's event map and
             <code>event.currentTarget</code> is the element.
           </p>
-          <pre class="code" tabindex="0"><code class="language-ts">import { button, div, input, type HTMLModifier } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-ts">import { button, div, input, type HTMLModifier } from 'fiorejs';
 
 const field = input
   .props({ type: 'text', value: 'Ada', maxLength: 40 })
@@ -73,7 +82,25 @@ const rounded: HTMLModifier = (builder) =&gt; builder.props({ className: 'rounde
 
 div.with(rounded).create(); // HTMLDivElement
 button.with(rounded).props({ type: 'submit' }).create('Save'); // HTMLButtonElement</code></pre>
-          <p>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-tsx">const field = (
+  &lt;input
+    type="text"
+    value="Ada"
+    maxLength={40}
+    aria-label="Name"
+    autocomplete="name"
+    oninput={(event) =&gt; console.log(event.currentTarget.value)}
+  /&gt;
+) as HTMLInputElement;
+field satisfies HTMLInputElement;
+
+const box = &lt;div&gt;Hello&lt;/div&gt;; // typed as Node, cast it for the element type
+(box as HTMLDivElement) satisfies HTMLDivElement;</code></pre>
+</div>
+          <p data-syntax="jsx">
+            Listeners are checked too. <code>body</code> accepts window events such as <code>onpopstate</code>.
+          </p>
+          <p data-syntax="builder">
             Listeners are checked too. <code>this</code> inside a listener written with <code>function</code> is the element, and
             <code>body</code> accepts window events such as <code>popstate</code>.
           </p>
@@ -81,18 +108,26 @@ button.with(rounded).props({ type: 'submit' }).create('Save'); // HTMLButtonElem
 
         <section id="props-and-listeners">
           <h2>Typed props, attributes and listeners</h2>
-          <p>
+          <p data-syntax="jsx">
+            JSX props take the writable properties of the element and its attributes, including <code>aria-*</code> and
+            <code>data-*</code>. A prop the element does not have is a type error, which catches a misspelled property early.
+            Custom events whose name has a hyphen, such as <code>oncart-add</code>, are accepted on every element and typed as
+            <code>CustomEvent</code>; annotate the parameter to type its <code>detail</code>. A custom event name without a hyphen
+            needs an entry in the global event map. Tags with a hyphen are custom elements and accept any prop.
+          </p>
+          <p data-syntax="builder">
             <code>props</code> takes the writable properties of the element, and <code>attrs</code> takes its attributes, including
             <code>aria-*</code> and <code>data-*</code>. A prop the element does not have is a type error, which catches a misspelled
             property early. Custom events whose name has a hyphen are accepted on every element and typed as
             <code>CustomEvent</code>; annotate the parameter to type its <code>detail</code>. A custom event name without a hyphen
             needs an entry in the global event map:
           </p>
-          <pre class="code" tabindex="0"><code class="language-ts">import { div, input, video } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-ts">import { div, input, video } from 'fiorejs';
 import { circle, type SVGModifier } from 'fiorejs/svg';
 
 const hot: SVGModifier = (builder) =&gt; builder.attrs({ fill: 'tomato' });
-circle.with(hot).attrs({ r: 5 }).create(); // SVGCircleElement
+circle.with(hot).attrs({ r: '5' }).create(); // SVGCircleElement
 
 div.on({ 'cart-add': (event: CustomEvent&lt;{ sku: string }&gt;) =&gt; console.log(event.detail.sku) }).create();
 
@@ -110,11 +145,32 @@ div.on({ itemselected: (event) =&gt; console.log(event.detail.id) }).create();
 input.props({ href: '/x' }).create();
 // @ts-expect-error a div has no `value` property
 div.props({ value: 'x' }).create();</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-tsx">&lt;div oncart-add={(event: CustomEvent&lt;{ sku: string }&gt;) =&gt; console.log(event.detail.sku)} /&gt;;
+
+&lt;video onended={(event) =&gt; (event.currentTarget.currentTime = 0)} /&gt;;
+
+declare global {
+  interface HTMLElementEventMap {
+    itemselected: CustomEvent&lt;{ id: number }&gt;;
+  }
+}
+
+&lt;div onitemselected={(event) =&gt; console.log(event.detail.id)} /&gt;;
+
+// @ts-expect-error an input has no `href` property
+&lt;input href="/x" /&gt;;
+// @ts-expect-error a div has no `value` property
+&lt;div value="x" /&gt;;</code></pre>
+</div>
         </section>
 
         <section id="modifiers">
           <h2>HTMLModifier and SVGModifier</h2>
-          <p>
+          <p data-syntax="jsx">
+            There is no <code>with</code> in JSX, so there is no modifier type. A reusable piece is a component, a function
+            from a typed props object to a node, as the next section shows.
+          </p>
+          <p data-syntax="builder">
             A function passed to <code>with</code> that should work on every tag has the type <code>HTMLModifier</code>, or
             <code>SVGModifier</code> for SVG. The builder keeps the type of the tag it is used on, so
             <code>div.with(rounded).create()</code> is still an <code>HTMLDivElement</code> (the first snippet above shows it). For
@@ -125,14 +181,24 @@ div.props({ value: 'x' }).create();</code></pre>
 
         <section id="signals">
           <h2>Typing signals and components</h2>
-          <p>
+          <p data-syntax="jsx">
+            <code>state&lt;T&gt;()</code> returns <code>State&lt;T&gt;</code>, and <code>computed</code> returns <code>Computed&lt;T&gt;</code>.
+            Give <code>state</code> a type argument when the initial value is narrower than the type, as with
+            <code>null</code> below. A component is a function that takes a typed props object and returns a node, and its
+            props are checked where it is used as a tag. Use <code>Reactive&lt;T&gt;</code>, a plain value or a signal of it,
+            for props that may change, and unwrap them with <code>read()</code>. For <code>children</code>, use the
+            <code>Child</code> type from <code>@fiorejs/jsx/jsx-runtime</code>. The item in <code>map</code> and <code>for</code>
+            keeps the type of the array.
+          </p>
+          <p data-syntax="builder">
             <code>state&lt;T&gt;()</code> returns <code>State&lt;T&gt;</code>, and <code>computed</code> returns <code>Computed&lt;T&gt;</code>.
             Give <code>state</code> a type argument when the initial value is narrower than the type, as with
             <code>null</code> below. A component is a typed function. Use <code>Reactive&lt;T&gt;</code>, a plain value or a signal of it,
             for props that may change, and unwrap them with <code>read()</code>. The item in
             <code>map</code> and <code>for</code> keeps the type of the array.
           </p>
-          <pre class="code" tabindex="0"><code class="language-ts">import { div, span } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-ts">import { div, span } from 'fiorejs';
 import { computed, read, state, type Computed, type Reactive, type State } from '@fiorejs/signals';
 
 type User = { id: number; name: string };
@@ -149,9 +215,30 @@ Greeting({ name: label, excited: true });
 
 const users = state&lt;User[]&gt;([{ id: 1, name: 'Ada' }]);
 div(users.for((item) =&gt; item.id).map((item) =&gt; span(item.name))); // item is User</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-tsx">import { computed, read, state, type Computed, type Reactive, type State } from '@fiorejs/signals';
+
+type User = { id: number; name: string };
+
+const user: State&lt;User | null&gt; = state&lt;User | null&gt;(null);
+const label: Computed&lt;string&gt; = computed(() =&gt; user.get()?.name ?? 'Guest');
+
+function Greeting(props: { name: Reactive&lt;string&gt;; excited?: boolean }) {
+  return (
+    &lt;div&gt;
+      &lt;span&gt;{computed(() =&gt; `Hello, ${read(props.name)}${props.excited ? '!' : ''}`)}&lt;/span&gt;
+    &lt;/div&gt;
+  );
+}
+
+&lt;Greeting name="Ada" /&gt;;
+&lt;Greeting name={label} excited /&gt;;
+
+const users = state&lt;User[]&gt;([{ id: 1, name: 'Ada' }]);
+&lt;div&gt;{users.for((item) =&gt; item.id).map((item) =&gt; &lt;span&gt;{item.name}&lt;/span&gt;)}&lt;/div&gt;; // item is User</code></pre>
+</div>
           <p>
             Signals fit the <code>Live&lt;T&gt;</code> type of fiorejs, so a signal is accepted wherever a value of that type is.
-            The full list of signal types is in the <a href="../signals.html#types">signals reference</a>.
+            The full list of signal types is in the <a href="../signals.html#types">Signals reference</a>.
           </p>
         </section>
 

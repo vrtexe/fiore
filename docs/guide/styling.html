@@ -11,6 +11,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
     />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
     <link rel="stylesheet" href="../assets/site.css" />
     <script type="module" src="../assets/docs.js"></script>
   </head>
@@ -28,9 +29,10 @@
           <a href="../tutorial/">Tutorial</a>
           <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
           <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
           <a href="https://github.com/vrtexe/fiore">GitHub</a>
         </nav>
-        <a class="btn" href="../tutorial/">Try it</a>
+        <a class="btn" href="quick-start.html">Quick start</a>
       </div>
     </header>
 
@@ -50,13 +52,20 @@
 
         <section id="classes">
           <h2>className and the class attribute</h2>
-          <p>
+          <p data-syntax="jsx">
+            For HTML elements, <code>class="card"</code> and <code>className="card"</code> do the same job: <code>class</code> is
+            set as an attribute and <code>className</code> as a property. On SVG elements every prop except listeners and
+            <code>style</code> is set as an attribute, and <code>className</code> is a read-only object in the DOM, so write
+            <code>class</code> there. Both accept a string, and both accept the result of <code>classList</code>:
+          </p>
+          <p data-syntax="builder">
             For HTML elements, <code>className</code> in <code>props</code> and <code>class</code> in <code>attrs</code> do the same job.
             Use the property in HTML. On SVG elements <code>className</code> is a read-only object in the DOM, so set the
             <code>class</code> attribute there. Both accept a string, and both accept the result of
             <code>classList</code>:
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { div } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div } from 'fiorejs';
 import { circle, svg } from 'fiorejs/svg';
 import { classList, state } from '@fiorejs/signals';
 
@@ -67,10 +76,26 @@ document.body.append(
   div.props({ className: 'card wide' }).create('Property'),
   div.attrs({ class: 'card wide' }).create('Attribute'),
   div.props({ className: classList(['card', { active, disabled: () =&gt; !enabled.get() }]) }).create('Live classes'),
-  svg.create(circle.attrs({ class: classList({ hot: active }), r: 5 }).create()),
+  svg(circle.attrs({ class: classList({ hot: active }), r: '5' }).create()),
 );
 
 active.set(true);</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { classList, state } from '@fiorejs/signals';
+
+const active = state(false);
+const enabled = state(true);
+
+document.body.append(
+  &lt;div className="card wide"&gt;Property&lt;/div&gt;,
+  &lt;div class="card wide"&gt;Attribute&lt;/div&gt;,
+  &lt;div class={classList(['card', { active, disabled: () =&gt; !enabled.get() }])}&gt;Live classes&lt;/div&gt;,
+  &lt;svg&gt;
+    &lt;circle class={classList({ hot: active })} r="5" /&gt;
+  &lt;/svg&gt;,
+);
+
+active.set(true);</code></pre>
+</div>
           <p>
             <code>classList</code> takes strings, which are always on, and objects whose keys are on while their value is
             truthy. A value can be a boolean, a signal or a getter. A condition computed from a signal must be a getter or
@@ -86,7 +111,8 @@ active.set(true);</code></pre>
             <code>style</code>, so a static object sets each property once. A value in the object can be a signal or
             a computed, and then that property follows it:
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { div, p } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div, p } from 'fiorejs';
 import { computed, state } from '@fiorejs/signals';
 
 const progress = state(30);
@@ -106,6 +132,24 @@ document.body.append(
 );
 
 progress.set(80);</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { computed, state } from '@fiorejs/signals';
+
+const progress = state(30);
+const hue = state(200);
+
+document.body.append(
+  &lt;div
+    style={{
+      width: computed(() =&gt; `${progress.get()}%`),
+      backgroundColor: computed(() =&gt; `hsl(${hue.get()} 70% 50%)`),
+      height: '8px',
+    }}
+  /&gt;,
+  &lt;p style={{ color: 'red', fontWeight: 'bold' }}&gt;Static style object&lt;/p&gt;,
+);
+
+progress.set(80);</code></pre>
+</div>
           <p>
             Bind each property on its own, as above. A computed that returns a whole style object merges that object
             on every update and never clears a key that is missing from the next one. Numbers are not
@@ -115,13 +159,20 @@ progress.set(80);</code></pre>
 
         <section id="custom-properties">
           <h2>CSS custom properties</h2>
-          <p>
+          <p data-syntax="jsx">
+            A custom property such as <code>--accent</code> cannot be assigned through the <code>style</code> object, because
+            the browser only reads custom properties through <code>style.setProperty()</code>. Pass a string as
+            <code>style</code> instead, which sets the <code>style</code> attribute. A computed string makes the attribute live.
+            For a one-off call, keep the element in a variable and call <code>style.setProperty()</code> on it:
+          </p>
+          <p data-syntax="builder">
             A custom property such as <code>--accent</code> cannot be assigned through the <code>style</code> object, because
             the browser only reads custom properties through <code>style.setProperty()</code>. Put them in the
             <code>style</code> attribute instead. A computed string makes the attribute live, and
             <code>also()</code> runs code on the created element for a one-off call:
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { div } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div } from 'fiorejs';
 import { computed, state } from '@fiorejs/signals';
 
 const accent = state('#b8f26d');
@@ -132,6 +183,22 @@ document.body.append(
 );
 
 accent.set('#6dd5f2');</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { computed, state } from '@fiorejs/signals';
+
+const accent = state('#b8f26d');
+
+const staticPanel = &lt;div style="--accent: tomato"&gt;Static&lt;/div&gt;;
+staticPanel.style.setProperty('--gap', '4px');
+
+document.body.append(
+  &lt;div class="panel" style={computed(() =&gt; `--accent: ${accent.get()}; --gap: 12px`)}&gt;
+    Themed panel
+  &lt;/div&gt;,
+  staticPanel,
+);
+
+accent.set('#6dd5f2');</code></pre>
+</div>
           <p>
             The live <code>style</code> attribute is replaced as a whole when the signal changes, which is right for a
             small set of variables. Your stylesheet then uses <code>var(--accent)</code> as usual, so one signal can
@@ -141,11 +208,16 @@ accent.set('#6dd5f2');</code></pre>
 
         <section id="modifiers">
           <h2>Reusable modifiers with with()</h2>
-          <p>
+          <p data-syntax="jsx">
+            JSX has no <code>with()</code>. A style modifier is an object of props that you spread into any tag, and a
+            conditional one is a spread of <code>false</code> or of the object. Spreads apply from left to right, so a later
+            <code>style</code> replaces an earlier one as a whole:
+          </p>
+          <p data-syntax="builder">
             <code>with(fn)</code> passes the builder to a function that returns a builder. Such a function is a style
             modifier: it can be applied to any tag, combined with others, or made conditional.
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { button, div } from 'fiorejs';
+          <pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { button, div } from 'fiorejs';
 
 const card = (builder) =&gt; builder.props({ className: 'card', style: { padding: '16px' } });
 const bordered = (builder) =&gt; builder.attrs({ 'data-bordered': '' });
@@ -157,16 +229,29 @@ document.body.append(
   div.with(card).with(when(isAdmin, (b) =&gt; b.attrs({ 'data-admin': '' }))).create('Admin tools'),
   button.with(card).props({ type: 'button' }).create('A button with the same card'),
 );</code></pre>
-          <p>
+          <pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const card = { class: 'card', style: { padding: '16px' } };
+const bordered = { 'data-bordered': '' };
+const isAdmin = true;
+
+document.body.append(
+  &lt;div {...card} {...bordered}&gt;Settings&lt;/div&gt;,
+  &lt;div {...card} {...(isAdmin &amp;&amp; { 'data-admin': '' })}&gt;Admin tools&lt;/div&gt;,
+  &lt;button {...card} type="button"&gt;A button with the same card&lt;/button&gt;,
+);</code></pre>
+          <p data-syntax="builder">
             Modifiers apply from left to right and each returns a new builder, so a modifier never changes the builder it
             was used on. A repeated <code>props</code> call replaces an earlier <code>style</code> object, and a later
             <code>className</code> replaces an earlier one. Keep one concern per modifier and give modifiers that need
             to be combined different keys, or merge the styles in a single modifier. For the TypeScript type
             of a modifier, see <a href="typescript.html#modifiers">TypeScript</a>.
           </p>
-          <div class="note">
+          <div class="note" data-syntax="builder">
             A function in <code>props</code> or <code>attrs</code> is a callback, never a getter. Write a value that
             depends on a signal as <code>computed(() =&gt; …)</code>.
+          </div>
+          <div class="note" data-syntax="jsx">
+            A function as a prop value is passed as it is, never read as a getter: <code>class={() =&gt; …}</code> does not work.
+            Write a value that depends on a signal as <code>computed(() =&gt; …)</code>.
           </div>
         </section>
 

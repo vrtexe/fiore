@@ -11,6 +11,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
     />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
     <link rel="stylesheet" href="../assets/site.css" />
     <script type="module" src="../assets/docs.js"></script>
   </head>
@@ -28,9 +29,10 @@
           <a href="../tutorial/">Tutorial</a>
           <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
           <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
           <a href="https://github.com/vrtexe/fiore">GitHub</a>
         </nav>
-        <a class="btn" href="../tutorial/">Try it</a>
+        <a class="btn" href="quick-start.html">Quick start</a>
       </div>
     </header>
 
@@ -50,16 +52,28 @@
 
         <section id="value-and-checked">
           <h2>Value and checked are props</h2>
-          <p>
+          <p data-syntax="builder">
             <code>value</code> and <code>checked</code> are JavaScript properties, so they go in <code>props</code>, not in
             <code>attrs</code>. The attribute only sets the initial state of a control, while the property is the
             state the user sees. A plain value sets the control once. A signal keeps it current: when the signal
             changes, the control changes.
           </p>
-          <p>
+          <p data-syntax="jsx">
+            <code>value</code> and <code>checked</code> are JavaScript properties, and JSX sets them as properties, so write them
+            as props like any other: <code>&lt;input value={name} /&gt;</code>. The attribute only sets the initial state of a
+            control, while the property is the state the user sees. A plain value sets the control once. A signal keeps it
+            current: when the signal changes, the control changes. Listeners are props that start with <code>on</code>, such
+            as <code>oninput</code> and <code>onchange</code>, and <code>onInput</code> works too.
+          </p>
+          <p data-syntax="builder">
             fiore assigns <code>value</code>, <code>selectedIndex</code> and <code>checked</code> last, after the other props, the
             attributes and the children. That order matters for controls whose value depends on their content, and
             it is the same whatever order you call <code>props</code>, <code>attrs</code> and <code>create</code> in.
+          </p>
+          <p data-syntax="jsx">
+            fiore assigns <code>value</code>, <code>selectedIndex</code> and <code>checked</code> last, after the other props and
+            the children. That order matters for controls whose value depends on their content, and it is the same whatever
+            order you write the props in.
           </p>
         </section>
 
@@ -69,15 +83,27 @@
             There is no special two-way syntax. Bind the signal to the property and write the signal from the
             event. A text input uses <code>input</code>, which fires on every keystroke:
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { input, label, p } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { input, label, p } from 'fiorejs';
 import { state } from '@fiorejs/signals';
 
 const name = state('Ada');
 
 document.body.append(
-  label.create(['Name ', input.props({ type: 'text', value: name }).on({ input: (event) =&gt; name.set(event.currentTarget.value) }).create()]),
+  label(['Name ', input.props({ type: 'text', value: name }).on({ input: (event) =&gt; name.set(event.currentTarget.value) }).create()]),
   p(['Hello, ', name]),
 );</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state } from '@fiorejs/signals';
+
+const name = state('Ada');
+
+document.body.append(
+  &lt;label&gt;
+    Name &lt;input type="text" value={name} oninput={(event) =&gt; name.set(event.currentTarget.value)} /&gt;
+  &lt;/label&gt;,
+  &lt;p&gt;Hello, {name}&lt;/p&gt;,
+);</code></pre>
+</div>
           <p>
             The signal drives the control, and the control drives the signal. The paragraph reads the same signal, so
             it shows what the user types. Setting <code>name</code> from anywhere else, such as a reset button, also
@@ -87,18 +113,30 @@ document.body.append(
             A checkbox uses <code>checked</code> and the <code>change</code> event, and reads
             <code>event.currentTarget.checked</code>:
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { input, label, p } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { input, label, p } from 'fiorejs';
 import { state } from '@fiorejs/signals';
 
 const agreed = state(false);
 
 document.body.append(
-  label.create([
+  label([
     input.props({ type: 'checkbox', checked: agreed }).on({ change: (event) =&gt; agreed.set(event.currentTarget.checked) }).create(),
     ' I agree',
   ]),
   p(agreed.if(() =&gt; 'Agreed').else(() =&gt; 'Not agreed')),
 );</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state } from '@fiorejs/signals';
+
+const agreed = state(false);
+
+document.body.append(
+  &lt;label&gt;
+    &lt;input type="checkbox" checked={agreed} onchange={(event) =&gt; agreed.set(event.currentTarget.checked)} /&gt; I agree
+  &lt;/label&gt;,
+  &lt;p&gt;{agreed.if(() =&gt; 'Agreed').else(() =&gt; 'Not agreed')}&lt;/p&gt;,
+);</code></pre>
+</div>
           <p>
             <code>currentTarget</code> is the element the listener was added to, typed as that element in TypeScript, so
             no cast is needed. The value of a <code>type="number"</code> input is still a string; read
@@ -113,7 +151,8 @@ document.body.append(
             fiore assigns <code>value</code> after the children, you can write the prop before the options and still get the
             right selection:
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { option, select } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { option, select } from 'fiorejs';
 import { state } from '@fiorejs/signals';
 
 const size = state('m');
@@ -125,6 +164,19 @@ document.body.append(
     .on({ change: (event) =&gt; size.set(event.currentTarget.value) })
     .create(Object.entries(sizes).map(([value, text]) =&gt; option.props({ value }).create(text))),
 );</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state } from '@fiorejs/signals';
+
+const size = state('m');
+const sizes = { s: 'Small', m: 'Medium', l: 'Large' };
+
+document.body.append(
+  &lt;select value={size} onchange={(event) =&gt; size.set(event.currentTarget.value)}&gt;
+    {Object.entries(sizes).map(([value, text]) =&gt; (
+      &lt;option value={value}&gt;{text}&lt;/option&gt;
+    ))}
+  &lt;/select&gt;,
+);</code></pre>
+</div>
           <p>
             The select shows Medium, because <code>size</code> holds <code>'m'</code> and the options were created first.
             With the DOM alone the order would be your job. The same rule applies to <code>selectedIndex</code>, and
@@ -140,7 +192,8 @@ document.body.append(
             signals, so the message appears and disappears without any extra code. The form below also covers the
             submit handler:
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { button, form, input, label, p } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { button, form, input, label, p } from 'fiorejs';
 import { computed, state } from '@fiorejs/signals';
 
 const email = state('');
@@ -159,7 +212,7 @@ const submit = (event) =&gt; {
 
 document.body.append(
   form.on({ submit }).attrs({ novalidate: '' }).create([
-    label.create([
+    label([
       'Email ',
       input
         .props({ type: 'email', value: email })
@@ -171,6 +224,39 @@ document.body.append(
     button.props({ type: 'submit' }).create('Subscribe'),
   ]),
 );</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { computed, state } from '@fiorejs/signals';
+
+const email = state('');
+const touched = state(false);
+const error = computed(() =&gt; (/^\S+@\S+\.\S+$/.test(email.get()) ? '' : 'Enter an email address'));
+const sent = state([]);
+
+const submit = (event) =&gt; {
+  event.preventDefault();
+  touched.set(true);
+  if (error.get()) return;
+  sent.update((list) =&gt; [...list, email.get()]);
+  email.set('');
+  touched.set(false);
+};
+
+document.body.append(
+  &lt;form onsubmit={submit} novalidate=""&gt;
+    &lt;label&gt;
+      Email{' '}
+      &lt;input
+        type="email"
+        value={email}
+        aria-invalid={computed(() =&gt; (touched.get() &amp;&amp; error.get() ? 'true' : null))}
+        oninput={(event) =&gt; email.set(event.currentTarget.value)}
+        onblur={() =&gt; touched.set(true)}
+      /&gt;
+    &lt;/label&gt;
+    &lt;p role="alert"&gt;{touched.computed((shown) =&gt; (shown ? error.get() : ''))}&lt;/p&gt;
+    &lt;button type="submit"&gt;Subscribe&lt;/button&gt;
+  &lt;/form&gt;,
+);</code></pre>
+</div>
           <p>
             <code>touched</code> turns on at blur or at a submit attempt, so an empty field is not marked invalid before
             the user has been there. <code>aria-invalid</code> is bound as an attribute: a signal holding <code>null</code>
@@ -186,7 +272,8 @@ document.body.append(
             Call <code>event.preventDefault()</code> to stay on the page. <code>FormData</code> reads every named control at once, which is
             handy when the form is not bound to signals:
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { button, form, input, output } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { button, form, input, output } from 'fiorejs';
 import { state } from '@fiorejs/signals';
 
 const result = state('Nothing sent yet');
@@ -207,7 +294,30 @@ document.body.append(
       output(result),
     ]),
 );</code></pre>
-          <div class="note">
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state } from '@fiorejs/signals';
+
+const result = state('Nothing sent yet');
+
+document.body.append(
+  &lt;form
+    onsubmit={(event) =&gt; {
+      event.preventDefault();
+      const data = Object.fromEntries(new FormData(event.currentTarget));
+      result.set(`Sent ${JSON.stringify(data)}`);
+    }}
+  &gt;
+    &lt;input name="title" value="Draft" /&gt;
+    &lt;input name="qty" type="number" value="2" /&gt;
+    &lt;button type="submit"&gt;Send&lt;/button&gt;
+    &lt;output&gt;{result}&lt;/output&gt;
+  &lt;/form&gt;,
+);</code></pre>
+</div>
+          <div class="note" data-syntax="jsx">
+            Everything read from a form is user input. Show it as a child, <code>{value}</code> or a signal, and never spread
+            an object built from it into a tag or pass it to <code>innerHTML</code>. See <a href="security.html">Security</a>.
+          </div>
+          <div class="note" data-syntax="builder">
             Everything read from a form is user input. Pass it to <code>.create()</code> or to a signal that is shown as a
             child, never to <code>props</code>. See <a href="security.html">Security</a>.
           </div>

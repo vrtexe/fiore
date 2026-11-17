@@ -11,6 +11,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
     />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
     <link rel="stylesheet" href="../assets/site.css" />
     <script type="module" src="../assets/docs.js"></script>
   </head>
@@ -28,9 +29,10 @@
           <a href="../tutorial/">Tutorial</a>
           <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
           <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
           <a href="https://github.com/vrtexe/fiore">GitHub</a>
         </nav>
-        <a class="btn" href="../tutorial/">Try it</a>
+        <a class="btn" href="quick-start.html">Quick start</a>
       </div>
     </header>
 
@@ -48,8 +50,44 @@
           </p>
         </header>
 
+        <section id="builder-vs-jsx">
+          <h2>Builder or JSX</h2>
+          <p>
+            Both syntaxes create the same DOM nodes with the same signals. Pick the one you like; this page is about JSX.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th></th><th>Builder</th><th>JSX</th></tr></thead>
+              <tbody>
+                <tr><td>Package</td><td><code>fiorejs</code></td><td><code>@fiorejs/jsx</code> next to <code>fiorejs</code></td></tr>
+                <tr><td>Build step</td><td>none</td><td>a compiler with the automatic JSX runtime</td></tr>
+                <tr><td>An element</td><td><code>div.props({ className: 'card' }).create('Hi')</code></td><td><code>&lt;div class="card"&gt;Hi&lt;/div&gt;</code></td></tr>
+                <tr><td>Props and attributes</td><td>separate: <code>props</code>, <code>attrs</code></td><td>one list, the name decides</td></tr>
+                <tr><td>Listeners</td><td><code>on({ click })</code></td><td><code>onclick</code> or <code>onClick</code></td></tr>
+                <tr><td>Reuse</td><td>builders, <code>with</code> and <code>also</code></td><td>components and spread props</td></tr>
+                <tr><td>Type of an expression</td><td>the exact element</td><td><code>Node</code>, cast it when needed</td></tr>
+                <tr><td>Signals, <code>if</code>, <code>for</code></td><td colspan="2">the same in both, from <code>@fiorejs/signals</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
         <section id="setup">
           <h2>Setup</h2>
+          <h3 id="new-project">New project</h3>
+          <p>
+            Run <code>npm create @fiorejs</code> and pick JSX, which is the default answer. There is nothing to configure: the
+            generator adds <code>@fiorejs/jsx</code> to the dependencies and writes the compiler setting for you, so you can
+            write JSX in <code>src/main.tsx</code> straight away.
+          </p>
+          <pre class="code" tabindex="0"><code>npm create @fiorejs my-app</code></pre>
+          <p>
+            For a TypeScript project it writes the setting to <code>tsconfig.json</code>. For a JavaScript project
+            (<code>--template js</code>) it writes <code>vite.config.js</code> and <code>jsconfig.json</code>. JSX needs the Vite
+            build, which is the default; <code>--build none</code> has no JSX, and <code>--no-jsx</code> turns it off. See
+            <a href="create-project.html">Create a project</a> for all options.
+          </p>
+          <h3 id="existing-project">Existing project</h3>
           <p>
             Install the runtime next to <code>fiorejs</code> and tell the compiler to import JSX helpers from it:
           </p>
@@ -64,6 +102,7 @@
     "jsxImportSource": "@fiorejs/jsx"
   }
 }</code></pre>
+          <p>Other tools take the import source in their own options:</p>
           <div class="table-wrap">
             <table>
               <thead><tr><th>Tool</th><th>Setting</th></tr></thead>
@@ -75,9 +114,6 @@
               </tbody>
             </table>
           </div>
-          <p>
-            <code>npm create @fiorejs</code> writes this setup for you; see <a href="create-project.html">Create a project</a>.
-          </p>
         </section>
 
         <section id="compiled">
@@ -120,7 +156,7 @@ document.body.append(note, list, fragment);</code></pre>
             <code>className</code> or <code>htmlFor</code>, are properties too. Every other name is an attribute, so
             <code>class</code>, <code>for</code>, <code>aria-label</code> and <code>width="50%"</code> work as in HTML.
           </p>
-          <pre class="code" tabindex="0"><code class="language-ts">import { computed, state } from '@fiorejs/signals';
+          <pre class="code" tabindex="0"><code class="language-tsx">import { computed, state } from '@fiorejs/signals';
 
 const name = state('Ada');
 const invalid = computed(() =&gt; (name.get() === '' ? 'true' : null));
@@ -157,7 +193,7 @@ document.body.append(
             never live: <code>class={() =&gt; …}</code> passes the function itself, so write
             <code>class={computed(() =&gt; …)}</code>. A component runs once and returns nodes:
           </p>
-          <pre class="code" tabindex="0"><code class="language-ts">import { computed, state } from '@fiorejs/signals';
+          <pre class="code" tabindex="0"><code class="language-tsx">import { computed, state } from '@fiorejs/signals';
 
 function Counter(props: { start?: number }) {
   const count = state(props.start ?? 0);
@@ -187,7 +223,7 @@ document.body.append(&lt;Counter start={3} /&gt;);</code></pre>
             nodes, strings, numbers or nested arrays; <code>null</code>, <code>undefined</code>, <code>true</code> and
             <code>false</code> are skipped. A live child of a fragment keeps updating after the fragment is inserted.
           </p>
-          <pre class="code" tabindex="0"><code class="language-ts">import { state } from '@fiorejs/signals';
+          <pre class="code" tabindex="0"><code class="language-tsx">import { state } from '@fiorejs/signals';
 
 const todos = state([
   { id: 1, text: 'Write docs' },

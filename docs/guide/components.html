@@ -11,6 +11,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
     />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
     <link rel="stylesheet" href="../assets/site.css" />
     <script type="module" src="../assets/docs.js"></script>
   </head>
@@ -28,9 +29,10 @@
           <a href="../tutorial/">Tutorial</a>
           <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
           <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
           <a href="https://github.com/vrtexe/fiore">GitHub</a>
         </nav>
-        <a class="btn" href="../tutorial/">Try it</a>
+        <a class="btn" href="quick-start.html">Quick start</a>
       </div>
     </header>
 
@@ -56,7 +58,8 @@
             Children are passed in a prop, and any node, string or array of these is accepted, as in
             <a href="children.html">Children</a>.
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { article, h2, li, ul } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { article, h2, li, ul } from 'fiorejs';
 
 function Tags(props) {
   return ul(props.items.map((item) =&gt; li(item)));
@@ -67,6 +70,30 @@ function Card(props) {
 }
 
 document.body.append(Card({ title: 'Release notes', children: Tags({ items: ['Fixes', 'Docs'] }) }));</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">function Tags(props) {
+  return &lt;ul&gt;{props.items.map((item) =&gt; &lt;li&gt;{item}&lt;/li&gt;)}&lt;/ul&gt;;
+}
+
+function Card(props) {
+  return (
+    &lt;article class="card"&gt;
+      &lt;h2&gt;{props.title}&lt;/h2&gt;
+      {props.children}
+    &lt;/article&gt;
+  );
+}
+
+document.body.append(
+  &lt;Card title="Release notes"&gt;
+    &lt;Tags items={['Fixes', 'Docs']} /&gt;
+  &lt;/Card&gt;,
+);</code></pre>
+</div>
+          <p data-syntax="jsx">
+            In JSX a component is used as a tag, <code>&lt;Card title="Release notes"&gt;…&lt;/Card&gt;</code>. Its attributes
+            arrive in the props object, and whatever sits between the tags arrives as <code>props.children</code>.
+            The name starts with a capital letter, so the compiler calls the function instead of creating an element.
+          </p>
           <p>
             The function body runs one time per call. It does not run again when data changes, so a value
             read in the body, such as <code>props.items</code> above, is read once. The next sections show how
@@ -80,13 +107,14 @@ document.body.append(Card({ title: 'Release notes', children: Tags({ items: ['Fi
             Create a signal inside the component and each call gets its own. Bind the signal where it is
             shown and write to it from a listener. Only the bound text changes when the value does.
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { button, div, span } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { button, div, span } from 'fiorejs';
 import { state } from '@fiorejs/signals';
 
 function Counter(props) {
   const count = state(props.start ?? 0);
 
-  return div.create([
+  return div([
     button.on({ click: () =&gt; count.update((n) =&gt; n - 1) }).create('-'),
     span(count),
     button.on({ click: () =&gt; count.update((n) =&gt; n + 1) }).create('+'),
@@ -94,6 +122,22 @@ function Counter(props) {
 }
 
 document.body.append(Counter({ start: 5 }), Counter({}));</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state } from '@fiorejs/signals';
+
+function Counter(props) {
+  const count = state(props.start ?? 0);
+
+  return (
+    &lt;div&gt;
+      &lt;button onclick={() =&gt; count.update((n) =&gt; n - 1)}&gt;-&lt;/button&gt;
+      &lt;span&gt;{count}&lt;/span&gt;
+      &lt;button onclick={() =&gt; count.update((n) =&gt; n + 1)}&gt;+&lt;/button&gt;
+    &lt;/div&gt;
+  );
+}
+
+document.body.append(&lt;Counter start={5} /&gt;, &lt;Counter /&gt;);</code></pre>
+</div>
           <p>
             The two counters do not affect each other, because each call of <code>Counter</code> created its own
             <code>count</code>. The update reaches the page on a microtask after the click handler returns; see
@@ -108,7 +152,8 @@ document.body.append(Counter({ start: 5 }), Counter({}));</code></pre>
             because a module is evaluated once. This is the whole mechanism for shared state: export the signals
             and the functions that change them, and import them where needed. There is no provider or context.
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { button, header, span } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { button, header, span } from 'fiorejs';
 import { computed, state } from '@fiorejs/signals';
 
 // cart.js: a module is evaluated once, so everything that imports it shares these signals
@@ -123,6 +168,26 @@ const CartBadge = () =&gt; span(computed(() =&gt; `${items.get().length} items, 
 const Buy = () =&gt; button.on({ click: () =&gt; add({ name: 'Mug', price: 12 }) }).create('Buy a mug');
 
 document.body.append(header(CartBadge()), Buy());</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { computed, state } from '@fiorejs/signals';
+
+// cart.js: a module is evaluated once, so everything that imports it shares these signals
+const items = state([]);
+const total = computed(() =&gt; items.get().reduce((sum, item) =&gt; sum + item.price, 0));
+const add = (item) =&gt; items.update((list) =&gt; [...list, item]);
+
+// header.js
+const CartBadge = () =&gt; &lt;span&gt;{computed(() =&gt; `${items.get().length} items, ${total.get()} CHF`)}&lt;/span&gt;;
+
+// product.js
+const Buy = () =&gt; &lt;button onclick={() =&gt; add({ name: 'Mug', price: 12 })}&gt;Buy a mug&lt;/button&gt;;
+
+document.body.append(
+  &lt;header&gt;
+    &lt;CartBadge /&gt;
+  &lt;/header&gt;,
+  &lt;Buy /&gt;,
+);</code></pre>
+</div>
           <p>
             The example puts three files in one so that it runs as it stands. In a real project the store, the
             badge and the button are three modules, and the badge updates when the button adds an item.
@@ -137,7 +202,8 @@ document.body.append(header(CartBadge()), Buy());</code></pre>
             and changing values reads its prop with <code>read()</code>, which returns the value of a signal or
             a plain value unchanged.
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { div, p } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div, p } from 'fiorejs';
 import { computed, read, state } from '@fiorejs/signals';
 
 function Price(props) {
@@ -146,12 +212,33 @@ function Price(props) {
 }
 
 function Order(props) {
-  return div.create([Price({ amount: props.net }), Price({ amount: computed(() =&gt; props.net.get() * 1.081) }), Price({ amount: 5 })]);
+  return div([Price({ amount: props.net }), Price({ amount: computed(() =&gt; props.net.get() * 1.081) }), Price({ amount: 5 })]);
 }
 
 const net = state(100);
 document.body.append(Order({ net }));
 net.set(200);</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { computed, read, state } from '@fiorejs/signals';
+
+function Price(props) {
+  const label = computed(() =&gt; `${read(props.amount).toFixed(2)} CHF`);
+  return &lt;p&gt;{label}&lt;/p&gt;;
+}
+
+function Order(props) {
+  return (
+    &lt;div&gt;
+      &lt;Price amount={props.net} /&gt;
+      &lt;Price amount={computed(() =&gt; props.net.get() * 1.081)} /&gt;
+      &lt;Price amount={5} /&gt;
+    &lt;/div&gt;
+  );
+}
+
+const net = state(100);
+document.body.append(&lt;Order net={net} /&gt;);
+net.set(200);</code></pre>
+</div>
           <p>
             All three <code>Price</code> calls work with the same code: a signal, a derived value and a plain number.
             In TypeScript the prop is typed <code>Reactive&lt;number&gt;</code>; see
@@ -167,7 +254,8 @@ net.set(200);</code></pre>
             seen, so a change to the list does not rebuild the rest. A row is rendered once, for the item it was
             created with. Fields that change over time therefore belong in signals inside the item.
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { button, li, ul } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { button, li, ul } from 'fiorejs';
 import { state } from '@fiorejs/signals';
 
 const todos = state([
@@ -183,6 +271,29 @@ function Todo(todo) {
 }
 
 document.body.append(ul(todos.for((todo) =&gt; todo.id).map(Todo)));</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state } from '@fiorejs/signals';
+
+const todos = state([
+  { id: 1, text: 'Write docs', done: state(false) },
+  { id: 2, text: 'Publish', done: state(false) },
+]);
+
+function Todo(todo) {
+  return (
+    &lt;li class={todo.done.computed((done) =&gt; (done ? 'done' : ''))} onclick={() =&gt; todo.done.update((done) =&gt; !done)}&gt;
+      {todo.text}
+      &lt;button onclick={() =&gt; todos.update((list) =&gt; list.filter((t) =&gt; t !== todo))}&gt;Remove&lt;/button&gt;
+    &lt;/li&gt;
+  );
+}
+
+document.body.append(&lt;ul&gt;{todos.for((todo) =&gt; todo.id).map(Todo)}&lt;/ul&gt;);</code></pre>
+</div>
+          <p data-syntax="jsx">
+            <code>.map(Todo)</code> calls <code>Todo</code> with the item itself, not with a props object, so here it is a
+            plain function and not used as a tag. A row that needs props would be written
+            <code>.map((todo) =&gt; &lt;Todo todo={todo} /&gt;)</code>.
+          </p>
           <p>
             Replace the array to change the list: <code>todos.update((list) =&gt; list.filter(…))</code> removes a
             row, and the other rows stay as they are. Pushing into the array does not notify; see
@@ -202,7 +313,8 @@ document.body.append(ul(todos.for((todo) =&gt; todo.id).map(Todo)));</code></pre
             from it. That function runs before the next run and when the effect stops. <code>root()</code> gives you
             the stop switch for a whole tree:
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { div } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div } from 'fiorejs';
 import { effect, root, state } from '@fiorejs/signals';
 
 const now = state(Date.now());
@@ -219,10 +331,27 @@ const dispose = root(() =&gt; document.body.append(Clock()));
 
 // later: stops the effect, which clears the timer, and every binding of Clock
 dispose();</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { effect, root, state } from '@fiorejs/signals';
+
+const now = state(Date.now());
+
+function Clock() {
+  effect(() =&gt; {
+    const timer = setInterval(() =&gt; now.set(Date.now()), 1000);
+    return () =&gt; clearInterval(timer);
+  });
+  return &lt;div&gt;{now.computed((time) =&gt; new Date(time).toISOString())}&lt;/div&gt;;
+}
+
+const dispose = root(() =&gt; document.body.append(&lt;Clock /&gt;));
+
+// later: stops the effect, which clears the timer, and every binding of Clock
+dispose();</code></pre>
+</div>
           <div class="note">
             Calling the function returned by <code>root()</code> stops the bindings for good, also if the element is
             inserted again later. See <a href="cleanup.html">Ownership and cleanup</a> and the
-            <a href="../signals.html#cleanup">cleanup reference</a>.
+            <a href="../signals.html#cleanup">Signals reference</a>.
           </div>
         </section>
 

@@ -11,6 +11,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
     />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
     <link rel="stylesheet" href="../assets/site.css" />
     <script type="module" src="../assets/docs.js"></script>
   </head>
@@ -28,9 +29,10 @@
           <a href="../tutorial/">Tutorial</a>
           <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
           <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
           <a href="https://github.com/vrtexe/fiore">GitHub</a>
         </nav>
-        <a class="btn" href="../tutorial/">Try it</a>
+        <a class="btn" href="quick-start.html">Quick start</a>
       </div>
     </header>
 
@@ -50,23 +52,41 @@
 
         <section id="plain-object">
           <h2>The plain-object data rule</h2>
-          <p>
+          <p data-syntax="jsx">
+            This rule belongs to the builder API, and JSX has no data object: whatever sits between the tags is children, and a
+            string is shown as text. JSX has its own risks, which are spreading an object whose keys you do not control and
+            putting an untrusted URL in an attribute. A spread copies every key of the object onto the element, so a key such as
+            <code>innerHTML</code> sets that property:
+          </p>
+          <p data-syntax="builder">
             A tag called with a plain object reads that object as the data object, with the keys <code>props</code>,
             <code>attrs</code>, <code>on</code> and <code>children</code>. Anything else is the children. If the object comes from untrusted
             data such as parsed JSON, storage or a message, an attacker can choose its keys:
             <code>{ "props": { "innerHTML": "…" } }</code> sets the HTML of the element.
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { li, p, ul } from 'fiorejs';
+          <pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { li, p, ul } from 'fiorejs';
 
 // A message from a server, a form, storage or postMessage: nobody checked what it holds
 const message = JSON.parse('{"props":{"innerHTML":"&lt;img src=x onerror=alert(1)&gt;"}}');
 
 const unsafe = p(message); // read as the data object: sets innerHTML
 const safe = p.create(message); // read as children: never sets props
-const rows = ul.create(['plain text', '&lt;b&gt;stays text&lt;/b&gt;'].map((text) =&gt; li.create(text)));
+const rows = ul(['plain text', '&lt;b&gt;stays text&lt;/b&gt;'].map((text) =&gt; li.create(text)));
 
 document.body.append(unsafe, safe, rows);</code></pre>
-          <p>
+          <pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const message = JSON.parse('{"innerHTML":"&lt;img src=x onerror=alert(1)&gt;"}');
+const text = '&lt;b&gt;stays text&lt;/b&gt;';
+
+const safe = &lt;p&gt;{text}&lt;/p&gt;; // a child: a string is shown as text
+const unsafe = &lt;p {...message} /&gt;; // a spread: sets innerHTML
+
+document.body.append(safe, unsafe);</code></pre>
+          <p data-syntax="jsx">
+            Show untrusted values as children, <code>&lt;p&gt;{value}&lt;/p&gt;</code>, and never spread an object that came from
+            untrusted data into a tag. Spread only objects you wrote, or build the object from a fixed list of keys.
+            See <a href="jsx.html">JSX</a>.
+          </p>
+          <p data-syntax="builder">
             Pass untrusted values to <code>.create(value)</code> or to <code>{ children: value }</code>, which always treat the value as
             children, and a string is shown as text. The rule is simple: literal text from your own code can use
             <code>p('Hello')</code>, and a value you did not write goes through <code>create</code>.
@@ -76,28 +96,46 @@ document.body.append(unsafe, safe, rows);</code></pre>
 
         <section id="event-attributes">
           <h2>on* attributes are ignored</h2>
-          <p>
+          <p data-syntax="jsx">
+            In JSX every prop whose name starts with <code>on</code>, in any case, is a listener and never an attribute. A
+            string such as <code>onclick="alert(1)"</code> is not set as an attribute, so no script runs from it. The name
+            after <code>on</code> is used as the event name, so a hyphenated name such as <code>on-tap</code> listens to
+            the event <code>-tap</code> and does not set an attribute either. Pass a function.
+          </p>
+          <p data-syntax="builder">
             An attribute whose name is <code>on</code> followed by letters only, such as <code>onclick</code> or
             <code>onload</code>, in any case, is never set, because the browser would run its text as script.
             This applies to <code>attrs</code> and to bound attributes alike. A hyphenated name such as <code>on-tap</code> is set,
             since it is not a handler. Attach listeners with <code>on</code>, which takes functions.
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { div } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div } from 'fiorejs';
 
 const element = div.attrs({ onclick: 'alert(1)', ONLOAD: 'alert(2)', 'on-tap': 'open', title: 'Hello' }).create('Text');
 
 document.body.append(element);
 console.log(element.getAttributeNames()); // [ 'on-tap', 'title' ]</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const element = &lt;div onclick="alert(1)" ONLOAD="alert(2)" title="Hello"&gt;Text&lt;/div&gt;;
+
+document.body.append(element);
+console.log(element.getAttributeNames()); // [ 'title' ]</code></pre>
+</div>
         </section>
 
         <section id="inner-html">
           <h2>innerHTML is your responsibility</h2>
-          <p>
+          <p data-syntax="jsx">
+            <code>innerHTML</code> is a property like any other, so <code>&lt;div innerHTML={html} /&gt;</code> sets it, and fiore does not
+            sanitize the string. Children are text nodes and are safe, so prefer them. Use <code>innerHTML</code> only for markup you
+            wrote, or for HTML that a sanitizer has cleaned first.
+          </p>
+          <p data-syntax="builder">
             <code>innerHTML</code> is a property like any other, so <code>props({ innerHTML })</code> sets it, and fiore does not
             sanitize the string. Children are text nodes and are safe, so prefer them. Use <code>innerHTML</code> only for markup you
             wrote, or for HTML that a sanitizer has cleaned first.
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { div } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div } from 'fiorejs';
 
 const comment = '&lt;img src=x onerror=alert(1)&gt; hello';
 
@@ -106,7 +144,21 @@ const trustedHtml = div.props({ innerHTML: '&lt;strong&gt;Static markup you wrot
 const risky = div.props({ innerHTML: comment }).create(); // runs the handler in a browser
 
 document.body.append(text, trustedHtml, risky);</code></pre>
-          <p>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const comment = '&lt;img src=x onerror=alert(1)&gt; hello';
+
+const text = &lt;div&gt;{comment}&lt;/div&gt;; // a text node: shown as typed
+const trustedHtml = &lt;div innerHTML="&lt;strong&gt;Static markup you wrote&lt;/strong&gt;" /&gt;;
+const risky = &lt;div innerHTML={comment} /&gt;; // runs the handler in a browser
+
+document.body.append(text, trustedHtml, risky);</code></pre>
+</div>
+          <p data-syntax="jsx">
+            The same goes for <code>srcdoc</code> and for URLs, as in <code>&lt;iframe srcdoc={html} /&gt;</code> and
+            <code>&lt;a href={url}&gt;</code>. Attribute values are passed to <code>setAttribute</code> unchecked, so a
+            <code>javascript:</code> URL in <code>href</code> or <code>src</code> runs when it is followed. Check the scheme of
+            a URL that comes from untrusted data.
+          </p>
+          <p data-syntax="builder">
             The same goes for <code>srcdoc</code> and for URLs. Attribute values are passed to <code>setAttribute</code> unchecked, so a
             <code>javascript:</code> URL in <code>href</code> or <code>src</code> runs when it is followed. Check the scheme of a URL
             that comes from untrusted data.
@@ -120,7 +172,8 @@ document.body.append(text, trustedHtml, risky);</code></pre>
             <code>constructor</code> and <code>prototype</code>. A JSON payload with such keys cannot reach
             <code>Object.prototype</code> through the library, and a polluted prototype adds nothing to an element.
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { div } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div } from 'fiorejs';
 
 const payload = JSON.parse('{"__proto__":{"polluted":true},"constructor":{"prototype":{"polluted":true}},"title":"ok"}');
 
@@ -128,7 +181,20 @@ const element = div.props(payload).create('Hi');
 
 document.body.append(element);
 console.log(element.title, ({}).polluted); // ok undefined</code></pre>
-          <p>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const payload = JSON.parse('{"__proto__":{"polluted":true},"constructor":{"prototype":{"polluted":true}},"title":"ok"}');
+
+const element = &lt;div {...payload}&gt;Hi&lt;/div&gt;;
+
+document.body.append(element);
+console.log(element.title, ({}).polluted); // ok undefined</code></pre>
+</div>
+          <p data-syntax="jsx">
+            A JSX spread goes through the same code, so <code>__proto__</code> cannot reach <code>Object.prototype</code>
+            there either. The other keys are still applied: the example sets a <code>constructor</code> attribute with the
+            text <code>[object Object]</code>, and a payload that sets <code>innerHTML</code> still sets it. Treat this as a
+            safety net, not as permission to spread untrusted objects.
+          </p>
+          <p data-syntax="builder">
             This protects the prototype, not the other keys: a payload that sets <code>innerHTML</code> still sets it. Treat
             this as a safety net, not as permission to pass untrusted objects to <code>props</code>.
           </p>
@@ -142,7 +208,8 @@ console.log(element.title, ({}).polluted); // ok undefined</code></pre>
             (a key such as <code>innerHTML</code> or <code>srcdoc</code> sets that property or attribute). If the user may pick
             attributes at all, filter their names against a list you control, and check the values you allow.
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { a } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { a } from 'fiorejs';
 
 const allowed = new Set(['title', 'rel', 'aria-label']);
 const fromUser = JSON.parse('{"title":"Docs","onmouseover":"alert(1)","href":"javascript:alert(1)"}');
@@ -151,6 +218,14 @@ const attrs = Object.fromEntries(Object.entries(fromUser).filter(([name]) =&gt; 
 const safeUrl = (value) =&gt; (['https:', 'http:'].includes(new URL(value, 'https://example.com').protocol) ? value : null);
 
 document.body.append(a.attrs({ ...attrs, href: safeUrl('javascript:alert(1)') ?? '#' }).create('Docs'));</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const allowed = new Set(['title', 'rel', 'aria-label']);
+const fromUser = JSON.parse('{"title":"Docs","onmouseover":"alert(1)","href":"javascript:alert(1)"}');
+
+const attrs = Object.fromEntries(Object.entries(fromUser).filter(([name]) =&gt; allowed.has(name)));
+const safeUrl = (value) =&gt; (['https:', 'http:'].includes(new URL(value, 'https://example.com').protocol) ? value : null);
+
+document.body.append(&lt;a {...attrs} href={safeUrl('javascript:alert(1)') ?? '#'}&gt;Docs&lt;/a&gt;);</code></pre>
+</div>
         </section>
 
         <nav class="pager" aria-label="Pages" data-pager></nav>

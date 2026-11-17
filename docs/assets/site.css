@@ -1,10 +1,12 @@
 :root {
+  /* Keeps the header still between pages with and without a scrollbar. */
+  scrollbar-gutter: stable;
   --bg: #0a0c0f;
   --bg-2: #0d1014;
   --surface: #11151a;
   --surface-2: #151a20;
   --ink: #f4f2ec;
-  --muted: #a7ada6;
+  --muted: #c9cdc6;
   --faint: #8a928b;
   --line: rgba(244, 242, 236, 0.1);
   --line-strong: rgba(244, 242, 236, 0.18);
