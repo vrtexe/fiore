@@ -766,6 +766,7 @@
           <a href="#overview">Overview</a>
           <a href="#install">Install and imports</a>
           <a href="#element">element()</a>
+          <a href="#fragment">fragment()</a>
           <a href="#builder">Builder</a>
 
           <p class="nav-group">Data object</p>
@@ -854,7 +855,7 @@ document.body.<span class="fn">appendChild</span>(card);</code></pre>
                 <tr>
                   <td><code>fiorejs</code></td>
                   <td><code>lib/html.js</code></td>
-                  <td><code>element</code>, <code>LIVE</code>, 112 HTML tag functions, default object</td>
+                  <td><code>element</code>, <code>fragment</code>, <code>LIVE</code>, 112 HTML tag functions, default object</td>
                 </tr>
                 <tr>
                   <td><code>fiorejs/html</code></td>
@@ -981,6 +982,18 @@ svg.circle.<span class="fn">attrs</span>({ r<span class="punc">:</span> <span cl
             </table>
           </div>
           <p>Every key is optional and accepts <code>undefined</code> or <code>null</code>.</p>
+        </section>
+
+        <section id="fragment">
+          <h2>fragment()</h2>
+          <p>
+            <code>fragment(children)</code> returns a <code>DocumentFragment</code> of the children, for a group of
+            nodes without a wrapping element. It takes the same children as a tag, live values included, and a live
+            child of a fragment keeps updating after the fragment is inserted.
+          </p>
+          <pre class="code" tabindex="0"><code><span class="kw">import</span> { fragment, dl, dt, dd } <span class="kw">from</span> <span class="str">'fiorejs'</span>;
+
+dl.<span class="fn">create</span>(terms.<span class="fn">map</span>((term) <span class="punc">=&gt;</span> <span class="fn">fragment</span>([<span class="fn">dt</span>(term.name), <span class="fn">dd</span>(term.text)])));</code></pre>
         </section>
 
         <section id="builder">

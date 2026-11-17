@@ -36,7 +36,7 @@
     "test": "tsc -p test && tsc -p test/plain && node --test test/out/render.test.js"
   },
   "peerDependencies": {
-    "fiorejs": "^2.0.0"
+    "fiorejs": "^2.1.0"
   },
   "publishConfig": {
     "access": "public"
