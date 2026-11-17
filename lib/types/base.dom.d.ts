@@ -46,7 +46,8 @@ export type BindContext =
     }
   | { element: BaseElement; kind: 'attribute'; name: string }
   | {
-      element: BaseElement;
+      /** The element, or the fragment, the child is built into. */
+      element: BaseElement | DocumentFragment;
       kind: 'child';
       /** The comment before the nodes of the child, or the element when the child is its only child. */
       anchor: Node;
@@ -55,7 +56,7 @@ export type BindContext =
 export type PickWritable<T> = Pick<T, WritableKeys<T>>;
 
 /** false, true, null and undefined are skipped, so `condition && node` works. */
-type Child = Node | string | number | boolean | null | undefined;
+type Child = Node | string | number | bigint | boolean | null | undefined;
 
 /** An item of a children array: a child, a live value of children, or a nested array, flattened at any depth. */
 type NestedChild = Child | LiveValue<Child | Child[]> | NestedChild[];

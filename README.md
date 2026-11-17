@@ -49,13 +49,13 @@ Every tag is a function with builder methods:
 | Method | Takes | Repeated calls |
 | --- | --- | --- |
 | `props(map)` | JavaScript properties of the element, such as `className`, `value` or `style`. `undefined` leaves the element's property unchanged, but a later `undefined` replaces an earlier value of the same builder. | Combine: later keys win, so a later `style` object replaces an earlier one. A nested object such as `style` is merged into the element after the other keys of its map. |
-| `attrs(map)` | Attributes, set with [`setAttribute`](https://developer.mozilla.org/en-US/docs/Web/API/Element/setAttribute). Inline event handlers such as `onclick`, in any case, are ignored, so no handler string is ever run; other names that start with `on`, such as `online`, are set. | Merge: later keys win, and `null` removes an earlier value. |
+| `attrs(map)` | Attributes, set with [`setAttribute`](https://developer.mozilla.org/en-US/docs/Web/API/Element/setAttribute). Every name that is `on` followed by letters only, such as `onclick` or `onunload`, in any case, is ignored, so no handler string is ever run; a hyphenated name such as `on-tap` is set. Never take attribute names from untrusted data. | Merge: later keys win, and `null` removes an earlier value. |
 | `on(map)` | Listeners: `{ click: fn }` or `{ click: { handler, options } }`. | Add listeners; they never replace each other. |
 | `with(fn)` | A function that gets the builder and returns a builder. | Each call applies its function. |
 | `also(fn)` | A function that gets the created element, after the listeners. The element is not in the document yet, so focusing or measuring does not work there. | Add callbacks, run in order. |
 | `create(children)` | The children, like the `children` key: a node, a string, a number, or an array of these. Creates the element and returns it. | |
 
-Children are nodes, strings, numbers or arrays of these, nested as deep as you like, so `[title, items.map(row)]` works. `null`, `undefined`, `true` and `false` are skipped, so `user.isAdmin && badge()` works.
+Children are nodes, strings, numbers, bigints or arrays of these, nested as deep as you like, so `[title, items.map(row)]` works. `null`, `undefined`, `true` and `false` are skipped, so `user.isAdmin && badge()` works.
 
 Each method returns a new builder and leaves the old one unchanged, and the top level of each map is copied when you call the method; nested objects such as `style` are used as they are when the element is created. A builder can therefore serve as a template:
 
@@ -125,6 +125,16 @@ import math from 'fiorejs/math';
 
 The [MDN](https://developer.mozilla.org/en-US/docs/Web/API) documentation of each element applies to its props and attributes. TypeScript declarations are included.
 
+### Fragments
+
+`fragment(children)` returns a `DocumentFragment` of the children, for a group of nodes without a wrapping element. It takes the same children as a tag, live values included; a live child of a fragment keeps updating after the fragment is inserted.
+
+```js
+import { fragment, dl, dt, dd } from 'fiorejs';
+
+dl.create(terms.map((term) => fragment([dt(term.name), dd(term.text)])));
+```
+
 ### Events
 
 Each element accepts the events of its own event map, so `body` takes window events such as `popstate`, and `video` takes media events such as `encrypted`. In a listener, `this` and `event.currentTarget` are typed as the element.
@@ -158,7 +168,7 @@ declare global {
 
 ### Attribute values
 
-`null`, `undefined` and `false` leave an attribute out. Every other value, including `0` and `''`, is passed to `setAttribute`, which converts it to a string; Trusted Types objects are passed through unchanged. `aria-*` and `data-*` attributes, and the enumerated attributes `contenteditable`, `draggable` and `spellcheck`, keep `false` as the string `"false"`.
+`null`, `undefined` and `false` leave an attribute out. Every other value, including `0` and `''`, is passed to `setAttribute`, which converts it to a string; Trusted Types objects are passed through unchanged. Values are not checked: a `javascript:` URL in `href` or `src` runs when it is followed, so check the scheme of a URL that comes from untrusted data. `aria-*` and `data-*` attributes, and the enumerated attributes `contenteditable`, `draggable` and `spellcheck`, keep `false` as the string `"false"`.
 
 Versions before 1.2.0 skipped every falsy value, including `0` and `''`. Use `null` or `false` to leave an attribute out.
 
@@ -183,9 +193,9 @@ class Observed {
 span(new Observed(clock));
 ```
 
-`context.kind` is `'property'`, `'attribute'` or `'child'`, and `context.element` is the element being built. Properties and attributes come with `context.name`; properties also carry `context.path`, the full key path such as `['style', 'color']`. A child comes with `context.anchor`, a node that stays in the document as long as the child does. A child that is the only item of `children` fills the element, and its anchor is the element. Any other child lives between two empty comments, and its anchor is the first one; the comments move with its nodes, for example out of a fragment, and show in `childNodes` and `innerHTML`, but not in `children`, `textContent` or CSS selectors. An only child belongs to its element: if code moves its nodes to another parent, later updates still go to the element, and nodes that other code adds to the element, for example in `also()`, are removed at its next update; give it a sibling in both cases.
+`context.kind` is `'property'`, `'attribute'` or `'child'`, and `context.element` is the element being built. Properties and attributes come with `context.name`; properties also carry `context.path`, the full key path such as `['style', 'color']`. A child comes with `context.anchor`, a node that stays in the document as long as the child does. A child that is the only item of `children` fills the element, and its anchor is the element; in a `fragment()` it keeps the comments. Any other child lives between two empty comments, and its anchor is the first one; the comments move with its nodes, for example out of a fragment, and show in `childNodes` and `innerHTML`, but not in `children`, `textContent` or CSS selectors. An only child belongs to its element: if code moves its nodes to another parent, later updates still go to the element, and nodes that other code adds to the element, for example in `also()`, are removed at its next update; give it a sibling in both cases.
 
-Only values with a `[LIVE]` method are live. A plain function is a callback, never a getter, in props, attributes and children alike; strings, numbers, booleans, nodes and plain objects without `[LIVE]` are static. Attributes that are inline event handlers of the element, such as `onclick` in any case, are never set or bound, because the browser runs their text as script; other names such as `online` are. As a prop, a handler can be a live value whose value is a function: `props: { onclick: handler }` swaps the handler when `handler` changes. Listeners belong in `on`. A live child that has not called `apply` yet keeps an empty place until it does. A node that one live child places can be taken over by another live child, which then owns it; a node from a live child that is passed as a static child of another element is moved there without its live child being told, so give each node one owner.
+Only values with a `[LIVE]` method are live. A plain function is a callback, never a getter, in props, attributes and children alike; strings, numbers, booleans, nodes and plain objects without `[LIVE]` are static. Attributes named `on` followed by letters only, such as `onclick` in any case, are never set or bound, because the browser may run their text as script; hyphenated names such as `on-tap` are. As a prop, a handler can be a live value whose value is a function: `props: { onclick: handler }` swaps the handler when `handler` changes. Listeners belong in `on`. A live child that has not called `apply` yet keeps an empty place until it does. A node that one live child places can be taken over by another live child, which then owns it; a node from a live child that is passed as a static child of another element is moved there without its live child being told, so give each node one owner.
 
 The key comes from `Symbol.for`, so live values also work when a page loads two copies of fiorejs. The `LiveValue`, `Live` and `BindContext` types are exported from `fiorejs`; a value whose `[LIVE]` method passes a `T` to `apply` fits `Live<T>`, so props, attributes and children check the type of a live value like that of a plain one.
 

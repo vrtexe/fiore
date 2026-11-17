@@ -1,4 +1,4 @@
-import { element } from 'fiorejs';
+import { element, fragment } from 'fiorejs';
 import svg, { element as svgElement } from 'fiorejs/svg';
 
 // ponytail: a, script, style and title always create HTML elements; SVG versions need a namespace hint
@@ -158,12 +158,7 @@ export function jsx(type, props) {
  * @returns {DocumentFragment}
  */
 export function Fragment({ children }) {
-  // A range moves the nodes in one step; spreading them as arguments overflows for very long lists.
-  const range = document.createRange();
-  // The null keeps a lone live child between markers instead of filling the div, so it still updates after the range
-  // moves its nodes out.
-  range.selectNodeContents(element('div')([children, null]));
-  return range.extractContents();
+  return fragment(children);
 }
 
 export { jsx as jsxs };

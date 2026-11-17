@@ -6,8 +6,9 @@ import lists from './flows/lists.js';
 import lifecycle from './flows/lifecycle.js';
 import resources from './flows/resource.js';
 import liveProtocol from './flows/live-protocol.js';
+import scheduling from './flows/scheduling.js';
 
-const flows = [builders, signals, liveChildren, lists, lifecycle, resources, liveProtocol];
+const flows = [builders, signals, scheduling, liveChildren, lists, lifecycle, resources, liveProtocol];
 const app = document.getElementById('app');
 const nav = document.getElementById('nav');
 

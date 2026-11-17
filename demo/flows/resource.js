@@ -1,12 +1,12 @@
 import { button, div, span, strong } from 'fiorejs';
-import { resource, state } from '@fiorejs/signals';
+import { flush, resource, state } from '@fiorejs/signals';
 import { action, card, flow, logger } from '../debug.js';
 
-/** A fake server: answers after a delay, fails for id 4, and honours the abort signal. */
+/** A fake server: answers after a delay, fails for id 5, and honours the abort signal. */
 function fetchUser(id, { signal }) {
   return new Promise((resolve, reject) => {
     const delay = 400 + Math.random() * 800;
-    const timer = setTimeout(() => (id === 4 ? reject(new Error('user 4 does not exist')) : resolve({ id, name: `User ${id}` })), delay);
+    const timer = setTimeout(() => (id === 5 ? reject(new Error('user 5 does not exist')) : resolve({ id, name: `User ${id}` })), delay);
     signal.addEventListener('abort', () => {
       clearTimeout(timer);
       reject(new Error('aborted'));
@@ -30,7 +30,7 @@ export default function resources() {
     span.attrs({ class: 'error' }).create(user.error.computed((error) => (error ? String(error.message) : ''))),
   ]);
 
-  return flow('resource', 'Async: resource', 'resource(source, fetcher) loads again when its source changes, aborts the older load, keeps the last value while loading, and exposes loading and error signals. User 4 fails on purpose.', [
+  return flow('resource', 'Async: resource', 'resource(source, fetcher) loads again when its source changes, aborts the older load, keeps the last value while loading, and exposes loading and error signals. User 5 fails on purpose.', [
     card(
       'Load a user',
       view,
@@ -38,9 +38,11 @@ export default function resources() {
         action('Previous', () => id.update((value) => Math.max(1, value - 1))),
         action('Next', () => id.update((value) => value + 1)),
         action('Next three quickly', () => {
-          id.update((value) => value + 1);
-          id.update((value) => value + 1);
-          id.update((value) => value + 1);
+          // Writes in one task share one flush, so flush() after each starts its load before the next write.
+          for (let i = 0; i < 3; i++) {
+            id.update((value) => value + 1);
+            flush();
+          }
         }),
         action('Refetch', () => user.refetch()),
         action('Rename locally (mutate)', () => user.mutate({ id: id.get(), name: 'Renamed without loading' })),

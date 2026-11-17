@@ -67,3 +67,30 @@ test('refuses a folder that is not empty', () => {
   assert.equal(result.status, 1);
   assert.match(result.stderr, /already exists and is not empty/);
 });
+
+test('the DOM templates pass data to create(), never as the only argument of a plain tag call', () => {
+  const dir = fileURLToPath(new URL('../templates/app/', import.meta.url));
+  for (const file of ['dom-plain.ts', 'dom-plain.js', 'dom-signals.ts', 'dom-signals.js']) {
+    const source = readFileSync(join(dir, file), 'utf8');
+    const tags = source.match(/import \{([^}]+)\} from 'fiorejs'/)[1].split(',').map((name) => name.trim());
+    for (const tag of tags) {
+      // A plain call with a variable reads an object, for example parsed JSON, as the data object.
+      assert.doesNotMatch(source, new RegExp(`(?<![.\\w])${tag}\\(\\s*[A-Za-z_$]`), `${file}: ${tag}(variable)`);
+    }
+  }
+});
+
+test('the TypeScript templates type-check against the packages, with the options the generator writes', async () => {
+  const { default: ts } = await import('typescript');
+  const dir = fileURLToPath(new URL('../templates/app/', import.meta.url));
+  for (const file of ['dom-plain.ts', 'dom-signals.ts', 'jsx-plain.tsx', 'jsx-signals.tsx']) {
+    const jsx = file.endsWith('.tsx') ? { jsx: 'react-jsx', jsxImportSource: '@fiorejs/jsx' } : {};
+    const { options } = ts.convertCompilerOptionsFromJson(
+      { target: 'es2022', module: 'esnext', moduleResolution: 'bundler', ...jsx, strict: true, lib: ['es2022', 'dom', 'dom.iterable'], noEmit: true },
+      dir,
+    );
+    const program = ts.createProgram([join(dir, file)], options);
+    const messages = ts.getPreEmitDiagnostics(program).map((d) => ts.flattenDiagnosticMessageText(d.messageText, '\n'));
+    assert.deepEqual(messages, [], file);
+  }
+});

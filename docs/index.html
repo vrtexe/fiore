@@ -998,6 +998,7 @@
           <a href="#usage">Usage</a>
           <a href="#api">API</a>
           <a href="api.html">Docs</a>
+          <a href="signals.html">Signals</a>
           <a href="https://github.com/vrtexe/fiore">GitHub</a>
         </nav>
         <a class="btn btn--primary btn--nav" href="#install">Get started</a>
@@ -1057,11 +1058,11 @@
               <span class="window-file">app.js</span>
               <span class="window-tag">ESM</span>
             </div>
-            <div class="code-body">
+            <div class="code-body" tabindex="0">
               <div class="gutter" aria-hidden="true">
                 1<br />2<br />3<br />4<br />5<br />6<br />7<br />8<br />9<br />10<br />11<br />12
               </div>
-              <pre><code><span class="kw">import</span> { div, button } <span class="kw">from</span> <span class="str">'fiorejs'</span><span class="punc">;</span>
+              <pre tabindex="0"><code><span class="kw">import</span> { div, button } <span class="kw">from</span> <span class="str">'fiorejs'</span><span class="punc">;</span>
 
 <span class="kw">const</span> save <span class="punc">=</span> () <span class="punc">=&gt;</span> console<span class="punc">.</span>log(<span class="str">'saved'</span>)<span class="punc">;</span>
 
@@ -1214,7 +1215,7 @@ document<span class="punc">.</span>body<span class="punc">.</span><span class="f
                   <span class="dot"></span>
                   <span class="window-file">panel.js</span>
                 </div>
-                <pre><code><span class="kw">import</span> { element } <span class="kw">from</span> <span class="str">'fiorejs'</span><span class="punc">;</span>
+                <pre tabindex="0"><code><span class="kw">import</span> { element } <span class="kw">from</span> <span class="str">'fiorejs'</span><span class="punc">;</span>
 
 <span class="kw">const</span> panel <span class="punc">=</span> <span class="fn">element</span>(<span class="str">'section'</span>)
   <span class="punc">.</span><span class="fn">props</span>({ className<span class="punc">:</span> <span class="str">'panel'</span> })
@@ -1250,21 +1251,21 @@ document<span class="punc">.</span>body<span class="punc">.</span><span class="f
             <div class="api-col">
               <h3>HTML</h3>
               <p class="api-count">112 tag functions</p>
-              <pre><code><span class="kw">import</span> { div, button }
+              <pre tabindex="0"><code><span class="kw">import</span> { div, button }
   <span class="kw">from</span> <span class="str">'fiorejs'</span>;</code></pre>
               <a class="api-link" href="https://github.com/vrtexe/fiore/blob/main/lib/html.js">lib/html.js</a>
             </div>
             <div class="api-col">
               <h3>SVG</h3>
               <p class="api-count">63 tag functions</p>
-              <pre><code><span class="kw">import</span> { circle }
+              <pre tabindex="0"><code><span class="kw">import</span> { circle }
   <span class="kw">from</span> <span class="str">'fiorejs/svg'</span>;</code></pre>
               <a class="api-link" href="https://github.com/vrtexe/fiore/blob/main/lib/svg.js">lib/svg.js</a>
             </div>
             <div class="api-col">
               <h3>MathML</h3>
               <p class="api-count">31 tag functions</p>
-              <pre><code><span class="kw">import</span> { mi, mfrac }
+              <pre tabindex="0"><code><span class="kw">import</span> { mi, mfrac }
   <span class="kw">from</span> <span class="str">'fiorejs/math'</span>;</code></pre>
               <a class="api-link" href="https://github.com/vrtexe/fiore/blob/main/lib/math.js">lib/math.js</a>
             </div>
@@ -1314,7 +1315,7 @@ document<span class="punc">.</span>body<span class="punc">.</span><span class="f
               </button>
             </div>
 
-            <pre class="quick-code"><code><span class="kw">import</span> { div } <span class="kw">from</span> <span class="str">'fiorejs'</span>;
+            <pre class="quick-code" tabindex="0"><code><span class="kw">import</span> { div } <span class="kw">from</span> <span class="str">'fiorejs'</span>;
 
 document.body.<span class="fn">appendChild</span>(
   <span class="fn">div</span>(<span class="str">'Hello'</span>),

@@ -1,5 +1,5 @@
-import { b, div, em, i } from 'fiorejs';
-import { state } from '@fiorejs/signals';
+import { b, div, em, fragment, i } from 'fiorejs';
+import { flush, state } from '@fiorejs/signals';
 import { action, card, domView, flow, logger } from '../debug.js';
 
 const words = ['one', 'two', 'three', 'four', 'five'];
@@ -26,11 +26,18 @@ export default function liveChildren() {
   let builds = 0;
   const conditional = div(count.if(() => (builds++, b(`some (branch built ${builds} times)`))).else(() => em('none')));
 
+  // A case condition shows the branch of the first case that matches.
+  const level = state(0);
+  const cases = div(
+    level
+      .case(0, () => em('none'))
+      .case((n) => n > 3, () => b('many'))
+      .else(() => 'a few'),
+  );
+
   // 5. A fragment that contains a live child keeps updating after it is inserted somewhere else.
   const open = state(false);
-  const fragment = document.createDocumentFragment();
-  fragment.append(...div([b('row'), open.computed((value) => (value ? em(' (details shown)') : null))]).childNodes);
-  const fragmentHost = div(fragment);
+  const fragmentHost = div(fragment([b('row'), open.computed((value) => (value ? em(' (details shown)') : null))]));
 
   return flow('live-children', 'Live children', 'A live value as a child: how its nodes are tracked, what the comment markers are, and why outside DOM changes such as normalize() or page translation do not break it.', [
     card('Only child versus siblings', div([only, withSiblings]), [action('Change text', () => text.set(`hello ${Math.floor(Math.random() * 100)}`))], { view: div([domView(only), domView(withSiblings)]) }),
@@ -66,12 +73,15 @@ export default function liveChildren() {
         action('Update the value', () => {
           next = (next + 1) % words.length;
           word.set(words[next]);
+          // The DOM updates in the next flush; flush() runs it now, so the text below is the new one.
+          flush();
           events.write(`set "${words[next]}": shown "${robust.textContent}"`);
         }),
       ],
       events,
     ),
     card('if / else', conditional, [action('count + 1', () => count.update((value) => value + 1)), action('count = 0', () => count.set(0))], { view: domView(conditional) }),
+    card('case', cases, [action('level + 1', () => level.update((value) => value + 1)), action('level = 0', () => level.set(0))], { view: domView(cases) }),
     card('A live child inside a fragment', fragmentHost, [action('Toggle details', () => open.update((value) => !value))], { view: domView(fragmentHost) }),
   ]);
 }

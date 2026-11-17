@@ -18,7 +18,7 @@ function TodoItem(text: string) {
         .props({ type: 'checkbox' })
         .on({ change: (event) => item.classList.toggle('done', event.currentTarget.checked) })
         .create(),
-      span(text),
+      span.create(text),
     ]),
     button
       .props({ className: 'ghost' })

@@ -11,7 +11,7 @@ const { default: math } = await import('../lib/math.js');
 const { default: svg } = await import('../lib/svg.js');
 const { assignProperties } = await import('../lib/core/base.js');
 const { deprecatedElement } = await import('../lib/core/html.js');
-const { option, select, span } = await import('../lib/html.js');
+const { option, select, span, fragment } = await import('../lib/html.js');
 
 /** Minimal signal used to exercise live values: it records the context it is bound with. */
 const signalPrototype = {
@@ -238,16 +238,16 @@ test('textContent and innerHTML props are kept when there are no children', () =
   assert.equal(div({ props: { innerHTML: '<b>x</b>' } }).innerHTML, '<b>x</b>');
 });
 
-test('inline handler attributes are never set or bound, in any case; other on* names are', () => {
+test('inline handler attributes are never set or bound, in any case; hyphenated on-* names are', () => {
   const before = contexts.length;
   const el = div({
-    attrs: { onclick: signal('go()'), OnClick: signal('go()'), online: signal('yes'), title: signal('t') },
+    attrs: { onclick: signal('go()'), OnClick: signal('go()'), 'on-line': signal('yes'), title: signal('t') },
     props: { onclick: () => {} },
   });
 
-  assert.deepEqual(contexts.slice(before).map((context) => context.name), ['online', 'title']);
+  assert.deepEqual(contexts.slice(before).map((context) => context.name), ['on-line', 'title']);
   assert.equal(el.hasAttribute('onclick'), false);
-  assert.equal(el.getAttribute('online'), 'yes');
+  assert.equal(el.getAttribute('on-line'), 'yes');
 });
 
 test('a live child that is not applied yet still gets a place', () => {
@@ -814,4 +814,92 @@ test('a cyclic value merged into a cyclic property ends instead of looping', () 
 
   assert.equal(el.cfg.mode, 'on');
   assert.equal(el.cfg.self, input, 'the second visit assigns the value whole');
+});
+
+test('a live list renders, replaces and empties many rows, keeping static siblings in place', () => {
+  const rows = (prefix, count) => Array.from({ length: count }, (_, i) => span({ children: `${prefix}${i}` }));
+  const content = signal([]);
+  const el = div({ children: ['<', content, '>'] });
+
+  const first = rows('a', 500);
+  content.set(first);
+  assert.equal(el.children.length, 500);
+  assert.equal(el.children[0], first[0]);
+  assert.equal(el.textContent.startsWith('<a0a1'), true);
+  assert.equal(el.textContent.endsWith('a499>'), true);
+
+  const second = rows('b', 300);
+  content.set(second);
+  assert.deepEqual([...el.children], second);
+  assert.equal(el.textContent.startsWith('<b0'), true);
+  assert.equal(el.textContent.endsWith('b299>'), true);
+
+  content.set([]);
+  assert.equal(html(el), '&lt;&gt;');
+});
+
+test('a live list in an only child renders and replaces many rows', () => {
+  const rows = (prefix, count) => Array.from({ length: count }, (_, i) => span({ children: `${prefix}${i}` }));
+  const content = signal(rows('a', 400));
+  const el = div({ children: content });
+  assert.equal(el.childNodes.length, 400);
+
+  const next = rows('b', 200);
+  content.set(next);
+  assert.deepEqual([...el.childNodes], next);
+});
+
+test('fragment() returns a fragment of its children, flattened, with empty values skipped', () => {
+  const result = fragment(['a', [span('b'), [null, 1]], false, undefined]);
+
+  assert.equal(result.nodeType, 11);
+  const host = div();
+  host.append(result);
+  assert.equal(host.innerHTML, 'a<span>b</span>1');
+});
+
+test('a lone live child of a fragment keeps updating after the fragment is inserted', () => {
+  const count = signal(1);
+  const host = div(['before', fragment([count]), 'after']);
+
+  count.set(2);
+
+  assert.equal(html(host), 'before2after');
+});
+
+test('every attribute named on followed by letters is skipped, also without an element property', () => {
+  const names = { onfocusin: 'a()', ONFOCUSOUT: 'a()', onunload: 'a()', ongesturestart: 'a()', online: 'yes', 'on-line': 'yes' };
+  const el = input.attrs(names).create();
+  const drawing = svg.svg.attrs(names).create();
+
+  for (const node of [el, drawing]) {
+    for (const name of ['onfocusin', 'onfocusout', 'onunload', 'ongesturestart', 'online']) {
+      assert.equal(node.hasAttribute(name), false, `${node.localName} ${name}`);
+    }
+    assert.equal(node.getAttribute('on-line'), 'yes');
+  }
+});
+
+test('a plain call reads only the own keys of its data object', () => {
+  Object.prototype.props = { innerHTML: '<img src="x">' };
+  Object.prototype.attrs = { title: 'polluted' };
+  try {
+    const el = div({ children: 'hello' });
+
+    assert.equal(el.innerHTML, 'hello');
+    assert.equal(el.hasAttribute('title'), false);
+  } finally {
+    delete Object.prototype.props;
+    delete Object.prototype.attrs;
+  }
+});
+
+test('a listener with options gets them', () => {
+  let calls = 0;
+  const el = div.on({ click: { handler: () => calls++, options: { once: true } } }).create();
+
+  el.dispatchEvent(new window.Event('click'));
+  el.dispatchEvent(new window.Event('click'));
+
+  assert.equal(calls, 1);
 });

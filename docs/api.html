@@ -753,6 +753,7 @@
         <nav class="nav-links" aria-label="Main">
           <a href="index.html">Home</a>
           <a class="is-current" href="api.html" aria-current="page">API</a>
+          <a href="signals.html">Signals</a>
           <a href="https://github.com/vrtexe/fiore">GitHub</a>
         </nav>
         <a class="btn" href="index.html#install">Get started</a>
@@ -766,6 +767,7 @@
           <a href="#overview">Overview</a>
           <a href="#install">Install and imports</a>
           <a href="#element">element()</a>
+          <a href="#fragment">fragment()</a>
           <a href="#builder">Builder</a>
 
           <p class="nav-group">Data object</p>
@@ -813,7 +815,7 @@
             function of any HTML element by name; the SVG and MathML entry points each export their
             own <code>element</code>.
           </p>
-          <div class="signature">
+          <div class="signature" tabindex="0">
             <code><span class="fn">element</span>&lt;T <span class="kw">extends</span> keyof HTMLElementTagNameMap&gt;(<br />
             &nbsp;&nbsp;name<span class="punc">:</span> T,<br />
             )<span class="punc">:</span> HTMLTag&lt;T&gt;</code>
@@ -822,7 +824,7 @@
             A tag is typed per element. For example, <code>div('Hello')</code> and
             <code>div.props({ className: 'card' }).create()</code> both return <code>HTMLDivElement</code>.
           </p>
-          <pre class="code"><code><span class="kw">import</span> { div } <span class="kw">from</span> <span class="str">'fiorejs'</span>;
+          <pre class="code" tabindex="0"><code><span class="kw">import</span> { div } <span class="kw">from</span> <span class="str">'fiorejs'</span>;
 
 <span class="kw">const</span> card <span class="punc">=</span> div.<span class="fn">props</span>({ className<span class="punc">:</span> <span class="str">'card'</span> }).<span class="fn">create</span>(<span class="str">'Hello'</span>);
 
@@ -835,13 +837,13 @@ document.body.<span class="fn">appendChild</span>(card);</code></pre>
 
         <section id="install">
           <h2>Install and imports</h2>
-          <pre class="code"><code>npm install -D fiorejs</code></pre>
+          <pre class="code" tabindex="0"><code>npm install -D fiorejs</code></pre>
           <p>
             The package is ESM. Each entry point maps to a module in <code>lib/</code>, and the
             package has no runtime dependencies.
           </p>
 
-          <div class="table-wrap">
+          <div class="table-wrap" tabindex="0">
             <table>
               <thead>
                 <tr>
@@ -854,7 +856,7 @@ document.body.<span class="fn">appendChild</span>(card);</code></pre>
                 <tr>
                   <td><code>fiorejs</code></td>
                   <td><code>lib/html.js</code></td>
-                  <td><code>element</code>, <code>LIVE</code>, 112 HTML tag functions, default object</td>
+                  <td><code>element</code>, <code>fragment</code>, <code>LIVE</code>, 112 HTML tag functions, default object</td>
                 </tr>
                 <tr>
                   <td><code>fiorejs/html</code></td>
@@ -891,7 +893,7 @@ document.body.<span class="fn">appendChild</span>(card);</code></pre>
           </div>
 
           <p>Named, default and namespace imports are all available:</p>
-          <pre class="code"><code><span class="kw">import</span> { div, button } <span class="kw">from</span> <span class="str">'fiorejs'</span>;
+          <pre class="code" tabindex="0"><code><span class="kw">import</span> { div, button } <span class="kw">from</span> <span class="str">'fiorejs'</span>;
 <span class="kw">import</span> html <span class="kw">from</span> <span class="str">'fiorejs'</span>;
 <span class="kw">import</span> { html, svg, math } <span class="kw">from</span> <span class="str">'fiorejs/global'</span>;
 
@@ -922,7 +924,7 @@ svg.circle.<span class="fn">attrs</span>({ r<span class="punc">:</span> <span cl
             builder calls.
           </p>
 
-          <pre class="code"><code><span class="kw">import</span> { element } <span class="kw">from</span> <span class="str">'fiorejs'</span>;
+          <pre class="code" tabindex="0"><code><span class="kw">import</span> { element } <span class="kw">from</span> <span class="str">'fiorejs'</span>;
 
 <span class="kw">const</span> panel <span class="punc">=</span> <span class="fn">element</span>(<span class="str">'section'</span>)
   .<span class="fn">props</span>({ className<span class="punc">:</span> <span class="str">'panel'</span> })
@@ -935,7 +937,7 @@ svg.circle.<span class="fn">attrs</span>({ r<span class="punc">:</span> <span cl
             A tag can also be called directly. A plain object is the data object, with the same
             names as the builder; anything else is the children:
           </p>
-          <pre class="code"><code><span class="fn">p</span>();
+          <pre class="code" tabindex="0"><code><span class="fn">p</span>();
 <span class="fn">p</span>(<span class="str">'Hello'</span>);
 <span class="fn">p</span>([<span class="fn">strong</span>(<span class="str">'Hi'</span>), <span class="str">' there'</span>]);
 <span class="fn">p</span>({ props<span class="punc">:</span> { className<span class="punc">:</span> <span class="str">'lead'</span> }, attrs<span class="punc">:</span> { title<span class="punc">:</span> <span class="str">'Intro'</span> }, on<span class="punc">:</span> { click<span class="punc">:</span> select }, children<span class="punc">:</span> <span class="str">'Hello'</span> });</code></pre>
@@ -947,7 +949,7 @@ svg.circle.<span class="fn">attrs</span>({ r<span class="punc">:</span> <span cl
           </p>
 
           <h3>The data object</h3>
-          <div class="table-wrap">
+          <div class="table-wrap" tabindex="0">
             <table>
               <thead>
                 <tr>
@@ -983,6 +985,18 @@ svg.circle.<span class="fn">attrs</span>({ r<span class="punc">:</span> <span cl
           <p>Every key is optional and accepts <code>undefined</code> or <code>null</code>.</p>
         </section>
 
+        <section id="fragment">
+          <h2>fragment()</h2>
+          <p>
+            <code>fragment(children)</code> returns a <code>DocumentFragment</code> of the children, for a group of
+            nodes without a wrapping element. It takes the same children as a tag, live values included, and a live
+            child of a fragment keeps updating after the fragment is inserted.
+          </p>
+          <pre class="code" tabindex="0"><code><span class="kw">import</span> { fragment, dl, dt, dd } <span class="kw">from</span> <span class="str">'fiorejs'</span>;
+
+dl.<span class="fn">create</span>(terms.<span class="fn">map</span>((term) <span class="punc">=&gt;</span> <span class="fn">fragment</span>([<span class="fn">dt</span>(term.name), <span class="fn">dd</span>(term.text)])));</code></pre>
+        </section>
+
         <section id="builder">
           <h2>Builder</h2>
           <p>
@@ -991,7 +1005,7 @@ svg.circle.<span class="fn">attrs</span>({ r<span class="punc">:</span> <span cl
             objects such as <code>style</code> are used as they are when the element is created.
             <code>.create()</code> creates the element and returns it.
           </p>
-          <div class="table-wrap">
+          <div class="table-wrap" tabindex="0">
             <table>
               <thead>
                 <tr>
@@ -1008,7 +1022,7 @@ svg.circle.<span class="fn">attrs</span>({ r<span class="punc">:</span> <span cl
                 </tr>
                 <tr>
                   <td><code>attrs(map)</code></td>
-                  <td>Attributes, set with <code>setAttribute</code>. Inline event handlers such as <code>onclick</code>, in any case, are ignored.</td>
+                  <td>Attributes, set with <code>setAttribute</code>. Every name that is <code>on</code> followed by letters only, such as <code>onclick</code>, in any case, is ignored.</td>
                   <td>Merge: later keys win, and <code>null</code> removes an earlier value.</td>
                 </tr>
                 <tr>
@@ -1035,12 +1049,12 @@ svg.circle.<span class="fn">attrs</span>({ r<span class="punc">:</span> <span cl
             </table>
           </div>
           <p>Because a builder never changes, it can serve as a template:</p>
-          <pre class="code"><code><span class="kw">const</span> card <span class="punc">=</span> div.<span class="fn">props</span>({ className<span class="punc">:</span> <span class="str">'card'</span> }).<span class="fn">on</span>({ click<span class="punc">:</span> select });
+          <pre class="code" tabindex="0"><code><span class="kw">const</span> card <span class="punc">=</span> div.<span class="fn">props</span>({ className<span class="punc">:</span> <span class="str">'card'</span> }).<span class="fn">on</span>({ click<span class="punc">:</span> select });
 
 card.<span class="fn">create</span>(<span class="fn">h2</span>(<span class="str">'A'</span>));
 card.<span class="fn">attrs</span>({ <span class="str">'aria-label'</span><span class="punc">:</span> <span class="str">'B'</span> }).<span class="fn">create</span>(<span class="fn">h2</span>(<span class="str">'B'</span>));</code></pre>
           <p><code>with</code> applies reusable settings, left to right, or a condition:</p>
-          <pre class="code"><code><span class="kw">const</span> shadow <span class="punc">=</span> (b) <span class="punc">=&gt;</span> b.<span class="fn">props</span>({ style<span class="punc">:</span> { boxShadow<span class="punc">:</span> <span class="str">'0 1px 4px #0003'</span> } });
+          <pre class="code" tabindex="0"><code><span class="kw">const</span> shadow <span class="punc">=</span> (b) <span class="punc">=&gt;</span> b.<span class="fn">props</span>({ style<span class="punc">:</span> { boxShadow<span class="punc">:</span> <span class="str">'0 1px 4px #0003'</span> } });
 
 div.<span class="fn">with</span>(shadow).<span class="fn">with</span>((b) <span class="punc">=&gt;</span> (isAdmin <span class="punc">?</span> b.<span class="fn">attrs</span>({ <span class="str">'data-admin'</span><span class="punc">:</span> <span class="str">''</span> }) <span class="punc">:</span> b)).<span class="fn">create</span>(<span class="str">'Settings'</span>);</code></pre>
 
@@ -1050,7 +1064,7 @@ div.<span class="fn">with</span>(shadow).<span class="fn">with</span>((b) <span 
             <code>HTMLModifier</code> (<code>SVGModifier</code> for SVG). It keeps the type of the
             tag it is used on:
           </p>
-          <pre class="code"><code><span class="kw">import</span> { button, div, <span class="kw">type</span> HTMLModifier } <span class="kw">from</span> <span class="str">'fiorejs'</span>;
+          <pre class="code" tabindex="0"><code><span class="kw">import</span> { button, div, <span class="kw">type</span> HTMLModifier } <span class="kw">from</span> <span class="str">'fiorejs'</span>;
 
 <span class="kw">const</span> card<span class="punc">:</span> HTMLModifier <span class="punc">=</span> (b) <span class="punc">=&gt;</span> b.<span class="fn">props</span>({ className<span class="punc">:</span> <span class="str">'card'</span> });
 
@@ -1066,7 +1080,7 @@ button.<span class="fn">with</span>(card).<span class="fn">props</span>({ type<s
             <code>ElementProps&lt;T&gt;</code>, which keeps the writable properties of the element
             and makes them recursively partial.
           </p>
-          <pre class="code"><code>div
+          <pre class="code" tabindex="0"><code>div
   .<span class="fn">props</span>({
     className<span class="punc">:</span> <span class="str">'card'</span>,
     textContent<span class="punc">:</span> <span class="str">'Hello'</span>,
@@ -1098,12 +1112,15 @@ button.<span class="fn">with</span>(card).<span class="fn">props</span>({ type<s
             <code>setAttribute(key, value)</code> for each entry. <code>null</code>, <code>undefined</code> and
             <code>false</code> leave the attribute out; every other value, including <code>0</code> and <code>''</code>, is set.
             <code>aria-*</code>, <code>data-*</code>, <code>contenteditable</code>, <code>draggable</code> and <code>spellcheck</code>
-            keep <code>false</code> as <code>"false"</code>. Inline event handlers such as <code>onclick</code>, in any case,
-            are ignored, so no handler string is ever run; use <code>on</code> for listeners. Other names that start with
-            <code>on</code>, such as <code>online</code>, are set. Repeated <code>attrs</code> calls on a builder merge:
+            keep <code>false</code> as <code>"false"</code>. Every name that is <code>on</code> followed by letters only, such as
+            <code>onclick</code> or <code>onunload</code>, in any case, is ignored, so no handler string is ever run; use
+            <code>on</code> for listeners. A hyphenated name such as <code>on-tap</code> is set. Never take attribute names
+            from untrusted data. Values are not checked either: a <code>javascript:</code> URL in <code>href</code> or
+            <code>src</code> runs when it is followed, so check the scheme of a URL that comes from untrusted data. Repeated
+            <code>attrs</code> calls on a builder merge:
             later keys win, and <code>null</code> removes an earlier value.
           </p>
-          <pre class="code"><code>input
+          <pre class="code" tabindex="0"><code>input
   .<span class="fn">attrs</span>({
     type<span class="punc">:</span> <span class="str">'email'</span>,
     required<span class="punc">:</span> <span class="str">'true'</span>,
@@ -1119,7 +1136,7 @@ button.<span class="fn">with</span>(card).<span class="fn">props</span>({ type<s
             Property names and attribute names differ for some elements. Use the attribute column
             with <code>attrs</code> and the property column with <code>props</code>.
           </p>
-          <div class="table-wrap">
+          <div class="table-wrap" tabindex="0">
             <table>
               <thead>
                 <tr>
@@ -1168,8 +1185,8 @@ button.<span class="fn">with</span>(card).<span class="fn">props</span>({ type<s
             <code>user.isAdmin &amp;&amp; badge()</code> works. With a builder, the children are the argument of
             <code>.create()</code>; in a plain call they are the argument itself or the <code>children</code> key.
           </p>
-          <div class="signature"><code><span class="kw">type</span> Child <span class="punc">=</span> Node | string | number | boolean | null | undefined</code></div>
-          <pre class="code"><code>div.<span class="fn">create</span>([<span class="str">'Status:'</span>, <span class="fn">span</span>(<span class="str">'ready'</span>), isAdmin <span class="punc">&amp;&amp;</span> <span class="fn">badge</span>()]);</code></pre>
+          <div class="signature" tabindex="0"><code><span class="kw">type</span> Child <span class="punc">=</span> Node | string | number | bigint | boolean | null | undefined</code></div>
+          <pre class="code" tabindex="0"><code>div.<span class="fn">create</span>([<span class="str">'Status:'</span>, <span class="fn">span</span>(<span class="str">'ready'</span>), isAdmin <span class="punc">&amp;&amp;</span> <span class="fn">badge</span>()]);</code></pre>
           <p>
             Numbers are inserted as text. Text nodes and document fragments are inserted as they are.
           </p>
@@ -1184,7 +1201,7 @@ button.<span class="fn">with</span>(card).<span class="fn">props</span>({ type<s
             name <code>onclick</code>.
           </p>
           <p>A value can be a function or an object with <code>handler</code> and <code>options</code>:</p>
-          <pre class="code"><code>button
+          <pre class="code" tabindex="0"><code>button
   .<span class="fn">on</span>({
     click<span class="punc">:</span> (event) <span class="punc">=&gt;</span> console.log(event.currentTarget),
     keydown<span class="punc">:</span> {
@@ -1204,7 +1221,7 @@ button.<span class="fn">with</span>(card).<span class="fn">props</span>({ type<s
             Custom event names that contain a hyphen are accepted on every element and typed as
             <code>CustomEvent</code>. Annotate the parameter to type its <code>detail</code>:
           </p>
-          <pre class="code"><code>div.<span class="fn">on</span>({ <span class="str">'cart-add'</span><span class="punc">:</span> (event<span class="punc">:</span> CustomEvent&lt;{ sku<span class="punc">:</span> string }&gt;) <span class="punc">=&gt;</span> console.log(event.detail.sku) }).<span class="fn">create</span>();</code></pre>
+          <pre class="code" tabindex="0"><code>div.<span class="fn">on</span>({ <span class="str">'cart-add'</span><span class="punc">:</span> (event<span class="punc">:</span> CustomEvent&lt;{ sku<span class="punc">:</span> string }&gt;) <span class="punc">=&gt;</span> console.log(event.detail.sku) }).<span class="fn">create</span>();</code></pre>
           <div class="note">
             <strong>Listener order.</strong> Listeners are attached after props, attributes and
             children, and before the <code>also</code> callbacks. Repeated <code>on</code> calls on
@@ -1533,7 +1550,7 @@ button.<span class="fn">with</span>(card).<span class="fn">props</span>({ type<s
             deprecated HTML tag. Every function is marked <code>@deprecated</code> in the
             declarations.
           </p>
-          <pre class="code"><code><span class="kw">import</span> { element, center } <span class="kw">from</span> <span class="str">'fiorejs/html/deprecated'</span>;</code></pre>
+          <pre class="code" tabindex="0"><code><span class="kw">import</span> { element, center } <span class="kw">from</span> <span class="str">'fiorejs/html/deprecated'</span>;</code></pre>
           <details>
             <summary>Show 29 deprecated functions</summary>
             <div class="tag-group">
@@ -1578,7 +1595,7 @@ button.<span class="fn">with</span>(card).<span class="fn">props</span>({ type<s
             Declaration files are generated next to every module and referenced by the
             <code>types</code> field. These are the public types behind the tag functions.
           </p>
-          <div class="table-wrap">
+          <div class="table-wrap" tabindex="0">
             <table>
               <thead>
                 <tr>
@@ -1670,7 +1687,7 @@ button.<span class="fn">with</span>(card).<span class="fn">props</span>({ type<s
             specifier. The package ships <code>lib/</code> only, with JavaScript and declaration
             files side by side.
           </p>
-          <div class="table-wrap">
+          <div class="table-wrap" tabindex="0">
             <table>
               <thead>
                 <tr>
@@ -1725,7 +1742,7 @@ button.<span class="fn">with</span>(card).<span class="fn">props</span>({ type<s
             Version 2 renames two keys of the data object and adds the builder; everything else
             works as before. Fiore was published as <code>html-dom-js</code> up to version 1.1.2.
           </p>
-          <div class="table-wrap">
+          <div class="table-wrap" tabindex="0">
             <table>
               <thead>
                 <tr>

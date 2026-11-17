@@ -1,5 +1,4 @@
 export { element };
-export { LIVE } from "./core/base.js";
 /**
  * @template T
  * @typedef {import('./types/base.dom.d.ts').LiveValue<T>} LiveValue
@@ -245,3 +244,4 @@ export type Live<T> = import("./types/base.dom.d.ts").Live<T>;
 export type HTMLBuilder = import("./types/html.dom.d.ts").HTMLBuilder;
 export type HTMLModifier = import("./types/html.dom.d.ts").HTMLModifier;
 import { element } from './core/html.js';
+export { LIVE, fragment } from "./core/base.js";

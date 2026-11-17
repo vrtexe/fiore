@@ -60,7 +60,7 @@ Each JSX prop goes to one of the fiorejs inputs:
 | an object or function on a custom element, or a prop its class defines a setter for | property | `<x-chart data={points} />` |
 | any other name | attribute | `class`, `for`, `id`, `title`, `type`, `disabled`, `aria-label`, `width="50%"` |
 
-The name alone decides, never the value, so `width="50%"` stays an attribute and `disabled={false}` removes it. Custom elements are looked up when they are used, so an element defined after its first use still gets its properties. A string for a custom element prop that is only a plain class field, with no setter, is set as an attribute. `value`, `selectedIndex` and `checked` are applied after the attributes and children, so `<select value="b">` selects its option `b`.
+The name alone decides, never the value, so `width="50%"` stays an attribute and `disabled={false}` removes it. Custom elements are looked up each time they are used, so once a class is defined, the next elements get the props its setters take. An element created before its class is defined gets object and function props as properties, but string props as attributes, and its upgrade does not call the setters for them: define the class first, or read those values with `observedAttributes`. A string for a custom element prop that is only a plain class field, with no setter, is set as an attribute. `value`, `selectedIndex` and `checked` are applied after the attributes and children, so `<select value="b">` selects its option `b`.
 
 ### Live values
 
@@ -119,6 +119,7 @@ const input = (<input value="Ada" />) as HTMLInputElement;
 
 ## Limits
 
+- Attribute values are passed to `setAttribute` unchecked, so a `javascript:` URL in `href` or `src` runs when it is followed. Check the scheme of a URL that comes from untrusted data.
 - `a`, `script`, `style` and `title` always create HTML elements, also inside `<svg>`.
 - `key` is accepted and ignored, because nothing is diffed; to reuse rows in a list, key it with `@fiorejs/signals`: `todos.for((todo) => todo.id).map(render)`. A `key` after a spread (`<li {...props} key="a" />`) compiles to `createElement` from `@fiorejs/jsx`, which the package exports.
 - Do not spread objects whose keys come from users: a key such as `innerHTML` or `srcdoc` sets that property or attribute.

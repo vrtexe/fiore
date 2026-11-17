@@ -14,13 +14,23 @@ export interface Signal<T> extends LiveValue<T> {
   /** Keys the rows of a list by `item.key`, or by what `key` returns. */
   for<U>(this: Signal<readonly U[]>, key?: (item: U) => unknown): Keyed<U>;
   /** Shows what `then` returns while the value is truthy, and nothing otherwise; add `.else(fn)` for the other case. */
-  if<A>(then: () => A): When<A, null>;
+  if<A>(then: () => A): When<A, null, T>;
+  /**
+   * Shows what `render` returns while the value matches, and nothing otherwise. A function is a test on the value; any
+   * other value is compared with `Object.is`. Add more `.case` calls and `.else(fn)`; the first match wins.
+   */
+  case<A>(match: T | Test<T>, render: () => A): When<A, null, T>;
 }
 
-/** A live value that shows one of two branches; only the shown branch is built. */
-export interface When<A, B> extends LiveValue<A | B> {
-  /** Shows what `otherwise` returns while the value is falsy. */
-  else<C>(otherwise: () => C): When<A, C>;
+/** A test on a value. Written as a method, so a signal of a narrower type still fits where a wider one is expected. */
+type Test<T> = { test(value: T): unknown }['test'];
+
+/** A live value that shows the branch of the first matching case, or the other branch; only the shown branch is built. */
+export interface When<A, B, T = unknown> extends LiveValue<A | B> {
+  /** Adds a case, tried after the earlier ones. */
+  case<C>(match: T | Test<T>, render: () => C): When<A | C, B, T>;
+  /** Shows what `otherwise` returns while no case matches. */
+  else<C>(otherwise: () => C): When<A, C, T>;
 }
 
 /** A signal of a list with its key, waiting for `map`. */
@@ -44,7 +54,20 @@ export type Reactive<T> = T | Signal<T>;
 
 export function state<T>(value: T): State<T>;
 export function computed<T>(fn: () => T): Computed<T>;
-export function effect(fn: () => void | (() => void)): () => void;
+/** Runs `fn` now and again in the next flush after a signal it read changed; returns a function that stops it. */
+export const effect: {
+  (fn: () => void | (() => void)): () => void;
+  /** Like `effect`, but its runs come before the effects and bindings of a flush. */
+  pre(fn: () => void | (() => void)): () => void;
+  /** Like `effect`, but its runs come after the effects and bindings of a flush, and its first run waits for the next flush. */
+  post(fn: () => void | (() => void)): () => void;
+};
+/** Runs the waiting effects and bindings now instead of on the next microtask. */
+export function flush(): void;
+/** Resolves after the waiting effects and bindings have run; rejects with the first error of that flush. */
+export function tick(): Promise<void>;
+/** Runs `fn` with a new owner and returns a function that stops everything `fn` created. */
+export function root(fn: () => void): () => void;
 export function untrack<T>(fn: () => T): T;
 export function isSignal(value: unknown): value is Signal<unknown>;
 export function read<T>(value: Reactive<T> | (() => T)): T;
@@ -64,7 +87,7 @@ export interface Resource<T> extends Signal<T | undefined> {
   /** Loads again with the last source value. */
   refetch(): void;
   /** Sets the value without loading. */
-  mutate(value: T): void;
+  mutate(value: T | undefined): void;
 }
 
 export interface ResourceInfo {

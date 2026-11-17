@@ -58,7 +58,8 @@
     "start": "npx http-server@14.1.1 . -a 127.0.0.1 -p 3100",
     "test": "tsc -p test && node --test test/core.test.js test/static.test.js",
     "clean-types": "node ./clean-types.js",
-    "generate-types": "npm run clean-types && tsc -p tsconfig.json"
+    "generate-types": "npm run clean-types && tsc -p tsconfig.json",
+    "test:e2e": "node --test --test-concurrency=1 test/e2e/"
   },
   "homepage": "https://github.com/vrtexe/fiore#readme",
   "bugs": {
@@ -71,6 +72,7 @@
   "packageManager": "npm@11.6.0",
   "devDependencies": {
     "jsdom": "^31.0.1",
+    "playwright": "1.64.1",
     "typescript": "5.9.3"
   },
   "workspaces": [
