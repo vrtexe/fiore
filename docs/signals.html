@@ -800,7 +800,7 @@
           <p class="nav-group">Reference</p>
           <a href="#types">TypeScript types</a>
           <a href="#limits">Limits</a>
-          <a href="#upgrading">Upgrading from 2.x</a>
+          <a href="#upgrading">Upgrading from 2.0</a>
         </nav>
       </aside>
 
@@ -1220,7 +1220,7 @@ todos.<span class="fn">mutate</span>((list) <span class="punc">=&gt;</span> list
 </section>
 
 <section id="upgrading">
-<h2>Upgrading from 2.x</h2>
+<h2>Upgrading from 2.0</h2>
 
 <ul>
   <li>Effects and bindings run in a flush on a microtask, not inside <code>set()</code>. Code that reads the DOM right after a write calls <code>flush()</code> first, or uses <code>effect.post</code>; tests call <code>flush()</code> before their assertions.</li>

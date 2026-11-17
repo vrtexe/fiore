@@ -232,7 +232,7 @@ dispose(); // stops every binding and effect of the app
 
 An element that is created but never inserted keeps its bindings for as long as its signals live, unless it was created in a root that is disposed. Once the element and its signals are no longer referenced, everything can be garbage-collected.
 
-## Upgrading from 2.x
+## Upgrading from 2.0
 
 - Effects and bindings run in a flush on a microtask, not inside `set()`. Code that reads the DOM right after a write calls `flush()` first, or uses `effect.post`; tests call `flush()` before their assertions.
 - An error of an effect or binding is thrown at the end of the flush instead of being reported, and the loop limit counts runs in one flush. A first run outside a flush still reports its error.

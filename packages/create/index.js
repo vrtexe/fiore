@@ -10,7 +10,7 @@ const templates = fileURLToPath(new URL('./templates/', import.meta.url));
 const versions = {
   '@eslint/js': '^10.0.0',
   '@fiorejs/jsx': '^2.1.0',
-  '@fiorejs/signals': '^3.0.0',
+  '@fiorejs/signals': '^2.1.0',
   eslint: '^10.0.0',
   fiorejs: '^2.1.0',
   globals: '^17.0.0',
