@@ -11,6 +11,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
     />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
     <link rel="stylesheet" href="../assets/site.css" />
     <script type="module" src="../assets/docs.js"></script>
   </head>
@@ -28,6 +29,7 @@
           <a href="../tutorial/">Tutorial</a>
           <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
           <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
           <a href="https://github.com/vrtexe/fiore">GitHub</a>
         </nav>
         <a class="btn" href="../tutorial/">Try it</a>
@@ -49,19 +51,19 @@
 
         <section id="accepted">
           <h2>Accepted children</h2>
-          <p>
-            A tag takes one argument, so a single child needs no array and several children go in
-            one. The element receives them in order.
-          </p>
+          <p data-syntax="builder">A tag takes one argument, so a single child needs no array and several children go in
+            one. The element receives them in order.</p>
+          <p data-syntax="jsx">In JSX the children go between the tags, and any value goes in braces. The element receives them in order.</p>
           <p>A child is one of these:</p>
           <ul>
             <li>a DOM node, such as an element, a text node or a <a href="fragments.html">fragment</a>;</li>
             <li>a string, a number or a bigint, which becomes a text node;</li>
             <li>an array of children, nested as deep as you like;</li>
             <li><code>null</code>, <code>undefined</code>, <code>true</code> or <code>false</code>, which are skipped;</li>
-            <li>a live value, such as a signal, which keeps its place up to date; see <a href="signals.html">Signals</a>.</li>
+            <li>a live value, such as a signal, which keeps its place up to date; see the <a href="signals.html">Signals page</a>.</li>
           </ul>
-          <pre class="code" tabindex="0"><code class="language-js">import { li, p, strong, ul } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { li, p, strong, ul } from 'fiorejs';
 
 const list = ul([
   li('Text'),
@@ -72,10 +74,24 @@ const list = ul([
 
 document.body.append(p(['Total: ', 3, ' items']), list);
           </code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const list = (
+  &lt;ul&gt;
+    &lt;li&gt;Text&lt;/li&gt;
+    &lt;li&gt;{42}&lt;/li&gt;
+    &lt;li&gt;{10n}&lt;/li&gt;
+    &lt;li&gt;
+      &lt;strong&gt;A node&lt;/strong&gt;
+    &lt;/li&gt;
+  &lt;/ul&gt;
+);
+
+document.body.append(&lt;p&gt;Total: {3} items&lt;/p&gt;, list);</code></pre>
+          </div>
         </section>
 
         <section id="forms">
           <h2>Three ways to pass children</h2>
+          <p data-syntax="jsx">JSX has one way to pass children: between the tags, or in the <code>children</code> prop of a component. The three builder forms below produce the same element.</p>
           <p>
             A plain call, a data object and a builder take the same children and produce the same
             element:
@@ -84,12 +100,12 @@ document.body.append(p(['Total: ', 3, ' items']), list);
 
 const a = p(['Hi ', em('there')]);
 const b = p({ children: ['Hi ', em('there')] });
-const c = p.create(['Hi ', em('there')]);
+const c = p.attrs({ id: 'c' }).create(['Hi ', em('there')]);
 
-console.log(a.outerHTML === b.outerHTML, b.outerHTML === c.outerHTML);
+console.log(a.innerHTML === b.innerHTML, b.innerHTML === c.innerHTML);
 // true true
           </code></pre>
-          <p>
+          <p data-syntax="builder">
             Prefer <code>create()</code> after a builder, and the plain call for static content. When
             the value comes from outside your code, use <code>create(value)</code>, because a plain
             object passed to a plain call would be read as a data object.
@@ -102,7 +118,8 @@ console.log(a.outerHTML === b.outerHTML, b.outerHTML === c.outerHTML);
             Arrays are flattened, so the result of <code>map</code> can sit next to other children
             without any joining. A cyclic array is read once and then skipped.
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { li, ul } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { li, ul } from 'fiorejs';
 
 const names = ['Ada', 'Grace', 'Edsger'];
 
@@ -115,6 +132,21 @@ document.body.append(list);
 console.log(list.children.length);
 // 4
           </code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const names = ['Ada', 'Grace', 'Edsger'];
+
+const list = (
+  &lt;ul&gt;
+    {names.map((name) =&gt; (
+      &lt;li&gt;{name}&lt;/li&gt;
+    ))}
+    {[[&lt;li&gt;and others&lt;/li&gt;]]}
+  &lt;/ul&gt;
+);
+
+document.body.append(list);
+console.log(list.children.length);
+// 4</code></pre>
+          </div>
         </section>
 
         <section id="skipped">
@@ -123,7 +155,8 @@ console.log(list.children.length);
             <code>null</code>, <code>undefined</code>, <code>true</code> and <code>false</code> add
             nothing. That makes a condition a plain expression:
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { div, span } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div, span } from 'fiorejs';
 
 function badge(user) {
   return div([
@@ -138,6 +171,21 @@ document.body.append(
   badge({ name: 'Bob', isAdmin: false }),
 );
           </code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">function badge(user) {
+  return (
+    &lt;div&gt;
+      &lt;span&gt;{user.name}&lt;/span&gt;
+      {user.isAdmin &amp;&amp; &lt;span className="badge"&gt;admin&lt;/span&gt;}
+      {user.nickname ?? null}
+    &lt;/div&gt;
+  );
+}
+
+document.body.append(
+  badge({ name: 'Ada', isAdmin: true, nickname: 'countess' }),
+  badge({ name: 'Bob', isAdmin: false }),
+);</code></pre>
+          </div>
           <p>
             <code>0</code> and the empty string are not skipped. <code>0</code> shows as the text
             <code>0</code>, so <code>count && node</code> prints <code>0</code> when the count is
@@ -147,18 +195,18 @@ document.body.append(
 
         <section id="text-vs-nodes">
           <h2>Text and nodes</h2>
-          <p>
-            A string child becomes a text node, never markup. <code>p('&lt;b&gt;hi&lt;/b&gt;')</code>
+          <p data-syntax="builder">A string child becomes a text node, never markup. <code>p('&lt;b&gt;hi&lt;/b&gt;')</code>
             shows the characters <code>&lt;b&gt;hi&lt;/b&gt;</code>. There is no HTML parsing in
             children, so untrusted text is safe there. To create a bold word, use a node:
-            <code>strong('hi')</code>.
-          </p>
-          <p>
-            An object that is not a node is shown as text through <code>String(value)</code>, and a
+            <code>strong('hi')</code>.</p>
+          <p data-syntax="jsx">A string in braces becomes a text node, never markup. <code>&lt;p&gt;{'&lt;b&gt;hi&lt;/b&gt;'}&lt;/p&gt;</code>
+            shows the characters <code>&lt;b&gt;hi&lt;/b&gt;</code>, so untrusted text is safe there. To create a bold word, write
+            the element: <code>&lt;strong&gt;hi&lt;/strong&gt;</code>. Markup written between the tags is read by the compiler, not at run time.</p>
+          <p data-syntax="builder">An object that is not a node is shown as text through <code>String(value)</code>, and a
             plain object passed to a tag call is read as the data object, as
-            <a href="elements.html#plain-calls">Elements and tags</a> explains.
-          </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { p, strong } from 'fiorejs';
+            <a href="elements.html#plain-calls">Elements and tags</a> explains.</p>
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { p, strong } from 'fiorejs';
 
 const safe = p('&lt;img src=x onerror=alert(1)&gt;');
 const bold = p(['Press ', strong('Save')]);
@@ -168,6 +216,18 @@ console.log(bold.children.length, bold.textContent);
 // 0 &lt;img src=x onerror=alert(1)&gt;
 // 1 Press Save
           </code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const safe = &lt;p&gt;{'&lt;img src=x onerror=alert(1)&gt;'}&lt;/p&gt;;
+const bold = (
+  &lt;p&gt;
+    Press &lt;strong&gt;Save&lt;/strong&gt;
+  &lt;/p&gt;
+);
+
+console.log(safe.children.length, safe.textContent);
+console.log(bold.children.length, bold.textContent);
+// 0 &lt;img src=x onerror=alert(1)&gt;
+// 1 Press Save</code></pre>
+          </div>
         </section>
 
         <section id="props-conflict">
@@ -178,7 +238,8 @@ console.log(bold.children.length, bold.textContent);
             not skipped, the first one replaces whatever the prop wrote. With no children, the
             content of the prop stays.
           </p>
-          <pre class="code" tabindex="0"><code class="language-js">import { div } from 'fiorejs';
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div } from 'fiorejs';
 
 const kept = div.props({ textContent: 'from the prop' }).create();
 const replaced = div.props({ textContent: 'from the prop' }).create('from the child');
@@ -191,9 +252,21 @@ console.log(skipped.textContent);
 // from the child
 // from the prop
           </code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const kept = &lt;div textContent="from the prop" /&gt;;
+const replaced = &lt;div textContent="from the prop"&gt;from the child&lt;/div&gt;;
+const skipped = &lt;div textContent="from the prop"&gt;{[null, false]}&lt;/div&gt;;
+
+console.log(kept.textContent);
+console.log(replaced.textContent);
+console.log(skipped.textContent);
+// from the prop
+// from the child
+// from the prop</code></pre>
+          </div>
           <p>
             Do not set <code>innerHTML</code> from untrusted data. Use children for text, and
-            <code>props</code> for markup only when you wrote it. Next:
+            <code>props</code> for markup only when you wrote it. In JSX that is the
+            <code>innerHTML</code> prop. Next:
             <a href="events.html">Events</a>.
           </p>
         </section>

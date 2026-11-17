@@ -11,6 +11,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
     />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
     <link rel="stylesheet" href="../assets/site.css" />
     <script type="module" src="../assets/docs.js"></script>
   </head>
@@ -28,6 +29,7 @@
           <a href="../tutorial/">Tutorial</a>
           <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
           <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
           <a href="https://github.com/vrtexe/fiore">GitHub</a>
         </nav>
         <a class="btn" href="../tutorial/">Try it</a>
@@ -42,15 +44,20 @@
       <main class="docs-main" id="main">
         <header class="docs-head">
           <h1>Conditional rendering</h1>
-          <p class="docs-lead">A component runs once, so a plain conditional in markup is decided once. <code>signal.if</code> and <code>signal.case</code> are the live versions: they switch between branches when the signal changes and build only the branch that is shown.</p>
+          <p class="docs-lead">A component is a function that takes a props object and runs once, so a plain conditional in markup is decided once. <code>signal.if</code> and <code>signal.case</code> are the live versions: they switch between branches when the signal changes and build only the branch that is shown.</p>
         </header>
 
         <section id="why">
           <h2>Why a plain conditional does not switch</h2>
-          <p>
+          <p data-syntax="builder">
             In <code>div(open.get() ? a : b)</code>, <code>open.get()</code> is read once while the element
             is created, so the result never changes. A live conditional is a value that fiorejs binds, like
             any other signal.
+          </p>
+          <p data-syntax="jsx">
+            In <code>&lt;div&gt;{open.get() ? a : b}&lt;/div&gt;</code>, <code>open.get()</code> is read once
+            while the element is created, so the result never changes. A live conditional is a value that
+            fiorejs binds, like any other signal.
           </p>
         </section>
 
@@ -61,7 +68,8 @@
             is truthy, and nothing otherwise. <code>.else(otherwise)</code> adds the other branch. Both
             branches are functions, so only the shown branch is built.
           </p>
-<pre class="code" tabindex="0"><code class="language-js">import { div, em, p } from 'fiorejs';
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div, em, p } from 'fiorejs';
 import { state, flush } from '@fiorejs/signals';
 
 const open = state(false);
@@ -78,6 +86,23 @@ console.log(view.innerHTML); // &lt;em&gt;closed&lt;/em&gt;, details was not bui
 open.set(true);
 flush(); // logs "build details"
 console.log(view.innerHTML); // &lt;p&gt;The details&lt;/p&gt;</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state, flush } from '@fiorejs/signals';
+
+const open = state(false);
+
+const details = () =&gt; {
+  console.log('build details');
+  return &lt;p&gt;The details&lt;/p&gt;;
+};
+
+const view = &lt;div&gt;{open.if(details).else(() =&gt; &lt;em&gt;closed&lt;/em&gt;)}&lt;/div&gt;;
+document.body.append(view);
+console.log(view.innerHTML); // &lt;em&gt;closed&lt;/em&gt;, details was not built
+
+open.set(true);
+flush(); // logs "build details"
+console.log(view.innerHTML); // &lt;p&gt;The details&lt;/p&gt;</code></pre>
+</div>
           <p>
             A branch is built once, when it is shown, and rebuilt only when the truthiness flips.
             <code>count.if(...)</code> does not rebuild when <code>count</code> goes from 1 to 2. When the
@@ -111,7 +136,8 @@ console.log(view.innerHTML); // &lt;p&gt;The details&lt;/p&gt;</code></pre>
             <code>.else(otherwise)</code> for the rest. The first case that matches wins. Without
             <code>.else</code>, nothing shows when no case matches.
           </p>
-<pre class="code" tabindex="0"><code class="language-js">import { div, em, span } from 'fiorejs';
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div, em, span } from 'fiorejs';
 import { state, flush } from '@fiorejs/signals';
 
 const status = state('loading');
@@ -132,6 +158,29 @@ console.log(view.textContent); // Done
 status.set('idle');
 flush();
 console.log(view.textContent); // empty: no case matches and else gives nothing</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state, flush } from '@fiorejs/signals';
+
+const status = state('loading');
+
+const view = (
+  &lt;div&gt;
+    {status
+      .case('loading', () =&gt; &lt;span&gt;Loading&lt;/span&gt;)
+      .case('error', () =&gt; &lt;em&gt;Something went wrong&lt;/em&gt;)
+      .case((value) =&gt; value.startsWith('done'), () =&gt; &lt;span&gt;Done&lt;/span&gt;)
+      .else(() =&gt; null)}
+  &lt;/div&gt;
+);
+document.body.append(view);
+
+status.set('done: 3 rows');
+flush();
+console.log(view.textContent); // Done
+
+status.set('idle');
+flush();
+console.log(view.textContent); // empty: no case matches and else gives nothing</code></pre>
+</div>
           <p>
             A branch is rebuilt only when another case wins. Moving from <code>'done: 3 rows'</code> to
             <code>'done: 4 rows'</code> keeps the same branch. <code>.if(then)</code> is the case
@@ -140,7 +189,7 @@ console.log(view.textContent); // empty: no case matches and else gives nothing<
           </p>
           <p>
             See <a href="lists.html">Lists</a> for repeating content, and
-            <a href="../signals.html#conditions">the reference</a> for the exact rules.
+            <a href="../signals.html#conditions">Signals reference</a> for the exact rules.
           </p>
         </section>
 

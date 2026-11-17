@@ -11,6 +11,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
     />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
     <link rel="stylesheet" href="../assets/site.css" />
     <script type="module" src="../assets/docs.js"></script>
   </head>
@@ -28,6 +29,7 @@
           <a href="../tutorial/">Tutorial</a>
           <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
           <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
           <a href="https://github.com/vrtexe/fiore">GitHub</a>
         </nav>
         <a class="btn" href="../tutorial/">Try it</a>
@@ -108,8 +110,8 @@ stop();  // leave b</code></pre>
           </p>
           <p>
             <code>read(value)</code> returns the current value of a signal, of a getter function or of a
-            plain value. It lets one function accept all three, which is how components take
-            <code>Reactive&lt;T&gt;</code> props. Inside an effect it subscribes like <code>get()</code>
+            plain value. It lets one function accept all three, which is how a component, a
+            function that takes a props object, accepts fields that are <code>Reactive&lt;T&gt;</code>. Inside an effect it subscribes like <code>get()</code>
             when the value is a signal.
           </p>
 <pre class="code" tabindex="0"><code class="language-js">import { state, effect, flush, untrack, read } from '@fiorejs/signals';
@@ -141,7 +143,8 @@ flush();         // logs "search dom page 2"</code></pre>
             The first run of <code>effect.post</code> waits for the next flush, not for the line after it.
             By then the element it was created with is usually in the document.
           </p>
-<pre class="code" tabindex="0"><code class="language-js">import { div } from 'fiorejs';
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div } from 'fiorejs';
 import { state, effect, tick } from '@fiorejs/signals';
 
 const label = state('first');
@@ -154,6 +157,19 @@ console.log('after creating the post effect'); // logs before the effect runs
 await tick(); // logs "post sees first first"
 label.set('second');
 await tick(); // logs "post sees second second"</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state, effect, tick } from '@fiorejs/signals';
+
+const label = state('first');
+const box = &lt;div&gt;{label}&lt;/div&gt;;
+document.body.append(box);
+
+effect.post(() =&gt; console.log('post sees', box.textContent, label.get()));
+console.log('after creating the post effect'); // logs before the effect runs
+
+await tick(); // logs "post sees first first"
+label.set('second');
+await tick(); // logs "post sees second second"</code></pre>
+</div>
           <p>
             <a href="timing.html">Timing and batching</a> shows the order of the three phases.
           </p>

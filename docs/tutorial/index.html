@@ -11,6 +11,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
     />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
     <link rel="stylesheet" href="../assets/site.css" />
     <link rel="stylesheet" href="tutorial.css" />
     <script type="module" src="app.js"></script>
@@ -26,11 +27,13 @@
         </a>
         <nav class="nav-links" aria-label="Main">
           <a href="../index.html">Home</a>
-          <a class="is-current" href="./" aria-current="page">Tutorial</a>
+          <a class="is-current" href="../tutorial/" aria-current="page">Tutorial</a>
           <a href="../guide/quick-start.html">Docs</a>
           <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
           <a href="https://github.com/vrtexe/fiore">GitHub</a>
         </nav>
+        <a class="btn" href="../guide/quick-start.html">Read the docs</a>
       </div>
     </header>
 
@@ -48,12 +51,18 @@
         </div>
       </section>
 
+      <div class="tut-split tut-split-x" role="separator" aria-orientation="vertical" aria-label="Resize the lesson and the editor" tabindex="0" data-split="x"></div>
+
       <section class="tut-work" aria-label="Editor and preview">
         <div class="tut-bar">
-          <span>main.js</span>
-          <button type="button" class="tut-link" data-reset>Reset</button>
+          <span data-file>main.js</span>
+          <span class="tut-tools">
+            <span data-switch></span>
+            <button type="button" class="tut-link" data-reset>Reset</button>
+          </span>
         </div>
         <div class="tut-editor" data-editor></div>
+        <div class="tut-split tut-split-y" role="separator" aria-orientation="horizontal" aria-label="Resize the editor and the preview" tabindex="0" data-split="y"></div>
         <div class="tut-bar">
           <span>Preview</span>
           <span class="tut-status" data-status></span>

@@ -11,6 +11,7 @@
       rel="icon"
       href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
     />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
     <link rel="stylesheet" href="../assets/site.css" />
     <script type="module" src="../assets/docs.js"></script>
   </head>
@@ -28,6 +29,7 @@
           <a href="../tutorial/">Tutorial</a>
           <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
           <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
           <a href="https://github.com/vrtexe/fiore">GitHub</a>
         </nav>
         <a class="btn" href="../tutorial/">Try it</a>
@@ -91,7 +93,8 @@ await new Promise((resolve) =&gt; setTimeout(resolve, 20)); // logs "idle User 2
             A failed load that nothing reads <code>error</code> of is also reported with
             <code>reportError</code>, so it does not go unnoticed. Show the states by binding them:
           </p>
-<pre class="code" tabindex="0"><code class="language-js">import { div } from 'fiorejs';
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div } from 'fiorejs';
 import { computed, resource, state, flush } from '@fiorejs/signals';
 
 const userId = state(1);
@@ -115,6 +118,32 @@ flush();
 console.log(view.textContent); // Could not load
 
 user.mutate({ name: 'Local' }); // sets the value; error stays until the next load</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { computed, resource, state, flush } from '@fiorejs/signals';
+
+const userId = state(1);
+const user = resource(userId, async (id) =&gt; {
+  if (id === 2) throw new Error('not found');
+  return { name: `User ${id}` };
+});
+
+const view = (
+  &lt;div&gt;
+    {computed(() =&gt; (user.error.get() ? 'Could not load' : user.loading.get() ? 'Loading' : user.get()?.name))}
+  &lt;/div&gt;
+);
+document.body.append(view);
+
+await new Promise((resolve) =&gt; setTimeout(resolve, 10));
+flush();
+console.log(view.textContent); // User 1
+
+userId.set(2);
+await new Promise((resolve) =&gt; setTimeout(resolve, 10));
+flush();
+console.log(view.textContent); // Could not load
+
+user.mutate({ name: 'Local' }); // sets the value; error stays until the next load</code></pre>
+</div>
           <p>
             Setting <code>loading</code> or <code>error</code> yourself is not supported and confuses the
             resource. Call <code>refetch()</code> only while the resource is in use: on a resource whose
@@ -152,7 +181,7 @@ console.log(results.get()); // results for b</code></pre>
           <p>
             When the aborted fetcher rejects, that error is ignored because the load is no longer the
             current one. See <a href="cleanup.html">Ownership and cleanup</a> for how a resource stops with
-            its owner, and <a href="../signals.html#resource">the reference</a> for the full contract.
+            its owner, and <a href="../signals.html#resource">Signals reference</a> for the full contract.
           </p>
         </section>
 
