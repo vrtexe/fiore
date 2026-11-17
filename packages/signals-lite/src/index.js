@@ -687,7 +687,6 @@ function mount(list, apply, context) {
       }
       return;
     }
-    const render = list.render;
     const key = list.key;
     const prevSub = activeSub;
     const prevOwner = owner;
@@ -699,12 +698,7 @@ function mount(list, apply, context) {
         const id = key === undefined ? item : key(item);
         let row = rows.get(id);
         if (row === undefined) {
-          owner = holder;
-          row = new Node(ROOT, undefined, undefined);
-          adopt(row);
-          row.key = id;
-          owner = row;
-          row.value = render(item, i);
+          row = createRow(list, holder, item, i, id);
           rows.set(id, row);
           created++;
         }
@@ -734,4 +728,15 @@ function mount(list, apply, context) {
   const node = new Node(EFFECT, undefined, pass);
   adopt(node);
   execute(node);
+}
+
+/** Renders a new row, owned by the list's holder; what the render creates belongs to the row. */
+function createRow(list, holder, item, index, id) {
+  owner = holder;
+  const row = new Node(ROOT, undefined, undefined);
+  adopt(row);
+  row.key = id;
+  owner = row;
+  row.value = list.render(item, index);
+  return row;
 }
