@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>TypeScript: fiore</title>
+    <meta name="description" content="Use the per-tag element types of fiorejs, typed props, attributes and listeners, modifiers, typed signals and components, and the type subpaths." />
+    <link rel="canonical" href="https://vrtexe.github.io/fiore/guide/typescript.html" />
+    <meta name="theme-color" content="#0a0c0f" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="../assets/site.css" />
+    <script type="module" src="../assets/docs.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <nav class="nav-links" aria-label="Main">
+          <a href="../index.html">Home</a>
+          <a href="../tutorial/">Tutorial</a>
+          <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
+          <a href="../api.html">API</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+        </nav>
+        <a class="btn" href="../tutorial/">Try it</a>
+      </div>
+    </header>
+
+    <div class="wrap docs-layout">
+      <aside class="docs-side">
+        <nav class="docs-nav" aria-label="Documentation" data-nav></nav>
+      </aside>
+
+      <main class="docs-main" id="main">
+        <header class="docs-head">
+          <h1>TypeScript</h1>
+          <p class="docs-lead">
+            Every package ships declarations, and the types follow the tag. A tag function returns the exact element
+            type, and checks props, attributes and listeners against that element. No extra setup is needed.
+          </p>
+        </header>
+
+        <section id="element-types">
+          <h2>Element types per tag</h2>
+          <p>
+            <code>input</code> returns <code>HTMLInputElement</code>, <code>div</code> returns <code>HTMLDivElement</code>, and the
+            same holds for SVG and MathML tags, so you can use the created element without a cast.
+            In <code>props</code>, the keys and value types come from the element: <code>maxLength</code> is a number on an input, and
+            <code>href</code> is rejected on one. In <code>on</code>, the event type comes from the element's event map and
+            <code>event.currentTarget</code> is the element.
+          </p>
+          <pre class="code" tabindex="0"><code class="language-ts">import { button, div, input, type HTMLModifier } from 'fiorejs';
+
+const field = input
+  .props({ type: 'text', value: 'Ada', maxLength: 40 })
+  .attrs({ 'aria-label': 'Name', autocomplete: 'name' })
+  .on({ input: (event) =&gt; console.log(event.currentTarget.value) })
+  .create();
+field satisfies HTMLInputElement;
+
+const box = div('Hello');
+box satisfies HTMLDivElement;
+
+const rounded: HTMLModifier = (builder) =&gt; builder.props({ className: 'rounded' });
+
+div.with(rounded).create(); // HTMLDivElement
+button.with(rounded).props({ type: 'submit' }).create('Save'); // HTMLButtonElement</code></pre>
+          <p>
+            Listeners are checked too. <code>this</code> inside a listener written with <code>function</code> is the element, and
+            <code>body</code> accepts window events such as <code>popstate</code>.
+          </p>
+        </section>
+
+        <section id="props-and-listeners">
+          <h2>Typed props, attributes and listeners</h2>
+          <p>
+            <code>props</code> takes the writable properties of the element, and <code>attrs</code> takes its attributes, including
+            <code>aria-*</code> and <code>data-*</code>. A prop the element does not have is a type error, which catches a misspelled
+            property early. Custom events whose name has a hyphen are accepted on every element and typed as
+            <code>CustomEvent</code>; annotate the parameter to type its <code>detail</code>. A custom event name without a hyphen
+            needs an entry in the global event map:
+          </p>
+          <pre class="code" tabindex="0"><code class="language-ts">import { div, input, video } from 'fiorejs';
+import { circle, type SVGModifier } from 'fiorejs/svg';
+
+const hot: SVGModifier = (builder) =&gt; builder.attrs({ fill: 'tomato' });
+circle.with(hot).attrs({ r: 5 }).create(); // SVGCircleElement
+
+div.on({ 'cart-add': (event: CustomEvent&lt;{ sku: string }&gt;) =&gt; console.log(event.detail.sku) }).create();
+
+video.on({ ended: function () { this.currentTime = 0; } }).create();
+
+declare global {
+  interface HTMLElementEventMap {
+    itemselected: CustomEvent&lt;{ id: number }&gt;;
+  }
+}
+
+div.on({ itemselected: (event) =&gt; console.log(event.detail.id) }).create();
+
+// @ts-expect-error an input has no `href` property
+input.props({ href: '/x' }).create();
+// @ts-expect-error a div has no `value` property
+div.props({ value: 'x' }).create();</code></pre>
+        </section>
+
+        <section id="modifiers">
+          <h2>HTMLModifier and SVGModifier</h2>
+          <p>
+            A function passed to <code>with</code> that should work on every tag has the type <code>HTMLModifier</code>, or
+            <code>SVGModifier</code> for SVG. The builder keeps the type of the tag it is used on, so
+            <code>div.with(rounded).create()</code> is still an <code>HTMLDivElement</code> (the first snippet above shows it). For
+            a modifier that only suits one tag, type the parameter as that tag's builder instead.
+            <code>HTMLModifier</code> comes from <code>fiorejs</code> and <code>SVGModifier</code> from <code>fiorejs/svg</code>.
+          </p>
+        </section>
+
+        <section id="signals">
+          <h2>Typing signals and components</h2>
+          <p>
+            <code>state&lt;T&gt;()</code> returns <code>State&lt;T&gt;</code>, and <code>computed</code> returns <code>Computed&lt;T&gt;</code>.
+            Give <code>state</code> a type argument when the initial value is narrower than the type, as with
+            <code>null</code> below. A component is a typed function. Use <code>Reactive&lt;T&gt;</code>, a plain value or a signal of it,
+            for props that may change, and unwrap them with <code>read()</code>. The item in
+            <code>map</code> and <code>for</code> keeps the type of the array.
+          </p>
+          <pre class="code" tabindex="0"><code class="language-ts">import { div, span } from 'fiorejs';
+import { computed, read, state, type Computed, type Reactive, type State } from '@fiorejs/signals';
+
+type User = { id: number; name: string };
+
+const user: State&lt;User | null&gt; = state&lt;User | null&gt;(null);
+const label: Computed&lt;string&gt; = computed(() =&gt; user.get()?.name ?? 'Guest');
+
+function Greeting(props: { name: Reactive&lt;string&gt;; excited?: boolean }): HTMLDivElement {
+  return div(span(computed(() =&gt; `Hello, ${read(props.name)}${props.excited ? '!' : ''}`)));
+}
+
+Greeting({ name: 'Ada' });
+Greeting({ name: label, excited: true });
+
+const users = state&lt;User[]&gt;([{ id: 1, name: 'Ada' }]);
+div(users.for((item) =&gt; item.id).map((item) =&gt; span(item.name))); // item is User</code></pre>
+          <p>
+            Signals fit the <code>Live&lt;T&gt;</code> type of fiorejs, so a signal is accepted wherever a value of that type is.
+            The full list of signal types is in the <a href="../signals.html#types">signals reference</a>.
+          </p>
+        </section>
+
+        <section id="subpaths">
+          <h2>The type subpaths</h2>
+          <p>
+            The main types are exported from the entry points: <code>fiorejs</code> exports <code>HTMLModifier</code>,
+            <code>HTMLBuilder</code>, <code>Live</code>, <code>LiveValue</code> and <code>BindContext</code>, and <code>fiorejs/svg</code>
+            exports <code>SVGModifier</code>. The rest live in the declaration files under <code>lib/types</code>, which the
+            <code>fiorejs/type/*</code> subpath maps to. Use it for types such as <code>ElementData</code> and <code>HTMLTag</code>:
+          </p>
+          <pre class="code" tabindex="0"><code class="language-ts">import type { Live, LiveValue, HTMLBuilder } from 'fiorejs';
+import type { ElementData, HTMLTag } from 'fiorejs/type/html.dom.d.ts';
+import type { Signal } from '@fiorejs/signals';
+
+type Props = { title: Live&lt;string&gt; };
+
+const asBuilder = (builder: HTMLBuilder): HTMLBuilder =&gt; builder;
+declare const tag: HTMLTag&lt;'section'&gt;;
+declare const data: ElementData&lt;'section'&gt;;
+declare const live: LiveValue&lt;number&gt;;
+declare const signal: Signal&lt;number&gt;;
+const fromSignal: LiveValue&lt;number&gt; = signal;
+export { asBuilder, tag, data, live, fromSignal };
+export type { Props };</code></pre>
+          <div class="note">
+            The entry points are listed in the <a href="../api.html#entry-points">API reference</a> and the types in
+            <a href="../api.html#types">TypeScript types</a>. A project must resolve <code>fiorejs</code> once: two
+            copies of the declarations make the <code>LIVE</code> symbol type differ, and TypeScript then rejects a signal as
+            a live value. Use <code>moduleResolution</code> <code>node16</code>, <code>nodenext</code> or <code>bundler</code> so the
+            <code>exports</code> field is read.
+          </div>
+        </section>
+
+        <nav class="pager" aria-label="Pages" data-pager></nav>
+      </main>
+    </div>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <p class="footer-note">MIT licensed. Source on GitHub.</p>
+        <div class="footer-links">
+          <a href="https://www.npmjs.com/package/fiorejs">npm</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+          <a href="https://github.com/vrtexe/fiore/issues">Issues</a>
+          <a href="https://github.com/vrtexe/fiore/releases">Releases</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

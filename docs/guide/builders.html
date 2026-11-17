@@ -1,0 +1,223 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Builders: fiore</title>
+    <meta name="description" content="Builders record props, attributes, listeners and callbacks and create the element at create(). They are immutable, so they work as templates." />
+    <link rel="canonical" href="https://vrtexe.github.io/fiore/guide/builders.html" />
+    <meta name="theme-color" content="#0a0c0f" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="../assets/site.css" />
+    <script type="module" src="../assets/docs.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <nav class="nav-links" aria-label="Main">
+          <a href="../index.html">Home</a>
+          <a href="../tutorial/">Tutorial</a>
+          <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
+          <a href="../api.html">API</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+        </nav>
+        <a class="btn" href="../tutorial/">Try it</a>
+      </div>
+    </header>
+
+    <div class="wrap docs-layout">
+      <aside class="docs-side">
+        <nav class="docs-nav" aria-label="Documentation" data-nav></nav>
+      </aside>
+
+      <main class="docs-main" id="main">
+        <header class="docs-head">
+          <h1>Builders</h1>
+          <p class="docs-lead">
+            A builder collects settings for one tag and creates the element when you call <code>create()</code>. Every method returns a new builder and leaves the old one unchanged, so a builder is also a template you can reuse.
+          </p>
+        </header>
+
+        <section id="methods">
+          <h2>The methods</h2>
+          <p>
+            Each tag function carries the builder methods, so you start a builder from the tag
+            itself. Nothing touches the DOM until <code>create()</code>.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Method</th><th>Takes</th><th>Repeated calls</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>props(map)</code></td><td>JavaScript properties of the element, such as <code>className</code> or <code>style</code>.</td><td>Combine; later keys win.</td></tr>
+                <tr><td><code>attrs(map)</code></td><td>Attributes, set with <code>setAttribute</code>.</td><td>Combine; later keys win, and <code>null</code> removes an earlier value.</td></tr>
+                <tr><td><code>on(map)</code></td><td>Listeners, as <code>{ click: fn }</code> or <code>{ click: { handler, options } }</code>.</td><td>Add listeners; they never replace each other.</td></tr>
+                <tr><td><code>with(fn)</code></td><td>A function that gets the builder and returns a builder.</td><td>Each call applies its function.</td></tr>
+                <tr><td><code>also(fn)</code></td><td>A function that gets the created element.</td><td>Add callbacks, run in order.</td></tr>
+                <tr><td><code>create(children)</code></td><td>The children, or nothing. Creates the element and returns it.</td><td></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <pre class="code" tabindex="0"><code class="language-js">import { a } from 'fiorejs';
+
+const link = a
+  .props({ href: '/docs', className: 'link' })
+  .attrs({ rel: 'noopener' })
+  .on({ click: () =&gt; console.log('followed') })
+  .create('Docs');
+
+document.body.append(link);
+          </code></pre>
+        </section>
+
+        <section id="immutable">
+          <h2>Immutability and templates</h2>
+          <p>
+            Because each method returns a new builder, a builder you keep never changes. Store a
+            builder once and derive variations from it. The top level of each map is copied when you
+            call the method, so changing the map afterwards has no effect on the builder.
+          </p>
+          <pre class="code" tabindex="0"><code class="language-js">import { div, h2 } from 'fiorejs';
+
+const card = div.props({ className: 'card' }).on({ click: () =&gt; console.log('selected') });
+
+const first = card.create(h2('A'));
+const second = card.attrs({ 'aria-label': 'B' }).create(h2('B'));
+const third = card.create(h2('C'));
+
+document.body.append(first, second, third);
+console.log(first.hasAttribute('aria-label'), third.hasAttribute('aria-label'));
+// false false
+          </code></pre>
+          <p>
+            <code>card.attrs(...)</code> produced a different builder. <code>card</code> itself
+            still has no attributes, so <code>third</code> does not get the label. Nested objects
+            such as <code>style</code> are not copied; they are used as they are when the element is
+            created, so do not change them between calls.
+          </p>
+        </section>
+
+        <section id="with">
+          <h2>Reusable settings with with()</h2>
+          <p>
+            <code>with(fn)</code> calls <code>fn</code> with the builder and uses the builder it
+            returns. Write a modifier once and apply it to any tag, or apply a condition without
+            breaking the chain:
+          </p>
+          <pre class="code" tabindex="0"><code class="language-js">import { button, div } from 'fiorejs';
+
+const shadow = (b) =&gt; b.props({ style: { boxShadow: '0 1px 4px #0003' } });
+const admin = (isAdmin) =&gt; (b) =&gt; (isAdmin ? b.attrs({ 'data-admin': '' }) : b);
+
+const panel = div.with(shadow).with(admin(true)).create('Settings');
+const action = button.with(shadow).with(admin(false)).create('Save');
+
+document.body.append(panel, action);
+          </code></pre>
+          <p>
+            In TypeScript, type a modifier that works on every HTML tag as
+            <code>HTMLModifier</code>, or <code>SVGModifier</code> for SVG. The result keeps the
+            type of the tag it is used on: <code>div.with(card).create()</code> is still an
+            <code>HTMLDivElement</code>.
+          </p>
+        </section>
+
+        <section id="order">
+          <h2>The fixed order of application</h2>
+          <p>
+            The order of the calls on a builder does not matter. <code>create()</code> always works
+            in the same sequence:
+          </p>
+          <ol>
+            <li>Create the element.</li>
+            <li>Assign the props, except <code>value</code>, <code>selectedIndex</code> and <code>checked</code>.</li>
+            <li>Set the attributes.</li>
+            <li>Add the children.</li>
+            <li>Assign <code>value</code>, <code>selectedIndex</code> and <code>checked</code>.</li>
+            <li>Attach the listeners.</li>
+            <li>Run the <code>also</code> callbacks.</li>
+          </ol>
+          <p>
+            A listener is therefore never called for a prop set during creation, and a callback sees
+            the finished element.
+          </p>
+        </section>
+
+        <section id="late-props">
+          <h2>Late props</h2>
+          <p>
+            Three props depend on other parts of the element, so fiore assigns them after the
+            attributes and the children. A <code>select</code> can only pick a value that has an
+            <code>option</code>, and a range input clamps its value to <code>min</code> and
+            <code>max</code>, which are attributes:
+          </p>
+          <pre class="code" tabindex="0"><code class="language-js">import { input, option, select } from 'fiorejs';
+
+const size = select.props({ value: 'M' }).create([option('S'), option('M'), option('L')]);
+const range = input.props({ type: 'range', value: '150' }).attrs({ max: '200' }).create();
+
+console.log(size.value, size.selectedIndex);
+console.log(range.value);
+// M 1
+// 150
+          </code></pre>
+          <p>
+            Without the late assignment, the range would clamp <code>150</code> to the default
+            maximum of 100 before the <code>max</code> attribute existed.
+          </p>
+        </section>
+
+        <section id="also">
+          <h2>Running code on the element with also()</h2>
+          <p>
+            <code>also(fn)</code> gets the created element after the listeners are attached. The
+            element is not in the document yet, so focusing or measuring does not work there:
+          </p>
+          <pre class="code" tabindex="0"><code class="language-js">import { canvas } from 'fiorejs';
+
+const surface = canvas
+  .props({ width: 100, height: 100 })
+  .also((element) =&gt; console.log('connected:', element.isConnected))
+  .create();
+
+document.body.append(surface);
+// connected: false
+          </code></pre>
+          <p>
+            Use it to keep a reference or to call a method on the new element. For anything that
+            needs the document, wait until the element is appended. Next:
+            <a href="props-attrs.html">Props and attributes</a>.
+          </p>
+        </section>
+
+        <nav class="pager" aria-label="Pages" data-pager></nav>
+      </main>
+    </div>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <p class="footer-note">MIT licensed. Source on GitHub.</p>
+        <div class="footer-links">
+          <a href="https://www.npmjs.com/package/fiorejs">npm</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+          <a href="https://github.com/vrtexe/fiore/issues">Issues</a>
+          <a href="https://github.com/vrtexe/fiore/releases">Releases</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

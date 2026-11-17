@@ -1,0 +1,213 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Effects: fiore</title>
+    <meta name="description" content="effect(), cleanup functions, stopping, effect.pre and effect.post, untrack and read, and how errors and runaway effects are handled." />
+    <link rel="canonical" href="https://vrtexe.github.io/fiore/guide/effects.html" />
+    <meta name="theme-color" content="#0a0c0f" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="../assets/site.css" />
+    <script type="module" src="../assets/docs.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <nav class="nav-links" aria-label="Main">
+          <a href="../index.html">Home</a>
+          <a href="../tutorial/">Tutorial</a>
+          <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
+          <a href="../api.html">API</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+        </nav>
+        <a class="btn" href="../tutorial/">Try it</a>
+      </div>
+    </header>
+
+    <div class="wrap docs-layout">
+      <aside class="docs-side">
+        <nav class="docs-nav" aria-label="Documentation" data-nav></nav>
+      </aside>
+
+      <main class="docs-main" id="main">
+        <header class="docs-head">
+          <h1>Effects</h1>
+          <p class="docs-lead">An effect runs a function now and again after any signal it read has changed. Use it for work that leaves the signal graph, such as logging, timers, storage or calling a library. For values and DOM updates, prefer computed values and bindings.</p>
+        </header>
+
+        <section id="effect">
+          <h2>effect(fn)</h2>
+          <p>
+            <code>effect(fn)</code> runs <code>fn</code> at once and subscribes to every signal it reads.
+            When one of them changes, the effect runs again in the next flush. It returns a function that
+            stops it.
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { state, effect, flush } from '@fiorejs/signals';
+
+const theme = state('light');
+
+const stop = effect(() =&gt; {
+  localStorage.setItem('theme', theme.get());
+});
+
+theme.set('dark');
+flush();
+console.log(localStorage.getItem('theme')); // dark
+
+stop();
+theme.set('light');
+flush();
+console.log(localStorage.getItem('theme')); // still dark: the effect is stopped</code></pre>
+          <p>
+            An effect reads only what it reads on its latest run, so its dependencies can change from run
+            to run. It is never re-entered: a write inside the effect to a signal it reads schedules another
+            run after the current one.
+          </p>
+        </section>
+
+        <section id="cleanup">
+          <h2>Cleanup</h2>
+          <p>
+            If <code>fn</code> returns a function, that function runs before the next run and when the
+            effect stops. Use it to undo what the run set up, such as a listener or a timer.
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { state, effect, flush } from '@fiorejs/signals';
+
+const room = state('a');
+
+const stop = effect(() =&gt; {
+  const name = room.get();
+  console.log('join', name);
+  return () =&gt; console.log('leave', name);
+});
+
+room.set('b');
+flush(); // leave a, join b
+stop();  // leave b</code></pre>
+          <p>
+            Effects and bindings created inside an effect belong to it. They stop before the next run and
+            when the effect stops; <a href="cleanup.html">Ownership and cleanup</a> describes the rules.
+          </p>
+        </section>
+
+        <section id="untrack">
+          <h2>untrack and read</h2>
+          <p>
+            <code>untrack(fn)</code> runs <code>fn</code> without subscribing to the signals it reads. Use it
+            when an effect should react to one signal but only look at another.
+          </p>
+          <p>
+            <code>read(value)</code> returns the current value of a signal, of a getter function or of a
+            plain value. It lets one function accept all three, which is how components take
+            <code>Reactive&lt;T&gt;</code> props. Inside an effect it subscribes like <code>get()</code>
+            when the value is a signal.
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { state, effect, flush, untrack, read } from '@fiorejs/signals';
+
+const query = state('fiore');
+const page = state(1);
+
+effect(() =&gt; {
+  // runs when query changes, not when page changes
+  console.log('search', read(query), 'page', untrack(() =&gt; page.get()));
+});
+
+page.set(2);
+flush();         // nothing runs
+query.set('dom');
+flush();         // logs "search dom page 2"</code></pre>
+        </section>
+
+        <section id="phases">
+          <h2>effect.pre and effect.post</h2>
+          <p>
+            <code>effect.pre(fn)</code> and <code>effect.post(fn)</code> take the same function and return
+            the same stop function as <code>effect</code>. They differ in when they run inside a flush.
+            <code>pre</code> effects run before the other effects and the bindings, so they can prepare
+            state the rest reads. <code>post</code> effects run last, after the bindings have updated the
+            DOM, so they can measure or focus elements.
+          </p>
+          <p>
+            The first run of <code>effect.post</code> waits for the next flush, not for the line after it.
+            By then the element it was created with is usually in the document.
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { div } from 'fiorejs';
+import { state, effect, tick } from '@fiorejs/signals';
+
+const label = state('first');
+const box = div(label);
+document.body.append(box);
+
+effect.post(() =&gt; console.log('post sees', box.textContent, label.get()));
+console.log('after creating the post effect'); // logs before the effect runs
+
+await tick(); // logs "post sees first first"
+label.set('second');
+await tick(); // logs "post sees second second"</code></pre>
+          <p>
+            <a href="timing.html">Timing and batching</a> shows the order of the three phases.
+          </p>
+        </section>
+
+        <section id="errors">
+          <h2>Errors and loops</h2>
+          <p>
+            An effect that throws is stopped. The other effects of the flush still run, and at its end the
+            flush throws the first error and reports the others with <code>reportError</code>. The error
+            reaches the caller of <code>flush()</code> and rejects a waiting <code>tick()</code>; otherwise
+            it is an uncaught error. An error in the first run of a new effect, outside a flush, is
+            reported instead of thrown.
+          </p>
+          <p>
+            An effect that runs more than 100 times in one flush is stopped with an error in the same way.
+            This usually means it sets a signal it reads.
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { state, effect, tick } from '@fiorejs/signals';
+
+const count = state(0);
+
+// Reads and writes count, so every run queues the next one
+effect(() =&gt; count.set(count.get() + 1));
+
+try {
+  await tick();
+} catch (error) {
+  console.log(error.message); // An effect ran more than 100 times in one flush; ...
+}</code></pre>
+          <p>
+            To fix a loop, read the signal with <code>untrack</code>, or write to a different signal. If the
+            value is derived, use a <a href="computed.html">computed</a> instead of an effect that writes.
+          </p>
+        </section>
+
+        <nav class="pager" aria-label="Pages" data-pager></nav>
+      </main>
+    </div>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <p class="footer-note">MIT licensed. Source on GitHub.</p>
+        <div class="footer-links">
+          <a href="https://www.npmjs.com/package/fiorejs">npm</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+          <a href="https://github.com/vrtexe/fiore/issues">Issues</a>
+          <a href="https://github.com/vrtexe/fiore/releases">Releases</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

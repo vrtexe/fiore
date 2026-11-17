@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Ownership and cleanup: fiore</title>
+    <meta name="description" content="How effects, bindings, computeds and list rows are owned and stopped, how root() ends them on demand, and when bindings pause." />
+    <link rel="canonical" href="https://vrtexe.github.io/fiore/guide/cleanup.html" />
+    <meta name="theme-color" content="#0a0c0f" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="../assets/site.css" />
+    <script type="module" src="../assets/docs.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <nav class="nav-links" aria-label="Main">
+          <a href="../index.html">Home</a>
+          <a href="../tutorial/">Tutorial</a>
+          <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
+          <a href="../api.html">API</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+        </nav>
+        <a class="btn" href="../tutorial/">Try it</a>
+      </div>
+    </header>
+
+    <div class="wrap docs-layout">
+      <aside class="docs-side">
+        <nav class="docs-nav" aria-label="Documentation" data-nav></nav>
+      </aside>
+
+      <main class="docs-main" id="main">
+        <header class="docs-head">
+          <h1>Ownership and cleanup</h1>
+          <p class="docs-lead">Whatever an effect, a computed, a list row or a conditional branch creates belongs to it. When it runs again or goes away, what it created stops for good. You rarely write cleanup code; this page says when it happens and how to take control with <code>root()</code>.</p>
+        </header>
+
+        <section id="owners">
+          <h2>Owners</h2>
+          <p>
+            Effects, bindings, computed values and lists register with the owner that is running when they
+            are created. When the owner reruns or stops, everything it owns stops, in the order it was
+            created. These are owners:
+          </p>
+          <ul>
+            <li>an <a href="effects.html">effect</a>: what it creates stops before its next run and when it stops;</li>
+            <li>a <a href="computed.html">computed</a> that builds elements: its bindings and effects stop before it recalculates and when nothing reads it any more;</li>
+            <li>a <code>signal.if</code> or <code>signal.case</code> branch: what the old branch created stops when another branch is shown;</li>
+            <li>a <a href="lists.html">list</a> row: its bindings stop when the item leaves the array, and all rows stop when the effect or computed around the list reruns.</li>
+          </ul>
+        </section>
+
+        <section id="nested">
+          <h2>Effects created in effects</h2>
+          <p>
+            An effect created inside another effect is owned by it. When the outer effect runs again, the
+            inner one is stopped and a new one is created by the new run. Without this, every rerun would
+            leave one more live inner effect behind.
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { state, effect, flush } from '@fiorejs/signals';
+
+const room = state('a');
+const message = state('hello');
+
+effect(() =&gt; {
+  const name = room.get();
+  effect(() =&gt; console.log(name, message.get()));
+}); // logs "a hello"
+
+room.set('b');
+flush(); // the old inner effect stops; logs "b hello"
+
+message.set('bye');
+flush(); // logs "b bye" once, not twice</code></pre>
+        </section>
+
+        <section id="root">
+          <h2>root()</h2>
+          <p>
+            <code>root(fn)</code> runs <code>fn</code> with an owner of its own and returns a function that
+            stops everything <code>fn</code> created: effects, bindings, computeds and lists, inserted or
+            not. Reads inside <code>fn</code> do not subscribe. A root belongs to no other owner, also when
+            it is created inside an effect, so call its function yourself. If <code>fn</code> throws, what
+            it created is stopped.
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { div } from 'fiorejs';
+import { root, state, effect, flush } from '@fiorejs/signals';
+
+const count = state(0);
+
+const dispose = root(() =&gt; {
+  effect(() =&gt; console.log('count is', count.get()));
+  document.body.append(div(count));
+}); // logs "count is 0"
+
+count.set(1);
+flush(); // logs "count is 1"; the div shows 1
+
+dispose();
+count.set(2);
+flush(); // logs nothing; the div still shows 1
+console.log(document.body.textContent); // 1</code></pre>
+          <p>
+            A binding stopped by a root stays stopped, also when its element is inserted again. Use a root
+            for the whole app, or for a view you mount and unmount yourself.
+          </p>
+        </section>
+
+        <section id="detach">
+          <h2>Removed elements</h2>
+          <p>
+            A binding also pauses while its element is out of the document. fiorejs watches the document
+            with a <code>MutationObserver</code>. When an element is removed, its bindings pause; when it is
+            inserted again, they resume with the current values. A live child among other children keeps its
+            place between two comments, so it pauses and resumes also when its nodes are moved. A live child
+            that is the only child follows its element.
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { span } from 'fiorejs';
+import { state, flush } from '@fiorejs/signals';
+
+const count = state(0);
+const label = span(count);
+document.body.append(label);
+
+label.remove();
+await new Promise((resolve) =&gt; setTimeout(resolve)); // let the observer see the removal
+
+count.set(1);
+flush();
+console.log(label.textContent); // 0: paused
+
+document.body.append(label);
+await new Promise((resolve) =&gt; setTimeout(resolve));
+console.log(label.textContent); // 1: resumed with the current value</code></pre>
+          <p>
+            Pausing is not ownership. Content built outside any owner, for example
+            <code>view = state(Home())</code>, is only paused when a live child replaces it and it leaves the
+            document. Build it in a computed or a root to stop it for good. The observer does not see
+            elements inside a shadow root, so their bindings are not paused.
+          </p>
+        </section>
+
+        <section id="never-inserted">
+          <h2>Elements that are never inserted</h2>
+          <p>
+            An element that is created but never inserted keeps its bindings for as long as its signals
+            live, unless it was created in a root that is disposed. Once the element and its signals are no
+            longer referenced, everything can be garbage-collected. A resource stops with its owner: its
+            load is aborted, as <a href="resources.html">Async data</a> describes.
+          </p>
+        </section>
+
+        <nav class="pager" aria-label="Pages" data-pager></nav>
+      </main>
+    </div>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <p class="footer-note">MIT licensed. Source on GitHub.</p>
+        <div class="footer-links">
+          <a href="https://www.npmjs.com/package/fiorejs">npm</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+          <a href="https://github.com/vrtexe/fiore/issues">Issues</a>
+          <a href="https://github.com/vrtexe/fiore/releases">Releases</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
