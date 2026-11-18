@@ -1663,7 +1663,7 @@ test('else shows the other branch', () => {
 test('a branch is built once while the condition keeps its truthiness', () => {
   const count = state(1);
   let builds = 0;
-  const el = div(count.if(() => (builds++, span('some'))).else(() => 'none'));
+  const el = div(count.computed(Boolean).if(() => (builds++, span('some'))).else(() => 'none'));
 
   count.set(2);
   flush();
@@ -1740,7 +1740,7 @@ test('case without else shows nothing when no case matches', () => {
 test('a case branch is rebuilt only when another case wins', () => {
   const count = state(1);
   let builds = 0;
-  const el = div(count.case((n) => n > 0, () => (builds++, span('some'))).else(() => 'none'));
+  const el = div(count.computed((n) => n > 0).case(true, () => (builds++, span('some'))).else(() => 'none'));
 
   count.set(2);
   flush();
@@ -2687,4 +2687,52 @@ test('a keyed row whose key leaves and comes back is built again, and a new orde
   assert.equal(renders, 4);
   assert.notEqual(list.children[1], two);
   assert.deepEqual([list.children[0], list.children[2]], [three, one]);
+});
+
+test('if passes the value and builds its branch again when the value changes, stopping what the old branch made', () => {
+  const user = state({ name: 'Ada' });
+  const log = [];
+  const el = div(
+    user.if((value) => {
+      effect(() => () => log.push(`stopped ${value.name}`));
+      return span(value.name);
+    }),
+  );
+
+  user.set({ name: 'Grace' });
+  flush();
+
+  assert.equal(el.textContent, 'Grace');
+  assert.deepEqual(log, ['stopped Ada']);
+});
+
+test('if keeps its branch while the value stays the same, and else is built only when it is shown', () => {
+  const list = state([1]);
+  let builds = 0;
+  let others = 0;
+  const value = state(0);
+  div(list.if(() => (builds++, span('list'))));
+  div(value.if(() => span('some')).else(() => (others++, 'none')));
+
+  list.mutate((items) => items.push(2));
+  flush();
+  value.set('');
+  flush();
+
+  assert.equal(builds, 1);
+  assert.equal(others, 1);
+});
+
+test('case passes the value and builds its branch again when the value changes', () => {
+  const count = state(11);
+  const built = [];
+  const el = div(count.case((n) => n > 10, (n) => (built.push(n), `many ${n}`)).else(() => 'few'));
+
+  count.set(12);
+  flush();
+  count.set(3);
+  flush();
+
+  assert.deepEqual(built, [11, 12]);
+  assert.equal(el.textContent, 'few');
 });

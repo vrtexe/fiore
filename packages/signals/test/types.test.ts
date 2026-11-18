@@ -85,3 +85,7 @@ const isPicked = selector(state(0));
 const picked: boolean = isPicked(1).get();
 div.props({ className: classList({ picked: isPicked(2) }) }).create(isPicked(3).if(() => 'yes'));
 void picked;
+
+// if gives the branch the truthy value.
+const someone = state<{ name: string } | null>(null);
+div(someone.if((person) => person.name).else(() => 'nobody'));

@@ -13,22 +13,26 @@ export interface Signal<T> extends LiveValue<T> {
   map<U>(this: Signal<readonly U[]>, render: (item: U, index: number) => Node): LiveValue<Node[]>;
   /** Keys the rows of a list by `item.key`, or by what `key` returns. */
   for<U>(this: Signal<readonly U[]>, key?: (item: U) => unknown): Keyed<U>;
-  /** Shows what `then` returns while the value is truthy, and nothing otherwise; add `.else(fn)` for the other case. */
-  if<A>(then: () => A): When<A, null, T>;
+  /** Shows what `then` returns for the value while it is truthy, rebuilt when the value changes; add `.else(fn)` for the other case. */
+  if<A>(then: (value: Truthy<T>) => A): When<A, null, T>;
   /**
-   * Shows what `render` returns while the value matches, and nothing otherwise. A function is a test on the value; any
-   * other value is compared with `Object.is`. Add more `.case` calls and `.else(fn)`; the first match wins.
+   * Shows what `render` returns for the value while it matches, rebuilt when the value changes, and nothing otherwise. A
+   * function is a test on the value; any other value is compared with `Object.is`. Add more `.case` calls and
+   * `.else(fn)`; the first match wins.
    */
-  case<A>(match: T | Test<T>, render: () => A): When<A, null, T>;
+  case<A>(match: T | Test<T>, render: (value: T) => A): When<A, null, T>;
 }
+
+/** The values of `T` that are truthy, as far as types tell. */
+type Truthy<T> = Exclude<T, false | 0 | 0n | '' | null | undefined>;
 
 /** A test on a value. Written as a method, so a signal of a narrower type still fits where a wider one is expected. */
 type Test<T> = { test(value: T): unknown }['test'];
 
 /** A live value that shows the branch of the first matching case, or the other branch; only the shown branch is built. */
 export interface When<A, B, T = unknown> extends LiveValue<A | B> {
-  /** Adds a case, tried after the earlier ones. */
-  case<C>(match: T | Test<T>, render: () => C): When<A | C, B, T>;
+  /** Adds a case, tried after the earlier ones; `render` gets the value. */
+  case<C>(match: T | Test<T>, render: (value: T) => C): When<A | C, B, T>;
   /** Shows what `otherwise` returns while no case matches. */
   else<C>(otherwise: () => C): When<A, C, T>;
 }

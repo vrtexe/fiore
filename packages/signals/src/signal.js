@@ -96,10 +96,10 @@ export class Signal {
   }
 
   /**
-   * Shows what `then` returns while the signal's value is truthy, and nothing otherwise; add `.else(fn)` for the other
-   * case. Only the shown branch is built.
+   * Shows what `then` returns for the signal's value while it is truthy, and nothing otherwise; add `.else(fn)` for the
+   * other case. Only the shown branch is built, and it is built again when the value changes.
    * @template A
-   * @param {() => A} then
+   * @param {(value: T) => A} then
    * @returns {When<A, null>}
    */
   if(then) {
@@ -109,10 +109,11 @@ export class Signal {
   /**
    * Shows what `render` returns while the signal's value matches `match`, and nothing otherwise. A function is a test
    * on the value; any other value is compared with `Object.is`. Add more cases with `.case` and the rest with
-   * `.else(fn)`; the first case that matches wins.
+   * `.else(fn)`; the first case that matches wins. `render` gets the value, and the branch is built again when it
+   * changes.
    * @template A
    * @param {unknown} match
-   * @param {() => A} render
+   * @param {(value: T) => A} render
    * @returns {When<A, null>}
    */
   case(match, render) {

@@ -24,7 +24,7 @@ export default function liveChildren() {
   // 4. if/else switches between two branches; only the shown one is built, and it is rebuilt only when the truthiness flips.
   const count = state(0);
   let builds = 0;
-  const conditional = div(count.if(() => (builds++, b(`some (branch built ${builds} times)`))).else(() => em('none')));
+  const conditional = div(count.computed(Boolean).if(() => (builds++, b(`some (branch built ${builds} times)`))).else(() => em('none')));
 
   // A case condition shows the branch of the first case that matches.
   const level = state(0);
