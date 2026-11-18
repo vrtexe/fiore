@@ -238,10 +238,13 @@ export class Computed extends Signal {
     // The reader subscribes first, so it stays subscribed even when the calculation throws.
     const edge = current !== null ? link(this, current) : undefined;
     const flags = this.flags;
-    if (flags & DIRTY || (flags & PENDING && checkDirty(this))) {
-      this._update();
-    } else if (flags & PENDING) {
-      this.flags &= ~PENDING;
+    // Dirty without sources means it never ran or let go of its sources; otherwise the check updates them first.
+    if (flags & (DIRTY | PENDING)) {
+      if ((flags & DIRTY && this.deps === undefined) || checkDirty(this) || this.flags & DIRTY) {
+        this._update();
+      } else {
+        this.flags &= ~PENDING;
+      }
     }
     if (this.subs === undefined) {
       release(this);

@@ -285,8 +285,10 @@ function markPending(edge) {
 }
 
 /**
- * Whether a source of `node` changed since `node` read it. Brings its computed sources up to date first, deepest first,
- * and stops at the first source whose version is not the one on its edge.
+ * Whether a source of `node` changed since `node` read it. Walks the sources in read order and stops at the first one
+ * whose version is not the one on its edge. A dirty or pending computed among them is checked the same way before its
+ * version is compared, so computeds are brought up to date deepest first, without recursion; the sources before the
+ * first change are the ones the next run reads first, so nothing outside the branch that run takes is calculated.
  * @param {Reader} node
  */
 export function checkDirty(node) {
@@ -298,15 +300,11 @@ export function checkDirty(node) {
     if (edge !== undefined && !dirty) {
       const dep = edge.dep;
       const flags = dep.flags;
-      if (flags & COMPUTED) {
-        if (flags & DIRTY) {
-          /** @type {Reader} */ (dep)._update();
-        } else if (flags & PENDING) {
-          stack[top++] = edge;
-          sub = /** @type {Reader} */ (dep);
-          edge = sub.deps;
-          continue;
-        }
+      if (flags & COMPUTED && flags & (DIRTY | PENDING)) {
+        stack[top++] = edge;
+        sub = /** @type {Reader} */ (dep);
+        edge = sub.deps;
+        continue;
       }
       if (dep.version !== edge.version) {
         dirty = true;
