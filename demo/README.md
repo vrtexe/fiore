@@ -71,7 +71,7 @@ A live value as a child keeps its own place in the parent. Open the markup views
 - **Only child versus siblings.** `div(text)` has one text node and no markers: the element itself bounds the child. `div(['[', text, ']'])` keeps the live text between two `⟨marker⟩` comments, because it has siblings.
 - **Text, node, list, nested, nothing.** One live child switches between a string, an element, a list of nodes, nested arrays and `null`. Only the nodes between its markers change.
 - **Robust against outside DOM changes.** Press `normalize()` (it merges adjacent text nodes), then **Simulate translation** (it replaces the live text node with `<font>`, as Chrome's page translation does), then **Update the value** (it calls `flush()` so the log can read the DOM right away). The new value still appears, because fiorejs reads the nodes between the markers instead of remembering them.
-- **if / else.** `count.if(() => …).else(() => …)` shows a branch by truthiness. Press **count + 1** several times: the branch is built once; press **count = 0** and then **count + 1**: it is built again, because the truthiness flipped.
+- **if / else.** `count.computed(Boolean).if(() => …).else(() => …)` shows a branch by truthiness. Press **count + 1** several times: the branch is built once; press **count = 0** and then **count + 1**: it is built again, because the truthiness flipped. `count.if((n) => …)` without `computed(Boolean)` would build it again on every change, since `.if` passes the value.
 - **case.** `level.case(0, …).case((n) => n > 3, …).else(…)` shows the branch of the first case that matches: **none** at 0, **a few** from 1 to 3, **many** above 3.
 - **A live child inside a fragment.** The fragment's nodes are moved into another element, and the live child inside keeps updating.
 
@@ -89,7 +89,7 @@ What to look at:
 - **Which rows render.** The log shows a line for every row that is rendered. Add, reverse, shuffle and clear: existing rows are never rendered again.
 - **Rows are moved, not rebuilt.** Type in or focus the input of a row, then press **Reverse** or **Shuffle**. The row keeps its input value, because only the rows out of place are moved.
 - **Fields in signals.** Each todo keeps `done` in a signal, so checking a box updates only that row's class and the "left" count.
-- **for(key) and copies.** The second card keys rows by `id`. **Replace with an edited copy** changes the data, but the rows keep showing the text they were created with: a keyed row is rendered once, and a copy with the same key reuses it. Put fields that change in signals, as the todo list does.
+- **for(key) and copies.** The second card keys rows by `id`. **Replace with an edited copy** changes the data, and the rows update in place: a keyed row gets a signal of its item, and a copy with the same key keeps the row and sets that signal, so the row is not rebuilt.
 
 ### 6. Lifecycle (`flows/lifecycle.js`)
 
@@ -106,7 +106,7 @@ What to look at:
 
 - **Next three quickly.** Three writes in one click would share one flush and start one load, so the button calls `flush()` after each: three loads start, the older ones are aborted (see the log), and only the last result is shown.
 - **loading and error.** Both are signals; the card shows them next to the name. Go to user 5 to see an error.
-- **Refetch** loads the current user again; **Rename locally** sets the value with `mutate` without loading.
+- **Refetch** loads the current user again; **Rename locally** sets the value with `set` without loading.
 
 ### 8. The live protocol (`flows/live-protocol.js`)
 

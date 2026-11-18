@@ -64,9 +64,10 @@
         <section id="if">
           <h2>signal.if and else</h2>
           <p>
-            <code>signal.if(then)</code> shows what <code>then</code> returns while the value of the signal
-            is truthy, and nothing otherwise. <code>.else(otherwise)</code> adds the other branch. Both
-            branches are functions, so only the shown branch is built.
+            <code>signal.if(then)</code> shows what <code>then</code> returns for the value of the signal while
+            it is truthy, and nothing otherwise. <code>.else(otherwise)</code> adds the other branch. Both
+            branches are functions, so only the shown branch is built. The <code>then</code> branch gets the
+            value, and <code>else</code> gets nothing.
           </p>
 <div class="code-pair">
 <pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div, em, p } from 'fiorejs';
@@ -104,14 +105,86 @@ flush(); // logs "build details"
 console.log(view.innerHTML); // &lt;p&gt;The details&lt;/p&gt;</code></pre>
 </div>
           <p>
-            A branch is built once, when it is shown, and rebuilt only when the truthiness flips.
-            <code>count.if(...)</code> does not rebuild when <code>count</code> goes from 1 to 2. When the
-            branch changes, the bindings and effects the old branch created stop.
+            A branch is built when it is shown and built again whenever the value changes
+            (<code>Object.is</code>), so <code>user.if((u) => ...)</code> always shows the current user. When
+            the branch is built again or another branch is shown, the bindings and effects the old branch
+            created stop. The <code>else</code> branch is built when it is shown and stays while the value
+            stays falsy. Without <code>.else</code>, nothing is shown while the value is falsy.
           </p>
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div, em, p } from 'fiorejs';
+import { state, flush } from '@fiorejs/signals';
+
+const user = state({ name: 'Ada' });
+
+const view = div(
+  user.if((current) =&gt; {
+    console.log('build profile for', current.name);
+    return p(current.name);
+  }).else(() =&gt; em('signed out')),
+);
+document.body.append(view); // logs "build profile for Ada"
+
+user.set({ name: 'Grace' });
+flush(); // the value changed, so the branch is built again: logs "build profile for Grace"
+console.log(view.innerHTML); // &lt;p&gt;Grace&lt;/p&gt;
+
+user.set(null);
+flush();
+console.log(view.innerHTML); // &lt;em&gt;signed out&lt;/em&gt;</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state, flush } from '@fiorejs/signals';
+
+const user = state({ name: 'Ada' });
+
+const view = (
+  &lt;div&gt;
+    {user.if((current) =&gt; {
+      console.log('build profile for', current.name);
+      return &lt;p&gt;{current.name}&lt;/p&gt;;
+    }).else(() =&gt; &lt;em&gt;signed out&lt;/em&gt;)}
+  &lt;/div&gt;
+);
+document.body.append(view); // logs "build profile for Ada"
+
+user.set({ name: 'Grace' });
+flush(); // the value changed, so the branch is built again: logs "build profile for Grace"
+console.log(view.innerHTML); // &lt;p&gt;Grace&lt;/p&gt;
+
+user.set(null);
+flush();
+console.log(view.innerHTML); // &lt;em&gt;signed out&lt;/em&gt;</code></pre>
+</div>
           <p>
-            To branch on something derived, use a computed: <code>count.computed((n) => n &gt; 10).if(...)</code>.
-            Without <code>.else</code>, nothing is shown while the value is falsy.
+            To build the branch only when the truthiness flips, branch on a boolean:
+            <code>count.computed(Boolean).if(...)</code> does not build the branch again when
+            <code>count</code> goes from 1 to 2, whereas <code>count.if(...)</code> does. The same works for
+            any derived value, for example <code>count.computed((n) =&gt; n &gt; 10).if(...)</code>.
           </p>
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div, em } from 'fiorejs';
+import { state, flush } from '@fiorejs/signals';
+
+const count = state(1);
+
+let builds = 0;
+const view = div(count.computed(Boolean).if(() =&gt; em(`built ${++builds}`)));
+document.body.append(view);
+
+count.set(2);
+flush(); // the truthiness did not flip, so the branch stays
+console.log(view.textContent, builds); // built 1 1</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state, flush } from '@fiorejs/signals';
+
+const count = state(1);
+
+let builds = 0;
+const view = &lt;div&gt;{count.computed(Boolean).if(() =&gt; &lt;em&gt;built {++builds}&lt;/em&gt;)}&lt;/div&gt;;
+document.body.append(view);
+
+count.set(2);
+flush(); // the truthiness did not flip, so the branch stays
+console.log(view.textContent, builds); // built 1 1</code></pre>
+</div>
         </section>
 
         <section id="branches">
@@ -224,8 +297,41 @@ flush();
 console.log(view.textContent); // empty: no case matches and else gives nothing</code></pre>
 </div>
           <p>
-            A branch is rebuilt only when another case wins. Moving from <code>'done: 3 rows'</code> to
-            <code>'done: 4 rows'</code> keeps the same branch. <code>.if(then)</code> is the case
+            Like <code>.if</code>, a case passes the value to <code>render</code> and builds its branch again
+            when the value changes, also while the same case keeps matching: moving from
+            <code>'done: 3 rows'</code> to <code>'done: 4 rows'</code> builds the <code>done</code> branch
+            again with the new value.
+          </p>
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div, span } from 'fiorejs';
+import { state, flush } from '@fiorejs/signals';
+
+const status = state('done: 3 rows');
+
+let builds = 0;
+const view = div(status.case((value) =&gt; value.startsWith('done'), (value) =&gt; span(`${value} (build ${++builds})`)));
+document.body.append(view);
+
+status.set('done: 4 rows');
+flush(); // same case, new value: the branch is built again
+console.log(view.textContent); // done: 4 rows (build 2)</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state, flush } from '@fiorejs/signals';
+
+const status = state('done: 3 rows');
+
+let builds = 0;
+const view = (
+  &lt;div&gt;{status.case((value) =&gt; value.startsWith('done'), (value) =&gt; &lt;span&gt;{value} (build {++builds})&lt;/span&gt;)}&lt;/div&gt;
+);
+document.body.append(view);
+
+status.set('done: 4 rows');
+flush(); // same case, new value: the branch is built again
+console.log(view.textContent); // done: 4 rows (build 2)</code></pre>
+</div>
+          <p>
+            To keep the branch while the value moves within a case, match on a derived value:
+            <code>count.computed((n) =&gt; n &gt; 10).case(true, ...)</code>. <code>.if(then)</code> is the case
             <code>Boolean</code>, so <code>.if(then).case(...)</code> works too. To match a function value
             itself, test it with <code>.case((value) =&gt; value === handler, ...)</code>.
           </p>

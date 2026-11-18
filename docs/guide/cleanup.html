@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Ownership and cleanup: fiore</title>
-    <meta name="description" content="How effects, bindings, computeds and list rows are owned and stopped, how root() ends them on demand, and when bindings pause." />
+    <meta name="description" content="How effects, bindings, computeds and list rows are owned and stopped, how onCleanup and root() end them on demand, and when bindings pause." />
     <link rel="canonical" href="https://vrtexe.github.io/fiore/guide/cleanup.html" />
     <meta name="theme-color" content="#0a0c0f" />
     <link
@@ -84,6 +84,64 @@ flush(); // the old inner effect stops; logs "b hello"
 
 message.set('bye');
 flush(); // logs "b bye" once, not twice</code></pre>
+        </section>
+
+        <section id="on-cleanup">
+          <h2>onCleanup</h2>
+          <p>
+            Bindings and effects stop on their own, but a document listener, a timer or a node you added outside
+            the element does not. <code>onCleanup(fn)</code> runs <code>fn</code> when the current owner stops:
+            when a <a href="#root">root</a> is stopped, when a <code>.if</code>, <code>.case</code> or computed
+            branch or a list row is removed, and before the next run of an effect, as well as when it stops. With
+            no owner, it never runs. Call it while the owner runs, next to the code it undoes.
+          </p>
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div, p } from 'fiorejs';
+import { flush, onCleanup, state } from '@fiorejs/signals';
+
+const open = state(false);
+
+function Panel() {
+  const onKey = (event) =&gt; console.log('key', event.key);
+  document.addEventListener('keydown', onKey);
+  onCleanup(() =&gt; document.removeEventListener('keydown', onKey));
+  return p('Panel');
+}
+
+document.body.append(div(open.if(() =&gt; Panel())));
+
+open.set(true);
+flush();
+document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); // logs "key Escape"
+
+open.set(false);
+flush(); // the branch is gone, and the listener with it
+document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); // logs nothing</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { flush, onCleanup, state } from '@fiorejs/signals';
+
+const open = state(false);
+
+function Panel() {
+  const onKey = (event) =&gt; console.log('key', event.key);
+  document.addEventListener('keydown', onKey);
+  onCleanup(() =&gt; document.removeEventListener('keydown', onKey));
+  return &lt;p&gt;Panel&lt;/p&gt;;
+}
+
+document.body.append(&lt;div&gt;{open.if(() =&gt; &lt;Panel /&gt;)}&lt;/div&gt;);
+
+open.set(true);
+flush();
+document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); // logs "key Escape"
+
+open.set(false);
+flush(); // the branch is gone, and the listener with it
+document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); // logs nothing</code></pre>
+</div>
+          <p>
+            An effect can also return its cleanup function, as <a href="effects.html">Effects</a> describes;
+            <code>onCleanup</code> is for code that is not an effect body, such as a component or a list row.
+          </p>
         </section>
 
         <section id="root">
@@ -202,13 +260,33 @@ console.log(label.textContent); // 1: resumed with the current value</code></pre
           <h2>Where code has no owner</h2>
           <p>
             An owner is only current while its code runs. Effects, bindings and computeds created where no owner
-            is running are never stopped. These places have no owner:
+            is running are never stopped, and <code>onCleanup</code> called there never runs. These places have no owner:
           </p>
           <ul>
-            <li>inside <code>untrack(fn)</code>, which runs <code>fn</code> without an owner as well as without subscribing;</li>
             <li>event handlers, timers and other callbacks that run later;</li>
             <li>in an async component or function, everything after the first <code>await</code>, because JavaScript cannot carry the owner across an <code>await</code>.</li>
           </ul>
+          <p>
+            <code>untrack(fn)</code> is not on this list. It runs <code>fn</code> without subscribing to the signals
+            it reads, but <code>fn</code> keeps the current owner, so what it creates stops with that owner:
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { effect, flush, state, untrack } from '@fiorejs/signals';
+
+const room = state('a');
+const message = state('hello');
+
+effect(() =&gt; {
+  const name = room.get();
+  untrack(() =&gt; {
+    effect(() =&gt; console.log(name, message.get()));
+  });
+}); // logs "a hello"
+
+room.set('b');
+flush(); // the outer effect reran, so the old inner effect stopped: logs "b hello"
+
+message.set('bye');
+flush(); // logs "b bye" once, not twice</code></pre>
           <p>
             None of these places needs to create anything. An event handler sets a signal, and the view that
             reacts to it is already declared with <code>.if</code>, <code>.case</code> or <code>.map</code>. The

@@ -23,6 +23,13 @@ export type HTMLTag<T extends keyof HTMLElementTagNameMap> = Tag<
   ElementEventData<HTMLElementTagNameMap[T]>
 >;
 
+/** The tag of a custom element: an HTMLElement with the global attributes and any other attribute. */
+export type CustomElementTag = Tag<
+  HTMLElement,
+  HTMLAttributes<HTMLElement> & { [name: string]: unknown },
+  ElementEventData<HTMLElement>
+>;
+
 /** A builder of any HTML element; `HTMLModifier` functions accept every HTML tag. */
 export type HTMLBuilder<T extends HTMLElement = HTMLElement> = Builder<T, HTMLAttributes<T>, ElementEventData<T>>;
 

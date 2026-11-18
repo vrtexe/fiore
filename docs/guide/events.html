@@ -79,7 +79,7 @@ send.click();
           </div>
           <p data-syntax="builder">A plain call takes the same map under the <code>on</code> key:
             <code>button({ on: { click: handler }, children: 'Send' })</code>.</p>
-          <p data-syntax="jsx">In JSX a listener is a prop: <code>on</code> and the event name, so <code>onclick</code> and <code>onClick</code> both listen to <code>click</code>. The name after <code>on</code> is lowercased and used as written otherwise, so <code>oncart-add</code> listens to <code>cart-add</code>.</p>
+          <p data-syntax="jsx">In JSX a listener is a prop: <code>on</code> and the event name, so <code>onclick</code> and <code>onClick</code> both listen to <code>click</code>. The first letter of the name after <code>on</code> is lowercased and the rest is kept, so <code>oncart-add</code> listens to <code>cart-add</code> and <code>onvalueChanged</code> to <code>valueChanged</code>. An event whose name starts with a capital letter, such as <code>DOMContentLoaded</code>, has no JSX form; listen to it with the builder's <code>on({ DOMContentLoaded })</code> or in code.</p>
         </section>
 
         <section id="element">

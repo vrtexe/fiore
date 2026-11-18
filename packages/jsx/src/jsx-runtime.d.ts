@@ -1,5 +1,5 @@
 import type { HTMLElementsAttributesMap } from 'fiorejs/type/attributes.d.ts';
-import type { ElementProps, Live, LiveAttributes } from 'fiorejs/type/base.dom.d.ts';
+import type { ElementProps, Live, LiveAttributes, RecursivePartial } from 'fiorejs/type/base.dom.d.ts';
 import type { HTMLEventMapOf } from 'fiorejs/type/html.dom.d.ts';
 import type { SVGEventMapOf } from 'fiorejs/type/svg.dom.d.ts';
 
@@ -15,6 +15,7 @@ type Listener<T extends Element, E> =
       options?: boolean | AddEventListenerOptions | undefined | null;
     };
 
+/** Listener props: `on` and the event name, or the name with a capital first letter; the runtime lowercases that letter. */
 type EventProps<T extends Element, M> = {
   [K in keyof M & string as `on${K}` | `on${Capitalize<K>}`]?: Listener<T, M[K]> | undefined | null;
 };
@@ -23,8 +24,11 @@ type CommonProps<T extends Element> = {
   /** Accepted and ignored, because nothing is diffed. */
   key?: string | number | bigint | null | undefined;
   children?: Child;
+  /** Called with the element once it is built, with its props, attributes, listeners and children, as the builder's `also`. */
+  ref?: ((element: T) => void) | undefined | null;
   class?: Live<string | undefined | null>;
-  style?: Live<string | Partial<CSSStyleDeclaration> | undefined | null>;
+  /** A string, or an object of style properties whose values may be live, as in the builder's props. */
+  style?: Live<string | RecursivePartial<CSSStyleDeclaration> | undefined | null>;
   [event: `on${string}-${string}`]: Listener<T, CustomEvent> | undefined | null;
 };
 
@@ -50,8 +54,11 @@ type SVGIntrinsicElements = { [K in SVGTag]: SVGProps<K> };
 export namespace JSX {
   type Element = Node;
 
-  /** Components may be async; their place stays empty until they resolve. */
-  type ElementType = string | ((props: any) => Node | Promise<Node>);
+  /**
+   * A component returns anything a child can be, such as a node, a live value, text or null, and may be async; a result
+   * that is not a node comes back in a fragment. An async component's place stays empty until it resolves.
+   */
+  type ElementType = string | ((props: any) => Child | Promise<Child>);
 
   interface ElementChildrenAttribute {
     children: {};
@@ -69,7 +76,7 @@ export namespace JSX {
 }
 
 export function jsx(
-  type: string | ((props: any) => Node | Promise<Node>),
+  type: string | ((props: any) => Child | Promise<Child>),
   props: Record<string, unknown>,
   key?: unknown,
 ): Node;

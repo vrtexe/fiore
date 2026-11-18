@@ -1,5 +1,5 @@
 import { Signal, state } from './signal.js';
-import { effect, untrack } from './tracking.js';
+import { effect, runIn } from './tracking.js';
 import { read } from './utils.js';
 import { report } from './scheduler.js';
 
@@ -36,8 +36,24 @@ class Resource extends Signal {
    * Sets the value without loading, for example after an optimistic change.
    * @param {unknown} value
    */
-  mutate(value) {
+  set(value) {
     this._value.set(value);
+  }
+
+  /**
+   * Sets the value that `fn` returns for the current value, without loading.
+   * @param {(value: unknown) => unknown} fn
+   */
+  update(fn) {
+    this._value.update(fn);
+  }
+
+  /**
+   * Changes the value in place without loading, and always notifies.
+   * @param {(value: unknown) => unknown} fn
+   */
+  mutate(fn) {
+    this._value.mutate(fn);
   }
 
   _active() {
@@ -52,7 +68,7 @@ class Resource extends Signal {
     this.error.set(undefined);
     const input = this._input;
     // Called inside the promise, so a synchronous throw from the fetcher becomes the error too.
-    new Promise((resolve) => resolve(untrack(() => this._load(input, { signal: own.signal })))).then(
+    new Promise((resolve) => resolve(runIn(null, null, () => this._load(input, { signal: own.signal })))).then(
       (result) => {
         if (this._controller === own) {
           // A finished load is not aborted when the next one starts.
@@ -67,7 +83,7 @@ class Resource extends Signal {
           this.error.set(reason);
           this.loading.set(false);
           // A failed load that nothing reads would otherwise go unnoticed.
-          if (this.error.subs.size === 0) {
+          if (this.error.subs === undefined) {
             report(reason);
           }
         }
@@ -98,8 +114,12 @@ export function resource(source, fetcher) {
     }
     result._start();
     return () => {
-      result._controller?.abort();
-      result._controller = undefined;
+      // A load still running is aborted, and the resource no longer says it is loading.
+      if (result._controller) {
+        result._controller.abort();
+        result._controller = undefined;
+        result.loading.set(false);
+      }
     };
   });
   return result;

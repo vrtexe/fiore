@@ -10,7 +10,7 @@ Object.assign(globalThis, {
 });
 
 const { button, div, span, input } = await import('fiorejs');
-const { state, computed, effect, untrack, read, resource, classList, isSignal, flush, tick: flushed, root } = await import('@fiorejs/signals');
+const { state, computed, effect, untrack, read, resource, classList, isSignal, flush, tick: flushed, root, onCleanup, selector } = await import('@fiorejs/signals');
 
 const tick = () => new Promise((resolve) => setTimeout(resolve));
 
@@ -117,6 +117,19 @@ test('effects only follow the branch they took last', () => {
   assert.equal(runs, 2);
 });
 
+test('what untrack creates belongs to the current owner', () => {
+  const count = state(0);
+  let runs = 0;
+  const stop = root(() => {
+    untrack(() => effect(() => (count.get(), runs++)));
+  });
+  stop();
+  count.set(1);
+  flush();
+
+  assert.equal(runs, 1);
+});
+
 test('untrack reads without subscribing', () => {
   const count = state(1);
   let runs = 0;
@@ -169,7 +182,7 @@ test('map reuses rows by key and stops the bindings of removed rows', () => {
   const label = state('item');
   const items = state([{ id: 1 }, { id: 2 }, { id: 3 }]);
   const list = div({
-    children: items.for((item) => item.id).map((item) => span({ children: computed(() => `${label.get()} ${item.id}`) })),
+    children: items.for((item) => item.id).map((item) => span({ children: computed(() => `${label.get()} ${item.get().id}`) })),
   });
   const [one, two, three] = list.children;
 
@@ -421,6 +434,53 @@ test('a binding that fails while building is reported, leaves no subscriber behi
   assert.equal(reads, 1);
   assert.equal(errors.length, 1);
   assert.equal(element.tagName, 'DIV');
+});
+
+test('onCleanup runs when its root stops, and before the next run of its effect', () => {
+  const log = [];
+  const stop = root(() => onCleanup(() => log.push('root')));
+  const count = state(0);
+  const stopEffect = effect(() => {
+    const seen = count.get();
+    onCleanup(() => log.push(`run ${seen}`));
+  });
+  count.set(1);
+  flush();
+  stop();
+  stopEffect();
+
+  assert.deepEqual(log, ['run 0', 'root', 'run 1']);
+});
+
+test('onCleanup runs when a branch or a list row is removed', () => {
+  const log = [];
+  const open = state(true);
+  const items = state(['a', 'b']);
+  document.body.append(
+    div(open.if(() => (onCleanup(() => log.push('branch')), span('open')))),
+    div(items.map((item) => (onCleanup(() => log.push(item)), span(item)))),
+  );
+  open.set(false);
+  items.set(['a']);
+  flush();
+
+  assert.deepEqual(log.sort(), ['b', 'branch']);
+});
+
+test('onCleanup with no owner never runs, and one that throws does not stop the others', async () => {
+  let ran = 0;
+  onCleanup(() => ran++);
+  const stop = root(() => {
+    onCleanup(() => {
+      throw new Error('cleanup failed');
+    });
+    onCleanup(() => ran++);
+  });
+
+  const errors = await reported(() => stop());
+
+  assert.equal(ran, 1);
+  assert.equal(errors.length, 1);
 });
 
 test('a cleanup that throws does not stop the effect that owns it', async () => {
@@ -1144,7 +1204,7 @@ test('resource turns a synchronous throw of its fetcher into the error', async (
   assert.equal(data.loading.get(), false);
 });
 
-test('resource keeps its value while reloading, and mutate sets it without loading', async () => {
+test('resource keeps its value while reloading, and set changes it without loading', async () => {
   const { calls, fetcher } = manual();
   const data = resource(fetcher);
   calls[0].resolve('first');
@@ -1153,10 +1213,23 @@ test('resource keeps its value while reloading, and mutate sets it without loadi
   flush();
 
   assert.equal(data.get(), 'first');
-  data.mutate('local');
+  data.set('local');
   flush();
   assert.equal(data.get(), 'local');
   assert.equal(calls.length, 2);
+});
+
+test('a resource stopped with its owner while loading is no longer loading', async () => {
+  /** @type {any} */
+  let users;
+  const stop = root(() => {
+    users = resource(() => new Promise(() => {}));
+  });
+  assert.equal(users.loading.get(), true);
+  stop();
+  await flushed();
+
+  assert.equal(users.loading.get(), false);
 });
 
 test('resource runs its fetcher untracked and aborts when its owner stops', async () => {
@@ -1264,14 +1337,14 @@ test('map reuses the rows of items it has seen', () => {
 
 test('for() keys rows by item.key by default and by a function when given', () => {
   const items = state([{ key: 'a' }, { key: 'b' }]);
-  const list = div({ children: items.for().map((item) => span(item.key)) });
+  const list = div({ children: items.for().map((item) => span(item.get().key)) });
   const [a, b] = list.children;
   items.set([{ key: 'b' }, { key: 'a' }]);
   flush();
   assert.deepEqual([...list.children], [b, a]);
 
   const rows = state([{ id: 1 }, { id: 2 }]);
-  const other = div({ children: rows.for((item) => item.id).map((item) => span(String(item.id))) });
+  const other = div({ children: rows.for((item) => item.id).map((item) => span(String(item.get().id))) });
   const [one, two] = other.children;
   rows.set([{ id: 2 }, { id: 1 }]);
   flush();
@@ -1312,7 +1385,7 @@ test('one list bound in two places keeps separate rows', () => {
 
 test('for() without key fields matches rows by position and does not throw', () => {
   const items = state([{ n: 1 }, { n: 2 }]);
-  const list = div({ children: items.for().map((item) => span(String(item.n))) });
+  const list = div({ children: items.for().map((item) => span(String(item.get().n))) });
 
   assert.doesNotThrow(() => {
     items.set([{ n: 3 }, { n: 4 }, { n: 5 }]);
@@ -1590,7 +1663,7 @@ test('else shows the other branch', () => {
 test('a branch is built once while the condition keeps its truthiness', () => {
   const count = state(1);
   let builds = 0;
-  const el = div(count.if(() => (builds++, span('some'))).else(() => 'none'));
+  const el = div(count.computed(Boolean).if(() => (builds++, span('some'))).else(() => 'none'));
 
   count.set(2);
   flush();
@@ -1667,7 +1740,7 @@ test('case without else shows nothing when no case matches', () => {
 test('a case branch is rebuilt only when another case wins', () => {
   const count = state(1);
   let builds = 0;
-  const el = div(count.case((n) => n > 0, () => (builds++, span('some'))).else(() => 'none'));
+  const el = div(count.computed((n) => n > 0).case(true, () => (builds++, span('some'))).else(() => 'none'));
 
   count.set(2);
   flush();
@@ -2202,4 +2275,484 @@ test('resource does not abort a load that has already failed', async () => {
 
   assert.equal(calls[0].signal.aborted, false);
   assert.equal(calls.length, 2);
+});
+
+test('a warmed chain of 20,000 computeds updates without throwing', () => {
+  const source = state(0);
+  const chain = [source];
+  const warm = [];
+  for (let i = 1; i <= 20_000; i++) {
+    const previous = chain[i - 1];
+    chain.push(computed(() => previous.get() + 1));
+    // The first read of a chain nests once per computed, so the chain is read in steps while it grows.
+    if (i % 1_000 === 0) warm.push(effect(() => chain[i].get()));
+  }
+  const seen = [];
+  effect(() => seen.push(chain[20_000].get()));
+  warm.forEach((stop) => stop());
+
+  source.set(1);
+  flush();
+  source.set(2);
+  flush();
+
+  assert.deepEqual(seen, [20_000, 20_001, 20_002]);
+});
+
+test('a source read twice in one run is followed once', () => {
+  const a = state(1);
+  const b = state(1);
+  const sum = computed(() => a.get() + a.get());
+  let runs = 0;
+  effect(() => {
+    runs++;
+    a.get();
+    b.get();
+    a.get();
+    sum.get();
+    sum.get();
+  });
+
+  a.set(2);
+  flush();
+  b.set(2);
+  flush();
+  a.set(3);
+  flush();
+
+  assert.equal(runs, 4);
+  assert.equal(sum.get(), 6);
+});
+
+test('a run that reads fewer sources, or reads them in another order, follows only what it read', () => {
+  const keys = state(['a', 'b', 'c']);
+  const values = { a: state(1), b: state(1), c: state(1) };
+  let reads = 0;
+  const doubled = computed(() => (reads++, values.c.get() * 2));
+  let runs = 0;
+  effect(() => {
+    runs++;
+    for (const key of keys.get()) (key === 'c' ? doubled : values[key]).get();
+  });
+
+  keys.set(['c', 'a']);
+  flush();
+  values.b.set(2);
+  flush();
+  values.c.set(2);
+  flush();
+  keys.set(['a']);
+  flush();
+  values.c.set(3);
+  flush();
+  values.a.set(2);
+  flush();
+
+  assert.equal(runs, 5);
+  assert.equal(reads, 2);
+});
+
+test('a cleanup that stops the reader while it lets go of its sources leaves nothing subscribed', () => {
+  const show = state(true);
+  const count = state(0);
+  let stop;
+  const view = computed(() => {
+    onCleanup(() => stop());
+    return count.get();
+  });
+  let runs = 0;
+  stop = effect(() => {
+    runs++;
+    if (show.get()) view.get();
+    count.get();
+  });
+
+  show.set(false);
+  flush();
+  count.set(1);
+  flush();
+  show.set(true);
+  flush();
+
+  assert.equal(runs, 2);
+});
+
+test('a computed that threw after reading a state passes on the next change of a dirty computed it did not read', () => {
+  const a = state(0);
+  const x = state(0);
+  const inner = computed(() => x.get() + 1);
+  let fail = false;
+  const outer = computed(() => {
+    a.get();
+    if (fail) throw new Error('outer');
+    return inner.get() * 10;
+  });
+  const seen = [];
+  effect(() => {
+    try {
+      seen.push(outer.get());
+    } catch {
+      seen.push('error');
+    }
+  });
+
+  fail = true;
+  a.set(1);
+  x.set(1);
+  flush();
+  fail = false;
+  x.set(2);
+  flush();
+
+  assert.deepEqual(seen, [10, 'error', 30]);
+});
+
+test('a warmed chain of 20,000 computeds that each also read the changed state updates without throwing', () => {
+  const source = state(1);
+  const chain = [source];
+  const warm = [];
+  for (let i = 1; i <= 20_000; i++) {
+    const previous = chain[i - 1];
+    chain.push(computed(() => previous.get() + source.get()));
+    // The first read of a chain nests once per computed, so the chain is read in steps while it grows.
+    if (i % 1_000 === 0) warm.push(effect(() => chain[i].get()));
+  }
+  const seen = [];
+  effect(() => seen.push(chain[20_000].get()));
+  warm.forEach((stop) => stop());
+
+  source.set(2);
+  flush();
+  source.set(3);
+  flush();
+
+  assert.deepEqual(seen, [20_001, 40_002, 60_003]);
+  assert.equal(chain[20_000].get(), 60_003);
+});
+
+test('checking a computed that threw does not calculate the sources it did not read', () => {
+  const user = state({ name: 'ann' });
+  const loggedIn = state(true);
+  let nameRuns = 0;
+  const name = computed(() => (nameRuns++, user.get().name));
+  const view = computed(() => {
+    if (!loggedIn.get()) throw new Error('logged out');
+    return `hi ${name.get()}`;
+  });
+  effect(() => {
+    try {
+      view.get();
+    } catch {
+      // Only what view calculates matters here.
+    }
+  });
+  const seen = [];
+  effect(() => seen.push(name.get()));
+
+  loggedIn.set(false);
+  flush();
+  const before = nameRuns;
+  user.set({ name: 'bob' });
+  assert.throws(() => view.get(), /logged out/);
+  assert.equal(nameRuns, before);
+  user.set({ name: 'ann' });
+  flush();
+
+  assert.deepEqual(seen, ['ann']);
+});
+
+test('an effect that changes a computed it read runs again, whoever else reads the computed', () => {
+  for (const laterReader of [false, true]) {
+    const s = state(0);
+    const x = state(0);
+    const c = computed(() => s.get() * 2);
+    let runs = 0;
+    const stop = effect(() => {
+      runs++;
+      if (c.get() === 2) s.set(2);
+      x.get();
+      c.get();
+    });
+    const stopOther = laterReader ? effect(() => c.get()) : () => {};
+
+    s.set(1);
+    flush();
+
+    assert.equal(runs, 3, `another reader subscribed after it: ${laterReader}`);
+    stop();
+    stopOther();
+  }
+});
+
+test('an effect that the check of its sources stops does not run', () => {
+  const log = [];
+  const items = state(1);
+  let made = 0;
+  const list = computed(() => {
+    const value = items.get();
+    const id = ++made;
+    effect(() => {
+      log.push(`run${id}`);
+      summary.get();
+      return () => log.push(`stop${id}`);
+    });
+    return value;
+  });
+  const summary = computed(() => list.get() * 10);
+  // The effect that list made still reads summary, and through it list, after the first reader stops.
+  effect(() => list.get())();
+
+  items.set(2);
+  flush();
+
+  for (let id = 1; id <= made; id++) {
+    const stopped = log.indexOf(`stop${id}`);
+    assert.ok(stopped === -1 || log.lastIndexOf(`run${id}`) < stopped, log.join(' '));
+  }
+});
+
+test('effects queued while a flush runs run once in that flush, in creation order, flush after flush', () => {
+  const a = state(0);
+  const b = state(0);
+  const log = [];
+  effect(() => log.push(`first${b.get()}`));
+  effect(() => {
+    const value = a.get();
+    log.push(`second${value}`);
+    b.set(value);
+  });
+  effect(() => log.push(`third${b.get()}`));
+  log.length = 0;
+
+  for (let i = 1; i <= 3; i++) {
+    a.set(i);
+    flush();
+  }
+
+  assert.deepEqual(log, ['second1', 'first1', 'third1', 'second2', 'first2', 'third2', 'second3', 'first3', 'third3']);
+});
+
+test('a list alone in its element clears and replaces all its rows in one step and stops their bindings', (t) => {
+  const label = state('a');
+  const items = state([1, 2, 3]);
+  const list = div(items.map((item) => span(computed(() => `${label.get()}${item}`))));
+  const old = [...list.children];
+  const ranges = t.mock.method(document, 'createRange');
+
+  items.set([4, 5]);
+  flush();
+  assert.equal(list.textContent, 'a4a5');
+  items.set([]);
+  flush();
+  assert.equal(list.childNodes.length, 0);
+  items.set([6]);
+  flush();
+  label.set('b');
+  flush();
+
+  assert.equal(ranges.mock.callCount(), 0);
+  assert.equal(list.textContent, 'b6');
+  assert.deepEqual(old.map((row) => row.textContent), ['a1', 'a2', 'a3']);
+});
+
+test('a list that shares its element keeps the other children when it clears or replaces its rows', () => {
+  const items = state([1, 2]);
+  const list = div(['[', items.map((item) => span(String(item))), ']']);
+
+  items.set([3, 4]);
+  flush();
+  assert.equal(list.textContent, '[34]');
+  items.set([]);
+  flush();
+
+  assert.equal(list.textContent, '[]');
+});
+
+test('a list alone in its element keeps the nodes of the rows that stay', () => {
+  const items = state([1, 2, 3]);
+  const list = div(items.map((item) => span(String(item))));
+  const [, two] = list.children;
+
+  items.set([4, 2, 5]);
+  flush();
+
+  assert.equal(list.textContent, '425');
+  assert.equal(list.children[1], two);
+});
+
+test('a selector tells only the readers of the old and the new key, and is current before the flush', () => {
+  const selected = state(1);
+  const isSelected = selector(selected);
+  let runs = 0;
+  for (let key = 0; key < 1_000; key++) {
+    effect(() => {
+      runs++;
+      isSelected(key).get();
+    });
+  }
+  const label = isSelected(5).computed((on) => (on ? 'selected' : ''));
+  effect(() => label.get());
+  runs = 0;
+
+  selected.set(5);
+  assert.equal(isSelected(5).get(), true);
+  assert.equal(isSelected(1).get(), false);
+  assert.equal(label.get(), 'selected');
+  flush();
+  assert.equal(runs, 2);
+  selected.set(7);
+  flush();
+
+  assert.equal(runs, 4);
+});
+
+test('a selector forgets the keys of removed rows', async () => {
+  const selected = state(null);
+  const isSelected = selector(selected);
+  let items = [{ id: 1 }, { id: 2 }];
+  const refs = items.map((item) => new WeakRef(item));
+  const list = state(items);
+  div(list.map((item) => span(isSelected(item).computed((on) => (on ? '*' : '-')))));
+  selected.set(items[0]);
+  flush();
+  selected.set(null);
+  flush();
+
+  list.set([]);
+  flush();
+  items = undefined;
+
+  for (const ref of refs) assert.equal(await collected(ref), true);
+});
+
+test('a selector marks the selected row of a keyed list through classList', () => {
+  const rows = state([1, 2, 3].map((id) => ({ id, label: `row ${id}` })));
+  const selected = state(0);
+  const isSelected = selector(selected);
+  const body = div(
+    rows.for((row) => row.id).map((row) => span.props({ className: classList(['row', { danger: isSelected(row.get().id) }]) }).create(row.get().label)),
+  );
+  const classes = () => [...body.children].map((row) => row.className);
+
+  selected.set(2);
+  flush();
+  assert.deepEqual(classes(), ['row', 'row danger', 'row']);
+  selected.set(3);
+  flush();
+  assert.deepEqual(classes(), ['row', 'row', 'row danger']);
+  rows.set(rows.get().slice(0, 2));
+  flush();
+
+  assert.deepEqual(classes(), ['row', 'row']);
+});
+
+test('a keyed row gets its item as a signal: a new object under the same key updates that row in place', () => {
+  const todos = state([
+    { id: 1, text: 'a' },
+    { id: 2, text: 'b' },
+  ]);
+  let renders = 0;
+  const reads = { 1: 0, 2: 0 };
+  const list = div(
+    todos.for((todo) => todo.id).map((todo) => {
+      renders++;
+      const id = todo.get().id;
+      return span(todo.computed((value) => (reads[id]++, value.text)));
+    }),
+  );
+  const [first, second] = list.children;
+
+  todos.set([todos.get()[0], { id: 2, text: 'b2' }]);
+  flush();
+
+  assert.equal(list.textContent, 'ab2');
+  assert.deepEqual([...list.children], [first, second]);
+  assert.equal(renders, 2);
+  assert.deepEqual(reads, { 1: 1, 2: 2 });
+});
+
+test('a keyed row whose key leaves and comes back is built again, and a new order moves the rows', () => {
+  const items = state([{ id: 1 }, { id: 2 }, { id: 3 }]);
+  let renders = 0;
+  const list = div(items.for((item) => item.id).map((item) => (renders++, span(String(item.get().id)))));
+  const [one, two, three] = list.children;
+
+  items.set([{ id: 3 }, { id: 1 }]);
+  flush();
+  assert.deepEqual([...list.children], [three, one]);
+  items.set([{ id: 3 }, { id: 2 }, { id: 1 }]);
+  flush();
+
+  assert.equal(list.textContent, '321');
+  assert.equal(renders, 4);
+  assert.notEqual(list.children[1], two);
+  assert.deepEqual([list.children[0], list.children[2]], [three, one]);
+});
+
+test('if passes the value and builds its branch again when the value changes, stopping what the old branch made', () => {
+  const user = state({ name: 'Ada' });
+  const log = [];
+  const el = div(
+    user.if((value) => {
+      effect(() => () => log.push(`stopped ${value.name}`));
+      return span(value.name);
+    }),
+  );
+
+  user.set({ name: 'Grace' });
+  flush();
+
+  assert.equal(el.textContent, 'Grace');
+  assert.deepEqual(log, ['stopped Ada']);
+});
+
+test('if keeps its branch while the value stays the same, and else is built only when it is shown', () => {
+  const list = state([1]);
+  let builds = 0;
+  let others = 0;
+  const value = state(0);
+  div(list.if(() => (builds++, span('list'))));
+  div(value.if(() => span('some')).else(() => (others++, 'none')));
+
+  list.mutate((items) => items.push(2));
+  flush();
+  value.set('');
+  flush();
+
+  assert.equal(builds, 1);
+  assert.equal(others, 1);
+});
+
+test('case passes the value and builds its branch again when the value changes', () => {
+  const count = state(11);
+  const built = [];
+  const el = div(count.case((n) => n > 10, (n) => (built.push(n), `many ${n}`)).else(() => 'few'));
+
+  count.set(12);
+  flush();
+  count.set(3);
+  flush();
+
+  assert.deepEqual(built, [11, 12]);
+  assert.equal(el.textContent, 'few');
+});
+
+test('a resource changes its value like a state, with set, update and mutate, without loading', async () => {
+  const { calls, fetcher } = manual();
+  const data = resource(fetcher);
+  calls[0].resolve([1]);
+  await tick();
+  const seen = [];
+  effect(() => seen.push(data.get().length));
+
+  data.update((list) => [...list, 2]);
+  flush();
+  data.mutate((list) => list.push(3));
+  flush();
+  data.set([]);
+  flush();
+
+  assert.deepEqual(seen, [1, 2, 3, 0]);
+  assert.equal(calls.length, 1);
+  assert.equal(data.loading.get(), false);
 });

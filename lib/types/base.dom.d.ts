@@ -21,8 +21,9 @@ export type ReadonlyKeys<T> = {
   >;
 }[keyof T];
 
+/** Optional props, nested objects included; undefined is accepted and skipped, as for attributes. */
 export type RecursivePartial<T> = {
-  [P in keyof T]?: Live<T[P] extends object ? RecursivePartial<T[P]> : T[P]>;
+  [P in keyof T]?: Live<T[P] extends object ? RecursivePartial<T[P]> : T[P]> | undefined;
 };
 
 /** A live value: core calls its [LIVE] method with an `apply` to call now and whenever the value changes. */
@@ -64,9 +65,9 @@ type NestedChild = Child | LiveValue<Child | Child[]> | NestedChild[];
 /** One child, a live value of children, or an array of children nested as deep as needed. */
 export type Children = Live<Child | Child[]> | NestedChild[];
 
-export type ElementProps<T extends BaseElement> = PickWritable<
-  RecursivePartial<T>
->;
+/** The props of an element: its writable properties, and `dataset`, whose keys are merged into its data-* attributes. */
+export type ElementProps<T extends BaseElement> = PickWritable<RecursivePartial<T>> &
+  (T extends HTMLOrSVGElement ? { dataset?: { [key: string]: Live<string | undefined> | undefined } | undefined } : {});
 
 export type BaseElement = Element;
 

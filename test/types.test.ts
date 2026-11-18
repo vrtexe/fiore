@@ -1,5 +1,5 @@
 // Type checks for consumers, compiled with tsc --noEmit by npm test.
-import { a, button, div, input, section, span, type HTMLModifier } from '../lib/html.js';
+import { a, button, div, element, form, input, section, span, type HTMLModifier } from '../lib/html.js';
 import svg from '../lib/svg.js';
 
 const isAdmin = false as boolean;
@@ -59,3 +59,32 @@ div.create('a', 'b');
 // A bigint renders as text, like a number.
 void div(10n);
 void div([1n, ' items']);
+
+// Boolean attributes take '' as in HTML, besides true and false.
+form.attrs({ novalidate: '' }).create();
+input.attrs({ autofocus: '', required: true, disabled: false }).create();
+// @ts-expect-error a boolean attribute takes true, false or ''
+input.attrs({ required: 'yes' }).create();
+
+// element() takes a custom element name; its tag builds an HTMLElement and takes any attribute.
+const userCard: HTMLElement = element('user-card').attrs({ name: 'Ada', class: 'card' }).create('Ada');
+void userCard;
+// @ts-expect-error a name without a hyphen must be a known element
+element('usercard');
+// @ts-expect-error the global attributes keep their types on a custom element
+element('user-card').attrs({ class: 42 });
+
+// With exactOptionalPropertyTypes, props take undefined like attributes do; undefined props are skipped.
+declare const maybeId: string | undefined;
+declare const maybeMax: number | undefined;
+div.attrs({ title: maybeId }).create();
+div.props({ title: maybeId, className: maybeId }).create();
+input.props({ maxLength: maybeMax }).create();
+// @ts-expect-error a prop still takes only its own type
+input.props({ maxLength: 'ten' }).create();
+
+// dataset is a prop whose keys are merged into the element's data-* attributes.
+div.props({ dataset: { id: '42', kind: 'demo' } }).create('x');
+div({ props: { dataset: { id: undefined } } });
+// @ts-expect-error dataset values are strings
+div.props({ dataset: { id: 42 } }).create();

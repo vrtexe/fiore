@@ -1,11 +1,12 @@
-import { effect, owner, untrack } from './tracking.js';
+import { adopt, bind } from './tracking.js';
 import { report } from './scheduler.js';
 
 /**
  * @typedef {{
  *   anchor: Node,
- *   start: () => () => void,
- *   stop?: () => void,
+ *   read: () => unknown,
+ *   apply: (value: unknown) => void,
+ *   effect: ReturnType<typeof bind> | undefined,
  * }} Binding
  */
 
@@ -81,17 +82,22 @@ function visit(node, fn) {
 function pause(binding) {
   if (!binding.anchor.isConnected) {
     // Cleared first, so a stop that throws still leaves the binding ready to resume.
-    const stop = binding.stop;
-    binding.stop = undefined;
-    stop?.();
+    const effect = binding.effect;
+    binding.effect = undefined;
+    effect?.stop();
   }
 }
 
 /** @param {Binding} binding */
 function resume(binding) {
-  if (!binding.stop && binding.anchor.isConnected) {
-    binding.stop = binding.start();
+  if (!binding.effect && binding.anchor.isConnected) {
+    start(binding);
   }
+}
+
+/** @param {Binding} binding */
+function start(binding) {
+  binding.effect = bind(() => binding.apply(binding.read()));
 }
 
 /**
@@ -105,7 +111,9 @@ export function attach(read, apply, context) {
   /** @type {Binding} */
   const binding = {
     anchor: context.kind === 'child' ? context.anchor : context.element,
-    start: () => untrack(() => effect(() => apply(read()))),
+    read,
+    apply,
+    effect: undefined,
   };
   // Filed under its anchor, so the observer finds it when the anchor is added or removed.
   let set = bindings.get(binding.anchor);
@@ -114,12 +122,12 @@ export function attach(read, apply, context) {
     bindings.set(binding.anchor, set);
   }
   set.add(binding);
-  binding.stop = binding.start();
+  start(binding);
   // The surrounding effect or list row ends the binding for good when it reruns or is removed.
-  owner?.owned.push(() => {
+  adopt(() => {
     bindings.get(binding.anchor)?.delete(binding);
-    binding.stop?.();
-    binding.stop = undefined;
+    binding.effect?.stop();
+    binding.effect = undefined;
   });
   observe();
 }

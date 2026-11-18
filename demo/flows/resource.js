@@ -45,7 +45,7 @@ export default function resources() {
           }
         }),
         action('Refetch', () => user.refetch()),
-        action('Rename locally (mutate)', () => user.mutate({ id: id.get(), name: 'Renamed without loading' })),
+        action('Rename locally (set)', () => user.set({ id: id.get(), name: 'Renamed without loading' })),
         button.on({ click: () => events.clear() }).create('Clear log'),
       ],
       events,

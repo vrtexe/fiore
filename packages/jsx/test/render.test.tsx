@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { LIVE } from 'fiorejs';
+import svg from 'fiorejs/svg';
 import { jsx, type Child } from '@fiorejs/jsx/jsx-runtime';
 
 const { window } = new JSDOM();
@@ -127,7 +129,7 @@ test('async components are inserted once they resolve, also inside fragments', a
   assert.equal(card.textContent, 'Hello , ');
 
   await new Promise((resolve) => setTimeout(resolve));
-  assert.equal(card.innerHTML, 'Hello <b>Ada</b>, <b>Grace</b>');
+  assert.equal(card.innerHTML, 'Hello <!----><b>Ada</b><!---->, <!----><b>Grace</b><!---->');
 });
 
 test('an async component works on its own', async () => {
@@ -141,7 +143,7 @@ test('an async component works on its own', async () => {
   host.append(node);
 
   await new Promise((resolve) => setTimeout(resolve));
-  assert.equal(host.innerHTML, '<b>Ada</b>');
+  assert.equal(host.innerHTML, '<!----><b>Ada</b><!---->');
 });
 
 test('a rejected async component is reported and leaves its place empty', async (t) => {
@@ -258,9 +260,9 @@ test('key is accepted and ignored, also after a spread', () => {
   assert.equal(item.hasAttribute('key'), false);
 });
 
-test('event handler names are recognised in any case and listen to the lowercased event', () => {
+test('event handler names start with on in any case and listen to the event with its first letter lowercased', () => {
   let clicks = 0;
-  const upper = jsx('button', { ONCLICK: () => clicks++ }) as HTMLButtonElement;
+  const upper = jsx('button', { Onclick: () => clicks++ }) as HTMLButtonElement;
   const camel = (<button onClick={(event) => event.currentTarget && clicks++} />) as HTMLButtonElement;
   upper.dispatchEvent(new window.Event('click'));
   camel.dispatchEvent(new window.Event('click'));
@@ -359,4 +361,146 @@ test('a fragment with a very long child list does not overflow', () => {
   const items = Array.from({ length: 200000 }, (_, i) => String(i % 10));
 
   assert.equal((<>{items}</>).childNodes.length, 200000);
+});
+
+test('ref gets the finished element, typed by its tag', () => {
+  let field: HTMLInputElement | undefined;
+  let circle: SVGCircleElement | undefined;
+  let valueSeen = '';
+  const form = (
+    <form>
+      <input value="Ada" ref={(element) => ((field = element), (valueSeen = element.value))} />
+      <svg>
+        <circle r="5" ref={(element) => (circle = element)} />
+      </svg>
+    </form>
+  ) as HTMLFormElement;
+
+  assert.equal(field, form.querySelector('input'));
+  assert.equal(valueSeen, 'Ada');
+  assert.equal(circle?.namespaceURI, 'http://www.w3.org/2000/svg');
+  assert.equal(form.querySelector('input')?.hasAttribute('ref'), false);
+});
+
+test('listeners take the event name as written after on, with its first letter lowercased', () => {
+  const heard: string[] = [];
+  const box = (
+    <my-picker
+      onclick={(event: Event) => heard.push(event.type)}
+      onvalueChanged={(event: Event) => heard.push(event.type)}
+      onIonChange={(event: Event) => heard.push(event.type)}
+      onpicker-open={(event: CustomEvent) => heard.push(event.type)}
+    />
+  ) as HTMLElement;
+  for (const name of ['click', 'valueChanged', 'valuechanged', 'ionChange', 'ionchange', 'picker-open']) {
+    box.dispatchEvent(new window.CustomEvent(name));
+  }
+
+  assert.deepEqual(heard, ['click', 'valueChanged', 'ionChange', 'picker-open']);
+});
+
+test('a component may return any child: a live value, null or text renders as that child, also at the top level', async () => {
+  const listeners: ((value: Node | null) => void)[] = [];
+  const Panel = () => ({
+    [LIVE](apply: (value: Node | null) => void) {
+      apply(null);
+      listeners.push(apply);
+    },
+  });
+  const Maybe = () => null;
+  const Label = (props: { text: string }) => props.text;
+  const Later = async () => null;
+  const host = document.createElement('section');
+  const top = <Panel />;
+  host.append(top, <Maybe />, <Label text="label" />, <Later />);
+  const nested = (
+    <div>
+      <Panel />
+      <Maybe />
+      <Label text="label" />
+    </div>
+  ) as HTMLDivElement;
+
+  listeners.forEach((apply) => apply(<p>Open</p>));
+  await new Promise((resolve) => setTimeout(resolve));
+
+  assert.ok(top instanceof window.DocumentFragment);
+  assert.equal(host.textContent, 'Openlabel');
+  assert.equal(nested.textContent, 'Openlabel');
+  assert.equal(nested.querySelector('p')?.textContent, 'Open');
+});
+
+// A component that returns something no child can be is rejected.
+const Settings = () => ({ theme: 'dark' });
+// @ts-expect-error an object that is not a node, a live value or text is not a child
+void (<Settings />);
+
+test('async components as list rows keep their rows when the list changes after they resolve', async () => {
+  const { state, flush } = await import('@fiorejs/signals');
+  const wait = () => new Promise((resolve) => setTimeout(resolve, 5));
+  async function Row(props: { id: number }) {
+    await new Promise((resolve) => setTimeout(resolve));
+    return <li>{`row ${props.id}`}</li>;
+  }
+  const keyedIds = state([1, 2, 3]);
+  const plainIds = state([1, 2, 3]);
+  const keyed = (<ul>{keyedIds.for((id) => id).map((id) => <Row id={id.get()} />)}</ul>) as HTMLUListElement;
+  const plain = (<ul>{plainIds.map((id) => <Row id={id} />)}</ul>) as HTMLUListElement;
+  const both = (ids: number[]) => {
+    keyedIds.set(ids);
+    plainIds.set(ids);
+    flush();
+  };
+  const texts = () => [keyed, plain].map((list) => [...list.children].map((row) => row.textContent).join(','));
+  await wait();
+  assert.deepEqual(texts(), ['row 1,row 2,row 3', 'row 1,row 2,row 3']);
+  const first = keyed.children[0];
+
+  both([1, 2, 3, 4]);
+  await wait();
+  assert.deepEqual(texts(), ['row 1,row 2,row 3,row 4', 'row 1,row 2,row 3,row 4']);
+  both([4, 2, 1]);
+  await wait();
+  assert.deepEqual(texts(), ['row 4,row 2,row 1', 'row 4,row 2,row 1']);
+  both([2, 1, 5]);
+  await wait();
+
+  assert.deepEqual(texts(), ['row 2,row 1,row 5', 'row 2,row 1,row 5']);
+  assert.equal(keyed.children[1], first);
+});
+
+// Boolean attributes take '' as in HTML.
+void (<form novalidate="" />);
+// @ts-expect-error a boolean attribute takes true, false or ''
+void (<input required="yes" />);
+
+// With exactOptionalPropertyTypes, property props take undefined like attribute props do.
+export function optionalProps(maybeId: string | undefined, maybeMax: number | undefined) {
+  return [<div class={maybeId} className={maybeId} />, <input maxlength={maybeMax} maxLength={maybeMax} />];
+}
+
+test('a dataset object sets data attributes, plain or live', () => {
+  const live = { [LIVE]: (apply: (value: string) => void) => apply('live') };
+  const box = (<div dataset={{ id: '42', kind: live }} />) as HTMLDivElement;
+
+  assert.equal(box.getAttribute('data-id'), '42');
+  assert.equal(box.getAttribute('data-kind'), 'live');
+  assert.equal(box.hasAttribute('dataset'), false);
+});
+
+test('every SVG tag of fiorejs/svg except a, script, style and title builds an SVG element', () => {
+  const names = Object.keys(svg)
+    .filter((name) => !['element', 'a', 'script', 'style', 'title'].includes(name))
+    .map((name) => (name === 'switch_' ? 'switch' : name));
+  const html = names.filter((name) => (jsx(name, {}) as Element).namespaceURI !== 'http://www.w3.org/2000/svg');
+
+  assert.equal(names.length, 59);
+  assert.deepEqual(html, []);
+});
+
+test('the runtime takes only the SVG element function, so a bundle without SVG leaves the SVG tags out', () => {
+  const source = readFileSync(new URL(import.meta.resolve('@fiorejs/jsx/jsx-runtime')), 'utf8');
+
+  assert.match(source, /import \{ element as svgElement \} from 'fiorejs\/svg';/);
+  assert.doesNotMatch(source, /import svg\b|import \* as/);
 });

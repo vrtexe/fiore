@@ -54,7 +54,7 @@ document.body.append(
         },
       })
       .create([field, button.props({ type: 'submit' }).create('Add')]),
-    ul.props({ className: 'list' }).create(todos.for((todo) => todo.id).map(TodoItem)),
+    ul.props({ className: 'list' }).create(todos.map(TodoItem)),
     p
       .props({ className: 'hint' })
       .create('Only the parts that read a signal update when it changes; there is no virtual DOM.'),

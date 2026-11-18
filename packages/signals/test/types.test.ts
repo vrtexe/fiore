@@ -1,5 +1,5 @@
 import { div, input, li, span, ul } from 'fiorejs';
-import { classList, computed, effect, flush, read, resource, root, state, tick, type Reactive } from '@fiorejs/signals';
+import { classList, computed, effect, flush, read, resource, root, selector, state, tick, type Reactive } from '@fiorejs/signals';
 // @ts-expect-error the brand is not exported
 import { SIGNAL } from '@fiorejs/signals';
 void SIGNAL;
@@ -36,7 +36,7 @@ void doubled;
 
 ul({ children: state(['a', 'b']).map((item) => li({ children: item })) });
 ul({ children: [li('head'), state(['a', 'b']).map((item) => li(item))] });
-ul({ children: state([{ id: 1 }]).for((item) => item.id).map((item) => li({ children: String(item.id) })) });
+ul({ children: state([{ id: 1 }]).for((item) => item.id).map((item) => li({ children: item.computed((value) => String(value.id)) })) });
 const doubledName: number = state(2).computed((value) => value * 2).get();
 void doubledName;
 // @ts-expect-error map needs a signal of an array
@@ -50,7 +50,9 @@ const busy: boolean = user.loading.get();
 void loaded;
 void busy;
 user.refetch();
-user.mutate({ value: 'x', aborted: false });
+user.set({ value: 'x', aborted: false });
+user.update((value) => value && { ...value, aborted: true });
+user.mutate((value) => value?.value.trim());
 div({ children: computed(() => user.get()?.value ?? 'loading') });
 const plain = resource(() => 42);
 const answer: number | undefined = plain.get();
@@ -78,4 +80,14 @@ void dispose;
 root((x: number) => x);
 
 // A resource can be cleared without loading.
-resource(() => ({ name: 'Ada' })).mutate(undefined);
+resource(() => ({ name: 'Ada' })).set(undefined);
+
+// A selector gives a boolean signal per key.
+const isPicked = selector(state(0));
+const picked: boolean = isPicked(1).get();
+div.props({ className: classList({ picked: isPicked(2) }) }).create(isPicked(3).if(() => 'yes'));
+void picked;
+
+// if gives the branch the truthy value.
+const someone = state<{ name: string } | null>(null);
+div(someone.if((person) => person.name).else(() => 'nobody'));

@@ -100,51 +100,115 @@ console.log(list.children.length); // 3</code></pre>
             Use it for objects, because a new copy of an object with the same key then keeps its row.
           </p>
           <p>
-            A row is rendered once, for the item it was created with. A copy with the same key reuses the
-            row as it is, so fields that change must be signals.
+            In a keyed list <code>render</code> gets the item as a read-only signal, not as the item. A new
+            array that keeps a key with another object, such as an immutable update of one record, keeps the
+            row and its nodes and sets the item signal, so only the bindings that read it update. Read the
+            current item with <code>todo.get()</code>, and bind a field with
+            <code>todo.computed((item) => item.text)</code>. A key that leaves the array and comes back gets a
+            new row.
           </p>
 <div class="code-pair">
 <pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { ul, li } from 'fiorejs';
-import { classList, state, flush } from '@fiorejs/signals';
+import { state, flush } from '@fiorejs/signals';
 
 const todos = state([
-  { id: 1, text: 'Write docs', done: state(false) },
-  { id: 2, text: 'Publish', done: state(false) },
+  { id: 1, text: 'Write docs', done: false },
+  { id: 2, text: 'Publish', done: false },
 ]);
 
 const list = ul(
   todos.for((todo) =&gt; todo.id).map((todo, index) =&gt; {
-    console.log('render', todo.text, 'at', index);
-    return li.props({ className: classList({ done: todo.done }) }).create(todo.text);
+    console.log('render', todo.get().text, 'at', index);
+    return li.props({ className: todo.computed((item) =&gt; (item.done ? 'done' : '')) }).create(todo.computed((item) =&gt; item.text));
   }),
 );
 document.body.append(list);
 
-todos.get()[0].done.set(true);                // no list work: only a class changes
-todos.set([{ id: 3, text: 'Release', done: state(false) }, ...todos.get()]);
-flush();                                      // logs "render Release at 0"
-console.log(list.children[1].className);      // done</code></pre>
-<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { classList, state, flush } from '@fiorejs/signals';
+todos.set(todos.get().map((todo) =&gt; (todo.id === 1 ? { ...todo, done: true } : todo)));
+flush();                                 // no render: row 1 stays and its class changes
+console.log(list.children[0].className); // done
+todos.set([{ id: 3, text: 'Release', done: false }, ...todos.get()]);
+flush();                                 // logs "render Release at 0"
+console.log(list.children.length);       // 3</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state, flush } from '@fiorejs/signals';
 
 const todos = state([
-  { id: 1, text: 'Write docs', done: state(false) },
-  { id: 2, text: 'Publish', done: state(false) },
+  { id: 1, text: 'Write docs', done: false },
+  { id: 2, text: 'Publish', done: false },
 ]);
 
 const list = (
   &lt;ul&gt;
     {todos.for((todo) =&gt; todo.id).map((todo, index) =&gt; {
-      console.log('render', todo.text, 'at', index);
-      return &lt;li class={classList({ done: todo.done })}&gt;{todo.text}&lt;/li&gt;;
+      console.log('render', todo.get().text, 'at', index);
+      return &lt;li class={todo.computed((item) =&gt; (item.done ? 'done' : ''))}&gt;{todo.computed((item) =&gt; item.text)}&lt;/li&gt;;
     })}
   &lt;/ul&gt;
 );
 document.body.append(list);
 
-todos.get()[0].done.set(true);                // no list work: only a class changes
-todos.set([{ id: 3, text: 'Release', done: state(false) }, ...todos.get()]);
-flush();                                      // logs "render Release at 0"
-console.log(list.children[1].className);      // done</code></pre>
+todos.set(todos.get().map((todo) =&gt; (todo.id === 1 ? { ...todo, done: true } : todo)));
+flush();                                 // no render: row 1 stays and its class changes
+console.log(list.children[0].className); // done
+todos.set([{ id: 3, text: 'Release', done: false }, ...todos.get()]);
+flush();                                 // logs "render Release at 0"
+console.log(list.children.length);       // 3</code></pre>
+</div>
+          <p>
+            <code>signal.map(render)</code> without a key still passes the plain item, because it keys by the
+            item itself and the item of a row never changes.
+          </p>
+        </section>
+
+        <section id="selector">
+          <h2>Selecting a row</h2>
+          <p>
+            <code>selector(source)</code> returns a function <code>isSelected(key)</code> that gives a boolean
+            signal, true while <code>source</code> equals <code>key</code>. When <code>source</code> changes,
+            only the readers of the old and the new key run again, so highlighting the selected row costs two
+            updates in a list of 10 or of 10,000 rows. A key is forgotten when nothing reads it.
+          </p>
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { ul, li } from 'fiorejs';
+import { classList, flush, selector, state } from '@fiorejs/signals';
+
+const rows = state([{ id: 1, text: 'Ada' }, { id: 2, text: 'Grace' }, { id: 3, text: 'Linus' }]);
+const selected = state(1);
+const isSelected = selector(selected);
+
+const list = ul(
+  rows.for((row) =&gt; row.id).map((row) =&gt;
+    li
+      .props({ className: classList({ selected: isSelected(row.get().id) }) })
+      .on({ click: () =&gt; selected.set(row.get().id) })
+      .create(row.computed((item) =&gt; item.text)),
+  ),
+);
+document.body.append(list);
+
+list.children[2].click();
+flush();
+console.log([...list.children].map((li) =&gt; li.className)); // [ '', '', 'selected' ]</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { classList, flush, selector, state } from '@fiorejs/signals';
+
+const rows = state([{ id: 1, text: 'Ada' }, { id: 2, text: 'Grace' }, { id: 3, text: 'Linus' }]);
+const selected = state(1);
+const isSelected = selector(selected);
+
+const list = (
+  &lt;ul&gt;
+    {rows.for((row) =&gt; row.id).map((row) =&gt; (
+      &lt;li class={classList({ selected: isSelected(row.get().id) })} onclick={() =&gt; selected.set(row.get().id)}&gt;
+        {row.computed((item) =&gt; item.text)}
+      &lt;/li&gt;
+    ))}
+  &lt;/ul&gt;
+);
+document.body.append(list);
+
+list.children[2].click();
+flush();
+console.log([...list.children].map((li) =&gt; li.className)); // [ '', '', 'selected' ]</code></pre>
 </div>
         </section>
 
@@ -154,7 +218,7 @@ console.log(list.children[1].className);      // done</code></pre>
             When the order changes, only the rows that are out of place are moved. A focused input in a
             row that does not move keeps its focus, and in browsers that have <code>moveBefore</code> it
             keeps focus in moved rows too. Rows of items that left the array stop, and the bindings inside
-            them stop for good.
+            them stop for good; use <a href="cleanup.html">onCleanup</a> to release what a row set up itself.
           </p>
           <p>
             A row can be a node or a fragment. Each place where a list is bound keeps its own rows. Inside a
@@ -173,8 +237,8 @@ console.log(list.children[1].className);      // done</code></pre>
           </p>
           <p>
             A key that appears more than once gets one row per occurrence. Items without a <code>key</code>
-            field all have the key <code>undefined</code> and are matched by position, so such a row keeps
-            showing the item it was created for. Give each item a stable key when its content can change.
+            field all have the key <code>undefined</code> and are matched by position, and the item signal of such a row
+            follows the item at its position. Give each item a stable key when items can move.
           </p>
 <div class="code-pair">
 <pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { ul, li } from 'fiorejs';
@@ -182,7 +246,7 @@ import { state, flush } from '@fiorejs/signals';
 
 const items = state([{ key: 'a' }, { key: 'a' }, { key: 'b' }]);
 
-const list = ul(items.for().map((item, index) =&gt; li(`${item.key}${index}`)));
+const list = ul(items.for().map((item, index) =&gt; li(`${item.get().key}${index}`)));
 document.body.append(list);
 console.log(list.textContent); // a0a1b2
 
@@ -193,7 +257,7 @@ console.log(list.textContent); // b2a0a1: rows moved, labels kept</code></pre>
 
 const items = state([{ key: 'a' }, { key: 'a' }, { key: 'b' }]);
 
-const list = &lt;ul&gt;{items.for().map((item, index) =&gt; &lt;li&gt;{item.key}{index}&lt;/li&gt;)}&lt;/ul&gt;;
+const list = &lt;ul&gt;{items.for().map((item, index) =&gt; &lt;li&gt;{item.get().key}{index}&lt;/li&gt;)}&lt;/ul&gt;;
 document.body.append(list);
 console.log(list.textContent); // a0a1b2
 

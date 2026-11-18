@@ -1,11 +1,26 @@
 import { LIVE } from "fiorejs";
-import { current, notify, owner, runTracked, stopOwned, track, untrackSources } from "./tracking.js";
+import {
+  COMPUTED,
+  DIRTY,
+  ERROR,
+  FORGETS,
+  PENDING,
+  RUNNING,
+  checkDirty,
+  createEffect,
+  current,
+  link,
+  owner,
+  propagate,
+  release,
+  runTracked,
+  stopOwned,
+} from "./tracking.js";
 import { List, itemKey } from "./list.js";
 import { When } from "./when.js";
 import { attach } from "./dom.js";
 
-/** @typedef {import('./tracking.js').Source} Source */
-/** @typedef {import('./tracking.js').Computation} Computation */
+/** @typedef {import('./tracking.js').Edge} Edge */
 
 export const SIGNAL = Symbol.for("fiorejs.signal");
 
@@ -54,13 +69,13 @@ export class Signal {
   }
 
   /**
-   * Renders a list and reuses the rows of items it has seen; the item itself is the key.
+   * Renders a list and reuses the rows of items it has seen; the item itself is the key, so `render` gets the item.
    * @template U
    * @this {Signal<readonly U[]>}
    * @param {(item: U, index: number) => Node} render
    */
   map(render) {
-    return new List(this, render, (item) => item);
+    return new List(this, render, (item) => item, false);
   }
 
   /**
@@ -72,18 +87,19 @@ export class Signal {
   for(key = itemKey) {
     return {
       /**
-       * Renders the list and reuses the rows of items whose key it has seen.
-       * @param {(item: U, index: number) => Node} render
+       * Renders the list and reuses the rows of items whose key it has seen. `render` gets a signal of the row's item,
+       * which changes when a new array keeps the key with another object, so the row updates in place.
+       * @param {(item: Signal<U>, index: number) => Node} render
        */
-      map: (render) => new List(this, render, key),
+      map: (render) => new List(this, render, key, true),
     };
   }
 
   /**
-   * Shows what `then` returns while the signal's value is truthy, and nothing otherwise; add `.else(fn)` for the other
-   * case. Only the shown branch is built.
+   * Shows what `then` returns for the signal's value while it is truthy, and nothing otherwise; add `.else(fn)` for the
+   * other case. Only the shown branch is built, and it is built again when the value changes.
    * @template A
-   * @param {() => A} then
+   * @param {(value: T) => A} then
    * @returns {When<A, null>}
    */
   if(then) {
@@ -93,10 +109,11 @@ export class Signal {
   /**
    * Shows what `render` returns while the signal's value matches `match`, and nothing otherwise. A function is a test
    * on the value; any other value is compared with `Object.is`. Add more cases with `.case` and the rest with
-   * `.else(fn)`; the first case that matches wins.
+   * `.else(fn)`; the first case that matches wins. `render` gets the value, and the branch is built again when it
+   * changes.
    * @template A
    * @param {unknown} match
-   * @param {() => A} render
+   * @param {(value: T) => A} render
    * @returns {When<A, null>}
    */
   case(match, render) {
@@ -106,7 +123,7 @@ export class Signal {
 
 /** A computed derives a value; a write from its run would loop through its own inputs, so it throws instead. */
 function forbidInComputed() {
-  if (current instanceof Computed) {
+  if (current !== null && current.flags & COMPUTED) {
     throw new Error("A computed cannot set a signal; derive the value, or set it in an effect or an event handler.");
   }
 }
@@ -121,26 +138,28 @@ class State extends Signal {
   /** @param {T} value */
   constructor(value) {
     super();
-    this._value = value;
-    /** @type {Set<Computation>} */
-    this.subs = new Set();
+    this.flags = 0;
+    /** @type {Edge | undefined} */
+    this.subs = undefined;
+    /** @type {Edge | undefined} */
+    this.subsTail = undefined;
     /** Counts changes, so a reader can tell whether this signal changed since it last read it. */
     this.version = 0;
+    this._value = value;
   }
 
   get() {
-    track(this);
+    const edge = current !== null ? link(this, current) : undefined;
+    if (edge !== undefined) {
+      edge.version = this.version;
+    }
     return this._value;
   }
 
   /** @param {T} next */
   set(next) {
     forbidInComputed();
-    if (!Object.is(next, this._value)) {
-      this._value = next;
-      this.version++;
-      notify(this);
-    }
+    writeValue(this, next);
   }
 
   /**
@@ -162,7 +181,58 @@ class State extends Signal {
       fn(this._value);
     } finally {
       this.version++;
-      notify(this);
+      if (this.subs !== undefined) {
+        propagate(this.subs);
+      }
+    }
+  }
+}
+
+/**
+ * The item of a keyed list row: a signal that only the list writes, when a new array keeps the row's key with another
+ * object.
+ * @template T
+ * @extends {Signal<T>}
+ */
+export class Item extends Signal {
+  /** @param {T} value */
+  constructor(value) {
+    super();
+    this.flags = 0;
+    /** @type {Edge | undefined} */
+    this.subs = undefined;
+    /** @type {Edge | undefined} */
+    this.subsTail = undefined;
+    this.version = 0;
+    this._value = value;
+  }
+
+  get() {
+    const edge = current !== null ? link(this, current) : undefined;
+    if (edge !== undefined) {
+      edge.version = this.version;
+    }
+    return this._value;
+  }
+
+  /** @param {T} next */
+  _replace(next) {
+    writeValue(this, next);
+  }
+}
+
+/**
+ * Sets the value of a state or an item; a different value (`Object.is`) tells its readers.
+ * @template T
+ * @param {State<T> | Item<T>} source
+ * @param {T} next
+ */
+function writeValue(source, next) {
+  if (!Object.is(next, source._value)) {
+    source._value = next;
+    source.version++;
+    if (source.subs !== undefined) {
+      propagate(source.subs);
     }
   }
 }
@@ -178,8 +248,8 @@ export function state(value) {
 
 /**
  * A cached value derived from other signals; recalculated on read after an input changed. The instance is its own
- * source, computation and owner: bindings and effects created by a run stop before the next run and when it loses its
- * readers. No cached result means it is dirty.
+ * source, reader and owner: bindings and effects created by a run stop before the next run and when it loses its
+ * readers. It has the fields of an effect in the same order, so the graph walks see one shape.
  * @template T
  * @extends {Signal<T>}
  */
@@ -187,100 +257,79 @@ export class Computed extends Signal {
   /** @param {() => T} fn */
   constructor(fn) {
     super();
-    this._fn = fn;
-    /** @typedef {{ value: T }} ComputedValue */
-    /** @typedef {{ error: unknown }} ComputedError */
-    /** @type {ComputedValue | ComputedError | undefined} The last result, an error cached like a value. */
-    this._result = undefined;
-    /** @type {Set<Computation>} */
-    this.subs = new Set();
-    /** @type {Set<Source>} */
-    this.sources = new Set();
-    this.missed = false;
-    /** @type {(() => void)[]} */
-    this.owned = [];
-    /** True while the computed runs, so a change during its own run still reaches its readers. */
-    this._running = false;
-    /** Set when an input changes during the current run, so that run is not cached. */
-    this._changed = false;
+    this.flags = COMPUTED | DIRTY;
+    /** @type {Edge | undefined} */
+    this.deps = undefined;
+    /** @type {Edge | undefined} */
+    this.depsTail = undefined;
+    /** @type {Edge | undefined} */
+    this.subs = undefined;
+    /** @type {Edge | undefined} */
+    this.subsTail = undefined;
     /** Counts recalculations that gave a different value or error, so readers can skip a run when nothing changed. */
     this.version = 0;
-    /** @type {ComputedValue | ComputedError | undefined} The last result, kept to compare with the next one. */
-    this._previous = undefined;
+    /** @type {(() => void)[] | undefined} */
+    this.owned = undefined;
+    this._fn = fn;
+    /** @type {unknown} The last result, an error when ERROR is set; kept to compare with the next one. */
+    this._value = undefined;
+    this.id = 0;
+    /** @type {0 | 1 | 2} */
+    this.phase = 1;
+    this.queued = false;
+    this.flush = 0;
+    this.runs = 0;
   }
 
-  stale() {
-    // Already dirty means the readers heard of the change, unless one of them failed before reading it again, or the
-    // change came during this computed's own run.
-    if (!this._result && !this.missed && !this._running) {
-      return;
-    }
-    this.missed = false;
-    this._result = undefined;
-    this._changed = this._running;
-    // The readers only learn that this value may have changed; they check its version before they run again.
-    for (const sub of this.subs) {
-      sub.stale(true);
-    }
-  }
-
-  /** Without readers a computed lets go of its sources, so it can be collected and is not visited on every set. */
-  release() {
-    untrackSources(this);
-    this._result = undefined;
-    stopOwned(this);
-  }
-
+  /** @returns {T} */
   get() {
     // The reader subscribes first, so it stays subscribed even when the calculation throws.
-    track(this);
-    let result = this._result;
-    if (!result) {
-      stopOwned(this);
-      this._running = true;
-      this._changed = false;
-      try {
-        // Without a reader the computed releases right after this read, so what the run creates belongs to the caller.
-        result = { value: runTracked(this, this.subs.size > 0 ? this : owner, this._fn) };
-      } catch (error) {
-        stopOwned(this);
-        result = { error };
-      } finally {
-        this._running = false;
-      }
-      if (!sameResult(this._previous, result)) {
-        this.version++;
-      }
-      this._previous = result;
-      // An input changed during the run: the readers were told, so the next read runs again instead of using this.
-      if (!this._changed) {
-        this._result = result;
+    const edge = current !== null ? link(this, current) : undefined;
+    const flags = this.flags;
+    // Dirty without sources means it never ran or let go of its sources; otherwise the check updates them first.
+    if (flags & (DIRTY | PENDING)) {
+      if ((flags & DIRTY && this.deps === undefined) || checkDirty(this) || this.flags & DIRTY) {
+        this._update();
+      } else {
+        this.flags &= ~PENDING;
       }
     }
-    if (this.subs.size === 0) {
-      this.release();
+    if (this.subs === undefined) {
+      release(this);
     }
-    // An effect remembers the version it read, so it can skip a later run if this value did not change.
-    current?.saw?.(this);
-    if ("error" in result) {
-      throw result.error;
+    // The reader remembers the version it read, so it can skip a run when this value did not change.
+    if (edge !== undefined) {
+      edge.version = this.version;
     }
-    return result.value;
+    if (this.flags & ERROR) {
+      throw this._value;
+    }
+    return /** @type {T} */ (this._value);
   }
-}
 
-/**
- * Whether two results of a computed are the same value (Object.is) or the same error.
- * @param {{ value: unknown } | { error: unknown } | undefined} previous
- * @param {{ value: unknown } | { error: unknown }} next
- */
-function sameResult(previous, next) {
-  if (!previous) {
-    return false;
+  /** Calculates the value again; an error is kept as the result. */
+  _update() {
+    stopOwned(this);
+    this.flags = (this.flags & ~(DIRTY | PENDING)) | RUNNING;
+    /** @type {unknown} */
+    let value;
+    let failed = false;
+    try {
+      // Without a reader the computed releases right after this read, so what the run creates belongs to the caller.
+      value = runTracked(this, this.subs !== undefined ? this : owner, this._fn);
+    } catch (error) {
+      stopOwned(this);
+      value = error;
+      failed = true;
+    }
+    const flags = this.flags & ~RUNNING;
+    if (this.version === 0 || !Object.is(value, this._value) || failed !== ((flags & ERROR) !== 0)) {
+      this.version++;
+    }
+    this._value = value;
+    // An input changed during the run: the readers were told, and the computed stays dirty, so the next read runs again.
+    this.flags = failed ? flags | ERROR : flags & ~ERROR;
   }
-  return "value" in previous
-    ? "value" in next && Object.is(previous.value, next.value)
-    : "error" in next && Object.is(previous.error, next.error);
 }
 
 /**
@@ -290,4 +339,95 @@ function sameResult(previous, next) {
  */
 export function computed(fn) {
   return new Computed(fn);
+}
+
+/**
+ * The readers of one key of a selector. The selector creates it on the first read of the key in an effect, computed or
+ * binding, and drops it when the last of them goes.
+ */
+class SelectorKey {
+  /**
+   * @param {Map<unknown, SelectorKey>} keys
+   * @param {unknown} key
+   */
+  constructor(keys, key) {
+    this.flags = FORGETS;
+    /** @type {Edge | undefined} */
+    this.subs = undefined;
+    /** @type {Edge | undefined} */
+    this.subsTail = undefined;
+    this.version = 0;
+    this._keys = keys;
+    this._key = key;
+  }
+
+  /** Tells the readers that the source moved to or away from the key. */
+  change() {
+    this.version++;
+    if (this.subs !== undefined) {
+      propagate(this.subs);
+    }
+  }
+
+  /** Leaves the selector once nothing reads the key. */
+  forget() {
+    if (this._keys.get(this._key) === this) {
+      this._keys.delete(this._key);
+    }
+  }
+}
+
+/**
+ * True while the selector's source equals the key.
+ * @extends {Signal<boolean>}
+ */
+class Selected extends Signal {
+  /**
+   * @param {{ value: unknown, keys: Map<unknown, SelectorKey> }} selection
+   * @param {unknown} key
+   */
+  constructor(selection, key) {
+    super();
+    this._selection = selection;
+    this._key = key;
+  }
+
+  get() {
+    const selection = this._selection;
+    if (current !== null) {
+      let node = selection.keys.get(this._key);
+      if (node === undefined) {
+        node = new SelectorKey(selection.keys, this._key);
+        selection.keys.set(this._key, node);
+      }
+      const edge = link(node, current);
+      if (edge !== undefined) {
+        edge.version = node.version;
+      }
+    }
+    return Object.is(selection.value, this._key);
+  }
+}
+
+/**
+ * Returns `select(key)`, a signal that is true while `source` equals `key` (`Object.is`). When `source` changes, only
+ * the readers of the old and the new key are told, whatever the number of keys. The selector follows `source` right
+ * after each write, and stops with the current owner.
+ * @template T
+ * @param {Signal<T> | (() => T)} source
+ * @returns {(key: T) => Signal<boolean>}
+ */
+export function selector(source) {
+  /** @type {{ value: unknown, keys: Map<unknown, SelectorKey> }} */
+  const selection = { value: undefined, keys: new Map() };
+  createEffect(() => {
+    const next = typeof source === "function" ? source() : source.get();
+    const previous = selection.value;
+    if (!Object.is(next, previous)) {
+      selection.value = next;
+      selection.keys.get(previous)?.change();
+      selection.keys.get(next)?.change();
+    }
+  }, 3);
+  return (key) => new Selected(selection, key);
 }

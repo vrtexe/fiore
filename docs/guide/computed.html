@@ -94,8 +94,22 @@ total.get();               // cached, logs nothing</code></pre>
           <p>
             A reader of a computed also runs only when the value changed (<code>Object.is</code>). With
             <code>user.computed((u) => u.name)</code>, a binding does not update when another field of
-            <code>user</code> changes, because the name is the same.
+            <code>user</code> changes, because the name is the same. The same holds for a computed that reads another computed:
+            when the one below it did not change its value, it is not calculated again.
           </p>
+<pre class="code" tabindex="0"><code class="language-js">import { state, computed, effect, flush } from '@fiorejs/signals';
+
+const user = state({ name: 'Ada', visits: 1 });
+const name = user.computed((u) =&gt; u.name);
+const shout = computed(() =&gt; {
+  console.log('calculating');
+  return name.get().toUpperCase();
+});
+
+effect(() =&gt; console.log(shout.get())); // logs "calculating", then "ADA"
+
+user.set({ name: 'Ada', visits: 2 });
+flush(); // name is still 'Ada', so shout is not calculated again and nothing logs</code></pre>
         </section>
 
         <section id="errors">

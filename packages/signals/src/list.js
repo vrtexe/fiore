@@ -1,6 +1,7 @@
 import { LIVE } from 'fiorejs';
-import { owner, own } from './tracking.js';
+import { adopt, own } from './tracking.js';
 import { attach } from './dom.js';
+import { Item } from './signal.js';
 
 /**
  * @template T
@@ -8,7 +9,7 @@ import { attach } from './dom.js';
  */
 
 /**
- * @typedef {{ first: Node | null, last: Node | null, stop: () => void, pass: number }} Row
+ * @typedef {{ first: Node | null, last: Node | null, stop: () => void, pass: number, item: Item<unknown> | undefined }} Row
  */
 
 /**
@@ -21,19 +22,22 @@ export function itemKey(item) {
 
 /**
  * A live list: every binding keeps its own rows by key and only renders new items. `index` is the item's index when its
- * row was created; a reused row keeps it.
+ * row was created; a reused row keeps it. A keyed list gives `render` a signal of the item, which the list sets when a
+ * new array keeps the key with another object; a list keyed by the item itself gives the item.
  * @template T
  */
 export class List {
   /**
    * @param {Signal<readonly T[]>} source
-   * @param {(item: T, index: number) => Node} render
+   * @param {(item: any, index: number) => Node} render
    * @param {(item: T) => unknown} key
+   * @param {boolean} live whether `render` gets a signal of the item
    */
-  constructor(source, render, key) {
+  constructor(source, render, key, live) {
     this._source = source;
     this._render = render;
     this._key = key;
+    this._live = live;
   }
 
   /**
@@ -47,7 +51,10 @@ export class List {
     /** Counts the passes; a row marked with the current pass is shown, so a repeated key takes the next row. */
     let pass = 0;
 
-    owner?.owned.push(() => {
+    // Alone in its element, the list owns all of the element's nodes, so it can remove them in one step.
+    const parent = context.kind === 'child' && context.anchor === context.element ? context.element : null;
+
+    adopt(() => {
       const old = rows;
       rows = new Map();
       for (const list of old.values()) {
@@ -66,13 +73,16 @@ export class List {
         const created = [];
         /** @type {Node[]} */
         const nodes = [];
+        const items = this._source.get();
         try {
-          this._source.get().forEach((item, index) => {
+          items.forEach((item, index) => {
             const id = this._key(item);
             let row = rows.get(id)?.find((candidate) => candidate.pass !== pass);
             if (!row) {
-              row = createRow(() => this._render(item, index));
+              row = this._live ? createLiveRow(this._render, item, index) : createRow(() => this._render(item, index));
               created.push(row);
+            } else if (row.item !== undefined) {
+              row.item._replace(item);
             }
             row.pass = pass;
             const list = next.get(id);
@@ -93,6 +103,10 @@ export class List {
 
         const old = rows;
         rows = next;
+        // No row stays, so the old rows leave the element at once instead of one by one; the new ones are inserted next.
+        if (parent !== null && created.length === items.length && parent.firstChild !== null) {
+          parent.textContent = '';
+        }
         for (const list of old.values()) {
           for (const row of list) {
             if (row.pass !== pass) {
@@ -117,5 +131,19 @@ function createRow(render) {
   // A fragment empties when it is inserted, so the row keeps its first and last node; a live child between them can
   // change the nodes in between.
   const fragment = node.nodeType === Node.DOCUMENT_FRAGMENT_NODE;
-  return { first: fragment ? node.firstChild : node, last: fragment ? node.lastChild : node, stop, pass: 0 };
+  return { first: fragment ? node.firstChild : node, last: fragment ? node.lastChild : node, stop, pass: 0, item: undefined };
+}
+
+/**
+ * Renders a row that gets a signal of its item.
+ * @param {(item: Item<unknown>, index: number) => Node} render
+ * @param {unknown} value
+ * @param {number} index
+ * @returns {Row}
+ */
+function createLiveRow(render, value, index) {
+  const item = new Item(value);
+  const row = createRow(() => render(item, index));
+  row.item = item;
+  return row;
 }

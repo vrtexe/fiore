@@ -1,18 +1,27 @@
-import { element, fragment } from 'fiorejs';
-import svg, { element as svgElement } from 'fiorejs/svg';
+import { LIVE, element, fragment } from 'fiorejs';
+import { element as svgElement } from 'fiorejs/svg';
 
 // ponytail: a, script, style and title always create HTML elements; SVG versions need a namespace hint
+/**
+ * The SVG tags of fiorejs/svg, written out so a bundle does not take in every SVG tag function; a test keeps the two
+ * in step.
+ */
 const SVG_TAGS = new Set(
-  Object.keys(svg)
-    .filter((name) => !['element', 'a', 'script', 'style', 'title'].includes(name))
-    .map((name) => (name === 'switch_' ? 'switch' : name)),
+  (
+    'animate animateMotion animateTransform circle clipPath defs desc ellipse feBlend feColorMatrix ' +
+    'feComponentTransfer feComposite feConvolveMatrix feDiffuseLighting feDisplacementMap feDistantLight ' +
+    'feDropShadow feFlood feFuncA feFuncB feFuncG feFuncR feGaussianBlur feImage feMerge feMergeNode feMorphology ' +
+    'feOffset fePointLight feSpecularLighting feSpotLight feTile feTurbulence filter foreignObject g image line ' +
+    'linearGradient marker mask metadata mpath path pattern polygon polyline radialGradient rect set stop svg switch ' +
+    'symbol text textPath tspan use view'
+  ).split(' '),
 );
 
 /** Tag functions by name, so every element name builds its tag function once. */
 const htmlTags = new Map();
 const svgTags = new Map();
 
-/** Names of event handlers, in any case. */
+/** Names of event handlers: `on` in any case, then the event name. */
 const HANDLER = /^on/i;
 
 /**
@@ -99,7 +108,17 @@ function report(error) {
 }
 
 /**
- * @param {string | ((props: any) => Node | Promise<Node>)} type
+ * A component's result as a node: a node as it is, and anything else a child can be, such as a live value, text or
+ * null, in a fragment, so it renders as that child would also where it is not a child, at the top level.
+ * @param {unknown} result
+ * @returns {Node}
+ */
+function toNode(result) {
+  return result instanceof Node ? result : fragment(/** @type {any} */ (result));
+}
+
+/**
+ * @param {string | ((props: any) => unknown)} type
  * @param {Record<string, unknown>} props
  * @returns {Node}
  */
@@ -107,12 +126,15 @@ export function jsx(type, props) {
   if (typeof type === 'function') {
     const result = type(props);
     if (!(result instanceof Promise)) {
-      return result;
+      return toNode(result);
     }
-    // An async component holds its place with an empty comment until it resolves.
-    const marker = document.createComment('');
-    result.then((node) => marker.replaceWith(node), report);
-    return marker;
+    // An async component is a live child that gets its result when it resolves. Its two comments hold its place and stay
+    // when the result arrives, so a list row or a branch that keeps its first and last node keeps the right ones.
+    return fragment({
+      [LIVE]: (/** @type {(value: unknown) => void} */ apply) => {
+        result.then((value) => apply(toNode(value)), report);
+      },
+    });
   }
 
   const { children, ...rest } = props;
@@ -121,21 +143,30 @@ export function jsx(type, props) {
     type.includes('-') && typeof customElements !== 'undefined' ? customElements.get(type) : undefined;
   /** @type {Record<string, any>} */
   const data = { props: {}, attrs: {}, on: {}, children };
+  /** @type {((element: Element) => void) | undefined} */
+  let ref;
 
   for (const [name, value] of Object.entries(rest)) {
     // A key inside a spread object is ignored like a key written on the element.
     if (name === 'key') {
       continue;
     }
+    if (name === 'ref') {
+      ref = typeof value === 'function' ? /** @type {(element: Element) => void} */ (value) : undefined;
+      continue;
+    }
     if (HANDLER.test(name)) {
+      // The event name as written, with its first letter lowercased: the typed onClick is click, onValueChanged is
+      // valueChanged.
       if (value != null) {
-        data.on[name.slice(2).toLowerCase()] = value;
+        data.on[name.charAt(2).toLowerCase() + name.slice(3)] = value;
       }
     } else if (value === null) {
       // null removes the attribute instead of writing "null" into a property.
       data.attrs[name] = null;
-    } else if (name === 'style' && typeof value === 'object') {
-      data.props.style = value;
+    } else if ((name === 'style' || name === 'dataset') && typeof value === 'object') {
+      // Merged into the element's style or dataset, as in the builder's props.
+      data.props[name] = value;
     } else if (!isSvg && isProperty(type, name, value, definition)) {
       data.props[name] = value;
     } else {
@@ -150,7 +181,10 @@ export function jsx(type, props) {
     create = isSvg ? svgElement(type) : element(type);
     tags.set(type, create);
   }
-  return create(data);
+  const node = create(data);
+  // Like the builder's also: the element is complete, with its props, attributes, listeners and children.
+  ref?.(node);
+  return node;
 }
 
 /**

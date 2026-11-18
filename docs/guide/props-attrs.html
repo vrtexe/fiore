@@ -106,7 +106,7 @@ console.log(email.value, email.getAttribute('value'));
           <p data-syntax="builder">Some properties hold an object, such as <code>style</code> and <code>dataset</code>.
             Pass a plain object and fiore merges it into the existing one instead of replacing it.
             That is the same as assigning each key on <code>element.style</code>:</p>
-          <p data-syntax="jsx"><code>style</code> takes an object, and each key is set on <code>element.style</code>. <code>dataset</code> is read-only, so write each key as a <code>data-*</code> attribute instead:</p>
+          <p data-syntax="jsx"><code>style</code> and <code>dataset</code> take an object and are merged into the element's existing object, as in the builder: each key of <code>style</code> is set on <code>element.style</code>, and each key of <code>dataset</code> becomes a <code>data-*</code> attribute.</p>
           <div class="code-pair">
 <pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div } from 'fiorejs';
 
@@ -120,10 +120,9 @@ const box = div
 
 document.body.append(box);
 console.log(box.dataset.id, box.style.color);
-// 42 tomato
-          </code></pre>
+// 42 tomato</code></pre>
 <pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const box = (
-  &lt;div className="box" style={{ color: 'tomato', paddingBlock: '8px' }} data-id="42" data-kind="demo"&gt;
+  &lt;div className="box" style={{ color: 'tomato', paddingBlock: '8px' }} dataset={{ id: '42', kind: 'demo' }}&gt;
     Styled
   &lt;/div&gt;
 );
@@ -178,8 +177,9 @@ document.body.append(toggle);</code></pre>
           <p>
             The result is <code>aria-pressed="false"</code>, <code>data-count="0"</code>,
             <code>title=""</code> and <code>spellcheck="false"</code>. There is no
-            <code>disabled</code> and no <code>hidden</code>. Merging two <code>attrs</code> calls
-            works the same way:
+            <code>disabled</code> and no <code>hidden</code>. A boolean attribute is set by the empty string, as in HTML:
+            <code>disabled: ''</code> writes <code>disabled=""</code>, and the types accept <code>''</code> there.
+            Merging two <code>attrs</code> calls works the same way:
           </p>
           <div class="code-pair">
 <pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { a } from 'fiorejs';
@@ -236,9 +236,9 @@ console.log(bad.outerHTML);
                   <tr><th>Prop</th><th>Applied as</th></tr>
                 </thead>
                 <tbody>
-                  <tr><td><code>on</code> and an event name, in any case: <code>onclick</code>, <code>onClick</code></td><td>An event listener, for <code>click</code>.</td></tr>
+                  <tr><td><code>on</code> and an event name, with its first letter lowercased and the rest kept: <code>onclick</code>, <code>onClick</code>, <code>onvalueChanged</code></td><td>An event listener, for <code>click</code> and <code>valueChanged</code>.</td></tr>
                   <tr><td><code>null</code>, as in <code>title={null}</code></td><td>Removes the attribute.</td></tr>
-                  <tr><td><code>style</code> with an object</td><td>Style properties.</td></tr>
+                  <tr><td><code>style</code> or <code>dataset</code> with an object</td><td>Style properties, or <code>data-*</code> attributes.</td></tr>
                   <tr><td>A camel-case name the element has a writable property for: <code>className</code>, <code>textContent</code>, <code>htmlFor</code></td><td>A property.</td></tr>
                   <tr><td><code>value</code>, <code>checked</code>, <code>selected</code>, <code>muted</code>, <code>indeterminate</code>, <code>volume</code>, <code>text</code>, <code>files</code>, where the element has it</td><td>A property.</td></tr>
                   <tr><td>Any other name: <code>class</code>, <code>for</code>, <code>id</code>, <code>type</code>, <code>disabled</code>, <code>aria-label</code>, <code>width</code></td><td>An attribute.</td></tr>

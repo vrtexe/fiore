@@ -931,7 +931,9 @@ svg.circle.<span class="fn">attrs</span>({ r<span class="punc">:</span> <span cl
             same methods as the named export. The tag creates the element with
             <code>document.createElement</code>, applies the data in a fixed order and returns the
             node. Use it with the builder, <code>element('div').props({ … }).create()</code>, or call
-            it directly, <code>element('div')(data)</code>.
+            it directly, <code>element('div')(data)</code>. A name with a hyphen, such as
+            <code>element('user-card')</code>, returns a typed custom element tag, an <code>HTMLElement</code> that takes
+            any attribute.
           </p>
 
           <ol>
@@ -1122,8 +1124,13 @@ button.<span class="fn">with</span>(card).<span class="fn">props</span>({ type<s
             is merged into the element after the other keys of its map.
           </p>
           <p>
-            Read-only DOM properties are excluded by the type. To set a read-only value, use a
-            writable property or an attribute instead.
+            Read-only DOM properties are excluded by the type, except <code>dataset</code>, which is typed as a
+            prop: its keys are merged into the element's <code>data-*</code> attributes, as <code>style</code> is
+            merged into its styles. To set any other read-only value, use a writable property or an attribute instead.
+          </p>
+          <p>
+            A <code>select</code> with a <code>value</code> prop assigns its value again when options are added or
+            replaced later, for example after a load, so the select keeps showing the option that matches.
           </p>
           <p>Source: <a class="text-link" href="https://github.com/vrtexe/fiore/blob/main/lib/core/base.js">lib/core/base.js</a></p>
         </section>
@@ -1676,7 +1683,7 @@ button.<span class="fn">with</span>(card).<span class="fn">props</span>({ type<s
                 <tr>
                   <td><code>ElementProps&lt;T&gt;</code></td>
                   <td><code>lib/types/base.dom.d.ts</code></td>
-                  <td>Writable, recursively partial element properties</td>
+                  <td>Writable, recursively partial element properties, and <code>dataset</code></td>
                 </tr>
                 <tr>
                   <td><code>BaseElement</code></td>

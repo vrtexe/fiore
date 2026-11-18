@@ -34,9 +34,9 @@ document.body.append(
 | --- | --- |
 | `state(value)` | A value with `get()`, `set(value)`, `update(fn)` and `mutate(fn)`. `update` sets the value `fn` returns, `mutate` changes the value in place. Reading it inside an effect, a computed or a binding subscribes to it. Setting an equal value (`Object.is`) does nothing. |
 | `signal.computed(fn)` | A computed value derived from one signal's value: `count.computed((n) => n * 2)`. |
-| `signal.map(render)`, `signal.for(key).map(render)` | A list that reuses the rows of items it has seen; see [Lists](#lists). |
-| `signal.if(then).else(otherwise)` | Shows one of two branches by the signal's truthiness; see [Conditions](#conditions). |
-| `signal.case(match, render).else(otherwise)` | Shows the branch of the first case the value matches; see [Conditions](#conditions). |
+| `signal.map(render)`, `signal.for(key).map(render)` | A list that reuses the rows of items it has seen; a keyed list gives `render` a signal of the row's item; see [Lists](#lists). |
+| `signal.if(then).else(otherwise)` | Shows `then(value)` while the value is truthy, built again when the value changes, and the other branch otherwise; see [Conditions](#conditions). |
+| `signal.case(match, render).else(otherwise)` | Shows `render(value)` for the first case the value matches, built again when the value changes; see [Conditions](#conditions). |
 | `signal.with(fn)` | Passes the signal to `fn` and returns its result, for reusable steps such as `todos.with(byId)`. |
 | `computed(fn)` | A value derived from other signals. It is calculated on first read and again on the next read after an input changed. It keeps its value while an effect or binding reads it, also when that reader reruns for another reason. If `fn` throws, the error is kept like a value and thrown on every read until an input changes; a reader that catches it stays subscribed and recovers then. While nothing reads it inside an effect or binding, it does not stay subscribed to its inputs and is recalculated on every read. Effects and bindings that read it run again only when its value changed (`Object.is`) or its error changed, so `user.computed((u) => u.name)` does not update the DOM when another field of `user` changes. `fn` derives a value and must not set signals: `set`, `update` or `mutate` inside it throws. To correct a value, derive the corrected one (`computed(() => Math.min(page.get(), last.get()))`) or correct it where it is set. |
 | `effect(fn)` | Runs `fn` now and again in the next flush after a signal it read changed; see [Scheduling](#scheduling). Returns a function that stops it. If `fn` returns a function, that function runs before the next run and when the effect stops. |
@@ -44,9 +44,11 @@ document.body.append(
 | `flush()` | Runs the effects and bindings that wait for the flush now. |
 | `tick()` | A promise that resolves after the waiting effects and bindings have run. |
 | `root(fn)` | Runs `fn` with an owner of its own and returns a function that stops everything `fn` created; see [Cleanup](#cleanup). |
-| `untrack(fn)` | Runs `fn` without subscribing to the signals it reads. |
+| `onCleanup(fn)` | Runs `fn` when the current owner stops: the root is stopped, the branch or list row is removed, or the effect runs again or stops. With no owner it never runs. Use it to remove document listeners, timers or nodes added outside the element. |
+| `untrack(fn)` | Runs `fn` without subscribing to the signals it reads. What `fn` creates still belongs to the current owner and stops with it. |
 | `read(value)` | Returns the current value of a signal, a getter function or a plain value. |
 | `classList(entries)` | A computed value for `className` or the `class` attribute that lists classes by condition; see [Classes](#classes). |
+| `selector(source)` | Returns `select(key)`, a signal that is true while `source` equals `key` (`Object.is`). When `source` changes, only the readers of the old and the new key run again, whatever the number of keys, so `classList({ danger: isSelected(row.id) })` on every row of a long list costs two updates per selection. A key is forgotten when nothing reads it. |
 | `resource(source, fetcher)` | Loads a value asynchronously, like Solid's `createResource`; see [Loading data](#loading-data). |
 
 ## Scheduling
@@ -77,7 +79,7 @@ An effect or binding that throws is stopped. The other effects of the flush stil
 
 `resource(source, fetcher)` calls `fetcher` with the value of `source` and loads again whenever `source` changes; while `source` gives `null`, `undefined` or `false`, nothing is loaded. `resource(fetcher)` loads once. The fetcher runs untracked and gets an `AbortSignal` that aborts when a newer load starts or the effect or list row the resource was created in goes away; the result of an older load is ignored.
 
-The resource is a signal of the last loaded value, which it keeps while it reloads, with `loading` and `error` as signals, `refetch()` to load again and `mutate(value)` to set the value without loading. `error` is cleared when a new load starts and when the source becomes `null`, `undefined` or `false`. A failed load that nothing reads `error` of is also reported with `reportError`, so it does not go unnoticed.
+The resource is a signal of the last loaded value, which it keeps while it reloads, with `loading` and `error` as signals, `refetch()` to load again, and `set(value)`, `update(fn)` and `mutate(fn)` to change the value without loading, as on a state. `error` is cleared when a new load starts and when the source becomes `null`, `undefined` or `false`. A failed load that nothing reads `error` of is also reported with `reportError`, so it does not go unnoticed.
 
 ```js
 import { div } from 'fiorejs';
@@ -135,7 +137,7 @@ Price({ amount: computed(() => total.get() * 1.081) });
 
 ## Conditions
 
-A component runs once, so `open.get() ? a : b` in markup is read once and never switches. `signal.if(then)` is the live version: it shows what `then` returns while the signal's value is truthy, and nothing otherwise; `.else(otherwise)` adds the other branch.
+A component runs once, so `open.get() ? a : b` in markup is read once and never switches. `signal.if(then)` is the live version: it shows what `then` returns for the signal's value while that value is truthy, and nothing otherwise; `.else(otherwise)` adds the other branch.
 
 ```js
 import { div, em } from 'fiorejs';
@@ -144,13 +146,14 @@ import { state } from '@fiorejs/signals';
 const open = state(false);
 
 div(open.if(() => Details()).else(() => em('closed')));
+div(user.if((u) => Profile(u)).else(() => em('signed out')));
 div(open.if(() => Details())); // nothing while closed
 div(count.computed((n) => n > 10).if(() => em('many')));
 ```
 
-Both branches are functions, so only the shown branch is built. It is built once and rebuilt only when the truthiness flips, so `count.if(...)` does not rebuild when `count` goes from 1 to 2. When the branch changes, the bindings and effects the old branch created stop. A branch returns text, nodes or nothing; to show a live value in a branch, put it in an element: `.else(() => span(user.computed(...)))`.
+Both branches are functions, so only the shown branch is built. The `then` branch gets the value and is built again whenever the value changes (`Object.is`), so `user.if((u) => Profile(u))` always shows the current user. To build it only when the truthiness flips, branch on a boolean: `count.computed(Boolean).if(...)` does not rebuild when `count` goes from 1 to 2. The `else` branch is built when it is shown and stays while the value stays falsy. When a branch is built again or another branch is shown, the bindings and effects the old branch created stop. A branch returns text, nodes or nothing; to show a live value in a branch, put it in an element: `.else(() => span(user.computed(...)))`.
 
-For more than two branches, `signal.case(match, render)` shows what `render` returns while the value matches. A function is a test on the value; any other value is compared with `Object.is`. Chain more cases, and `.else(otherwise)` for the rest; the first case that matches wins, and without `.else` nothing shows when none matches. A branch is rebuilt only when another case wins.
+For more than two branches, `signal.case(match, render)` shows what `render` returns while the value matches. A function is a test on the value; any other value is compared with `Object.is`. Chain more cases, and `.else(otherwise)` for the rest; the first case that matches wins, and without `.else` nothing shows when none matches. Like `.if`, a case's `render` gets the value and its branch is built again when the value changes, also while the same case keeps matching; to keep the branch while the value moves within a case, match on a derived value: `count.computed((n) => n > 10).case(true, ...)`.
 
 ```js
 div(
@@ -167,7 +170,7 @@ div(count.case(0, () => 'none').case((n) => n > 10, () => 'many').else(() => 'so
 
 ## Lists
 
-`signal.map(render)` renders a list from a signal of an array and reuses the rows of items it has seen before, so it only renders new items. The item itself is the key, so an item replaced by a copy gets a new row. `signal.for().map(render)` keys rows by `item.key`, and `signal.for((item) => item.id).map(render)` by what the function returns. A row is rendered once, for the item it was created with: a copy with the same key reuses the row as it is, so put the fields that change in signals (`{ id, text, done: state(false) }`) when you key a list. A key that appears more than once gets one row per occurrence; items without a `key` field all get the key `undefined` and are matched by position, so such a row keeps showing the item it was created for. A row can be a node or a fragment. When the order changes, only the rows that are out of place are moved, so a focused input in an unmoved row keeps its focus; browsers with `moveBefore` keep it in moved rows too. If `render` throws, the list keeps the rows it had, but stops updating like any binding that throws, and the error is thrown at the end of the flush.
+`signal.map(render)` renders a list from a signal of an array and reuses the rows of items it has seen before, so it only renders new items. The item itself is the key, so an item replaced by a copy gets a new row. `signal.for().map(render)` keys rows by `item.key`, and `signal.for((item) => item.id).map(render)` by what the function returns. In a keyed list `render` gets a signal of the item instead of the item: a new array that keeps a key with another object, such as an immutable update of one record, keeps the row and sets its item signal, so only the bindings that read it update and the row's nodes stay. A key that leaves the list and comes back gets a new row. `signal.map(render)` keys by the item itself, which therefore never changes for a row, so it passes the plain item. A key that appears more than once gets one row per occurrence; items without a `key` field all get the key `undefined` and are matched by position, and each such row's item signal follows the item at its position. A row can be a node or a fragment. When the order changes, only the rows that are out of place are moved, so a focused input in an unmoved row keeps its focus; browsers with `moveBefore` keep it in moved rows too. If `render` throws, the list keeps the rows it had, but stops updating like any binding that throws, and the error is thrown at the end of the flush.
 
 A list is a live value, so pass it directly as the children. Each place it is bound keeps its own rows. Inside a computed child, give it its own element: `computed(() => (show.get() ? ul(todos.map(render)) : null))`; rows are then reused only while that computed does not recalculate. `render` gets the item's index at the time its row is created.
 
@@ -177,9 +180,10 @@ import { state } from '@fiorejs/signals';
 
 const todos = state([{ id: 1, text: 'Write docs' }]);
 
-ul(todos.for((todo) => todo.id).map((todo) => li.create(todo.text)));
+ul(todos.for((todo) => todo.id).map((todo) => li.create(todo.computed((value) => value.text))));
 
 todos.set([...todos.get(), { id: 2, text: 'Publish' }]);
+todos.set(todos.get().map((todo) => (todo.id === 1 ? { ...todo, text: 'Write more docs' } : todo))); // row 1 updates in place
 ```
 
 Lists of a few thousand rows are fine: in Chromium, 1,000 rows with three bound inputs each render in about 40 ms including layout, a change to one row takes well under a millisecond, and adding, removing or swapping rows moves only the rows involved. For much longer lists the number of DOM nodes becomes the limit, so paginate or render only the visible rows.
