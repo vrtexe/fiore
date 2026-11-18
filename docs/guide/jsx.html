@@ -65,6 +65,7 @@
                 <tr><td>Props and attributes</td><td>separate: <code>props</code>, <code>attrs</code></td><td>one list, the name decides</td></tr>
                 <tr><td>Listeners</td><td><code>on({ click })</code></td><td><code>onclick</code> or <code>onClick</code></td></tr>
                 <tr><td>Reuse</td><td>builders, <code>with</code> and <code>also</code></td><td>components and spread props</td></tr>
+                <tr><td>The element in a variable</td><td><code>also(fn)</code></td><td><code>ref={fn}</code></td></tr>
                 <tr><td>Type of an expression</td><td>the exact element</td><td><code>Node</code>, cast it when needed</td></tr>
                 <tr><td>Signals, <code>if</code>, <code>for</code></td><td colspan="2">the same in both, from <code>@fiorejs/signals</code></td></tr>
               </tbody>
@@ -149,8 +150,9 @@ document.body.append(note, list, fragment);</code></pre>
           <h2>Props and attributes</h2>
           <p>
             JSX has one list of props, so the runtime decides, per name, whether to set a property or an attribute. The
-            name decides, never the value. Names that start with <code>on</code> are listeners, written in any case, so
-            <code>onclick</code> and <code>onClick</code> both listen to <code>click</code>. <code>value</code>, <code>checked</code>,
+            name decides, never the value. Names that start with <code>on</code> are listeners. The first letter of the event name is lowercased and
+            the rest is kept, so <code>onclick</code> and <code>onClick</code> both listen to <code>click</code>, and
+            <code>onvalueChanged</code> and <code>onValueChanged</code> listen to <code>valueChanged</code>. <code>value</code>, <code>checked</code>,
             <code>selected</code>, <code>muted</code>, <code>indeterminate</code>, <code>volume</code>, <code>text</code> and <code>files</code> are
             properties where the element has them, and camel-case names that the element has a writable property for, such as
             <code>className</code> or <code>htmlFor</code>, are properties too. Every other name is an attribute, so
@@ -179,8 +181,10 @@ document.body.append(
   &lt;/form&gt;,
 );</code></pre>
           <p>
-            <code>title={null}</code> removes the attribute and <code>disabled={false}</code> leaves it out. A
-            <code>style</code> object sets style properties. On SVG elements every prop except listeners and a
+            <code>title={null}</code> removes the attribute and <code>disabled={false}</code> leaves it out;
+            <code>disabled=""</code> sets a boolean attribute, as in HTML. A
+            <code>style</code> object sets style properties, and its values may be signals. A <code>dataset</code> object
+            sets <code>data-*</code> attributes. On SVG elements every prop except listeners and a
             <code>style</code> object is set as an attribute. Full table: the
             <a href="https://github.com/vrtexe/fiore/tree/main/packages/jsx">package README</a>.
           </p>
@@ -191,7 +195,7 @@ document.body.append(
           <p>
             A signal works as a child or as a prop value, and a derived value is a <code>computed</code>. A bare function is
             never live: <code>class={() =&gt; …}</code> passes the function itself, so write
-            <code>class={computed(() =&gt; …)}</code>. A component runs once and returns nodes:
+            <code>class={computed(() =&gt; …)}</code>. A component runs once and returns a node, or any other child:
           </p>
           <pre class="code" tabindex="0"><code class="language-tsx">import { computed, state } from '@fiorejs/signals';
 
@@ -244,11 +248,101 @@ document.body.append(
     &lt;Term name="HTML" text="Markup" /&gt;
     &lt;Term name="CSS" text="Styles" /&gt;
   &lt;/dl&gt;,
-  &lt;ul&gt;{todos.for((todo) =&gt; todo.id).map((todo) =&gt; &lt;li&gt;{todo.text}&lt;/li&gt;)}&lt;/ul&gt;,
+  &lt;ul&gt;{todos.for((todo) =&gt; todo.id).map((todo) =&gt; &lt;li&gt;{todo.computed((item) =&gt; item.text)}&lt;/li&gt;)}&lt;/ul&gt;,
 );</code></pre>
+          <p>
+            In a keyed list the row gets its item as a signal, so a field is bound with
+            <code>todo.computed((item) =&gt; item.text)</code> and the current item is <code>todo.get()</code>; see
+            <a href="lists.html">Lists</a>.
+          </p>
+        </section>
+
+        <section id="components">
+          <h2>What a component returns</h2>
+          <p>
+            A component may return a node, or anything else a child can be: a live value such as
+            <code>open.if(...)</code>, text, <code>null</code> or a list. A result that is not a node comes back in a
+            fragment, so it renders as that child would, also when <code>&lt;Panel /&gt;</code> is appended at the top level
+            and not placed in an element.
+          </p>
+<pre class="code" tabindex="0"><code class="language-jsx">import { state, flush } from '@fiorejs/signals';
+
+const open = state(false);
+
+const Panel = () =&gt; open.if(() =&gt; &lt;p&gt;Open&lt;/p&gt;);
+const Nothing = () =&gt; null;
+
+document.body.append(&lt;Panel /&gt;, &lt;Nothing /&gt;);
+open.set(true);
+flush();
+console.log(document.body.innerHTML); // &lt;!----&gt;&lt;p&gt;Open&lt;/p&gt;&lt;!----&gt;</code></pre>
+          <p>
+            A component can be <code>async</code>. It returns a fragment with two empty comments that hold its place, and the
+            result is put between them when it resolves, like a live child. A rejection goes to <code>reportError</code>. The
+            comments stay, so a list row or a branch made of an async component keeps its place when the list changes later.
+          </p>
+<pre class="code" tabindex="0"><code class="language-jsx">async function User(props) {
+  const user = await Promise.resolve({ name: `User ${props.id}` });
+  return &lt;p&gt;{user.name}&lt;/p&gt;;
+}
+
+document.body.append(
+  &lt;section&gt;
+    &lt;h2&gt;Profile&lt;/h2&gt;
+    &lt;User id={1} /&gt;
+  &lt;/section&gt;,
+);
+console.log(document.body.innerHTML); // &lt;section&gt;&lt;h2&gt;Profile&lt;/h2&gt;&lt;!----&gt;&lt;!----&gt;&lt;/section&gt;
+await new Promise((resolve) =&gt; setTimeout(resolve));
+console.log(document.body.innerHTML); // &lt;section&gt;&lt;h2&gt;Profile&lt;/h2&gt;&lt;!----&gt;&lt;p&gt;User 1&lt;/p&gt;&lt;!----&gt;&lt;/section&gt;</code></pre>
+        </section>
+
+        <section id="ref">
+          <h2>Getting the element with ref</h2>
+          <p>
+            A JSX expression is typed as <code>Node</code>, not as the specific element. To get the element with the type of
+            its tag, pass <code>ref</code>, a function that is called with the finished element, with its props, listeners
+            and children in place. It is the same as the builder's <code>also</code>:
+          </p>
+<pre class="code" tabindex="0"><code class="language-jsx">let input;
+const form = (
+  &lt;form&gt;
+    &lt;input value="Ada" ref={(element) =&gt; (input = element)} /&gt;
+  &lt;/form&gt;
+);
+document.body.append(form);
+input.focus();
+console.log(input.value, document.activeElement === input); // Ada true</code></pre>
+          <p>
+            In TypeScript declare the variable with the element type, <code>let input!: HTMLInputElement;</code>, and the
+            parameter of <code>ref</code> is typed by the tag. Or cast the expression when it is the element itself:
+            <code>(&lt;input /&gt;) as HTMLInputElement</code>.
+          </p>
+        </section>
+
+        <section id="events">
+          <h2>Event names</h2>
+          <p>
+            Everything after <code>on</code> is the event name as written, except that its first letter is lowercased, so
+            custom events work like built-in ones. Built-in events are lowercase, so <code>onKeydown</code> listens to
+            <code>keydown</code>, but <code>onKeyDown</code> listens to <code>keyDown</code>, which no element fires. An
+            event whose name starts with a capital letter, such as <code>DOMContentLoaded</code>, has no JSX form: listen to
+            it with the builder's <code>on({ DOMContentLoaded })</code> or in code.
+          </p>
+<pre class="code" tabindex="0"><code class="language-jsx">const widget = (
+  &lt;div
+    onClick={() =&gt; console.log('click')} // listens to click
+    onvalueChanged={() =&gt; console.log('valueChanged')} // listens to valueChanged
+    oncart-add={() =&gt; console.log('cart-add')} // listens to cart-add
+  /&gt;
+);
+widget.click(); // click</code></pre>
+        </section>
+
+        <section id="notes">
+          <h2>Keys and spread</h2>
           <div class="note">
-            A JSX expression is typed as <code>Node</code>. Cast it when you need the element type:
-            <code>(&lt;input /&gt;) as HTMLInputElement</code>. <code>key</code> is accepted and ignored; key list rows with
+            <code>key</code> is accepted and ignored; key list rows with
             <code>signal.for(...)</code>. Do not spread objects whose keys come from users; see
             <a href="security.html">Security</a>.
           </div>

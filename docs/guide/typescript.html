@@ -56,7 +56,8 @@
             In JSX, tags, attributes, properties and listeners are checked against the element: <code>maxLength</code> is a number on
             an <code>input</code>, and <code>href</code> is rejected on one. In a listener, <code>event.currentTarget</code> is the
             element, so <code>event.currentTarget.value</code> needs no cast. A JSX expression itself is typed as
-            <code>Node</code>, not as the element, so cast it with <code>as</code> when you need the element type.
+            <code>Node</code>, not as the element, so use <code>ref</code>, which is typed by the tag, or cast it with
+            <code>as</code> when you need the element type.
           </p>
           <p data-syntax="builder">
             <code>input</code> returns <code>HTMLInputElement</code>, <code>div</code> returns <code>HTMLDivElement</code>, and the
@@ -82,19 +83,19 @@ const rounded: HTMLModifier = (builder) =&gt; builder.props({ className: 'rounde
 
 div.with(rounded).create(); // HTMLDivElement
 button.with(rounded).props({ type: 'submit' }).create('Save'); // HTMLButtonElement</code></pre>
-<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-tsx">const field = (
-  &lt;input
-    type="text"
-    value="Ada"
-    maxLength={40}
-    aria-label="Name"
-    autocomplete="name"
-    oninput={(event) =&gt; console.log(event.currentTarget.value)}
-  /&gt;
-) as HTMLInputElement;
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-tsx">let field!: HTMLInputElement;
+&lt;input
+  type="text"
+  value="Ada"
+  maxLength={40}
+  aria-label="Name"
+  autocomplete="name"
+  oninput={(event) =&gt; console.log(event.currentTarget.value)}
+  ref={(element) =&gt; (field = element)} // element is an HTMLInputElement
+/&gt;;
 field satisfies HTMLInputElement;
 
-const box = &lt;div&gt;Hello&lt;/div&gt;; // typed as Node, cast it for the element type
+const box = &lt;div&gt;Hello&lt;/div&gt;; // typed as Node, so cast it or use ref for the element type
 (box as HTMLDivElement) satisfies HTMLDivElement;</code></pre>
 </div>
           <p data-syntax="jsx">
@@ -111,16 +112,20 @@ const box = &lt;div&gt;Hello&lt;/div&gt;; // typed as Node, cast it for the elem
           <p data-syntax="jsx">
             JSX props take the writable properties of the element and its attributes, including <code>aria-*</code> and
             <code>data-*</code>. A prop the element does not have is a type error, which catches a misspelled property early.
-            Custom events whose name has a hyphen, such as <code>oncart-add</code>, are accepted on every element and typed as
-            <code>CustomEvent</code>; annotate the parameter to type its <code>detail</code>. A custom event name without a hyphen
-            needs an entry in the global event map. Tags with a hyphen are custom elements and accept any prop.
+            A listener is written <code>on</code> and the event name, or with a capital first letter, so the types offer
+            <code>onkeydown</code> and <code>onKeydown</code>. Custom events whose name has a hyphen, such as <code>oncart-add</code>,
+            are accepted on every element and typed as <code>CustomEvent</code>; annotate the parameter to type its
+            <code>detail</code>. A custom event name without a hyphen needs an entry in the global event map. Tags with a
+            hyphen are custom elements and accept any prop.
           </p>
           <p data-syntax="builder">
             <code>props</code> takes the writable properties of the element, and <code>attrs</code> takes its attributes, including
             <code>aria-*</code> and <code>data-*</code>. A prop the element does not have is a type error, which catches a misspelled
             property early. Custom events whose name has a hyphen are accepted on every element and typed as
             <code>CustomEvent</code>; annotate the parameter to type its <code>detail</code>. A custom event name without a hyphen
-            needs an entry in the global event map:
+            needs an entry in the global event map. <code>dataset</code> is a typed prop, whose keys are merged into the
+            element's <code>data-*</code> attributes, and <code>element('user-card')</code>, with a hyphenated name, returns the tag
+            of a custom element, which takes any attribute:
           </p>
           <div class="code-pair">
 <pre class="code" tabindex="0" data-syntax="builder"><code class="language-ts">import { div, input, video } from 'fiorejs';
@@ -184,18 +189,19 @@ declare global {
           <p data-syntax="jsx">
             <code>state&lt;T&gt;()</code> returns <code>State&lt;T&gt;</code>, and <code>computed</code> returns <code>Computed&lt;T&gt;</code>.
             Give <code>state</code> a type argument when the initial value is narrower than the type, as with
-            <code>null</code> below. A component is a function that takes a typed props object and returns a node, and its
+            <code>null</code> below. A component is a function that takes a typed props object and returns a node, or any other child, and its
             props are checked where it is used as a tag. Use <code>Reactive&lt;T&gt;</code>, a plain value or a signal of it,
             for props that may change, and unwrap them with <code>read()</code>. For <code>children</code>, use the
-            <code>Child</code> type from <code>@fiorejs/jsx/jsx-runtime</code>. The item in <code>map</code> and <code>for</code>
-            keeps the type of the array.
+            <code>Child</code> type from <code>@fiorejs/jsx</code>. The item in <code>map</code> keeps the type of the array, and
+            in a keyed list, after <code>for</code>, it is a <code>Signal</code> of that type.
           </p>
           <p data-syntax="builder">
             <code>state&lt;T&gt;()</code> returns <code>State&lt;T&gt;</code>, and <code>computed</code> returns <code>Computed&lt;T&gt;</code>.
             Give <code>state</code> a type argument when the initial value is narrower than the type, as with
             <code>null</code> below. A component is a typed function. Use <code>Reactive&lt;T&gt;</code>, a plain value or a signal of it,
             for props that may change, and unwrap them with <code>read()</code>. The item in
-            <code>map</code> and <code>for</code> keeps the type of the array.
+            <code>map</code> keeps the type of the array, and in a keyed list, after <code>for</code>, it is a
+            <code>Signal</code> of that type.
           </p>
           <div class="code-pair">
 <pre class="code" tabindex="0" data-syntax="builder"><code class="language-ts">import { div, span } from 'fiorejs';
@@ -214,7 +220,7 @@ Greeting({ name: 'Ada' });
 Greeting({ name: label, excited: true });
 
 const users = state&lt;User[]&gt;([{ id: 1, name: 'Ada' }]);
-div(users.for((item) =&gt; item.id).map((item) =&gt; span(item.name))); // item is User</code></pre>
+div(users.for((item) =&gt; item.id).map((item) =&gt; span(item.computed((user) =&gt; user.name)))); // item is Signal&lt;User&gt;</code></pre>
 <pre class="code" tabindex="0" data-syntax="jsx"><code class="language-tsx">import { computed, read, state, type Computed, type Reactive, type State } from '@fiorejs/signals';
 
 type User = { id: number; name: string };
@@ -234,16 +240,16 @@ function Greeting(props: { name: Reactive&lt;string&gt;; excited?: boolean }) {
 &lt;Greeting name={label} excited /&gt;;
 
 const users = state&lt;User[]&gt;([{ id: 1, name: 'Ada' }]);
-&lt;div&gt;{users.for((item) =&gt; item.id).map((item) =&gt; &lt;span&gt;{item.name}&lt;/span&gt;)}&lt;/div&gt;; // item is User</code></pre>
+&lt;div&gt;{users.for((item) =&gt; item.id).map((item) =&gt; &lt;span&gt;{item.computed((user) =&gt; user.name)}&lt;/span&gt;)}&lt;/div&gt;; // item is Signal&lt;User&gt;</code></pre>
 </div>
           <p data-syntax="jsx">
             A component that forwards its props to an element takes the element's props type,
-            <code>JSX.IntrinsicElements['input']</code>. <code>JSX</code> is exported from the
-            <code>@fiorejs/jsx/jsx-runtime</code> entry, not from <code>@fiorejs/jsx</code>, so import it as a type from there.
+            <code>JSX.IntrinsicElements['input']</code>. <code>JSX</code> is exported from
+            <code>@fiorejs/jsx</code>, so import it as a type from there.
             The wrapper then accepts every prop and listener of <code>input</code>, with the same types as a plain
             <code>&lt;input&gt;</code>.
           </p>
-          <pre class="code" tabindex="0" data-syntax="jsx"><code class="language-tsx">import type { JSX } from '@fiorejs/jsx/jsx-runtime';
+          <pre class="code" tabindex="0" data-syntax="jsx"><code class="language-tsx">import type { JSX } from '@fiorejs/jsx';
 
 export function TextInput(props: JSX.IntrinsicElements['input']) {
   return &lt;input {...props} /&gt;;

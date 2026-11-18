@@ -200,7 +200,7 @@ console.log(range.value);
 
         <section id="also">
           <h2>Running code on the element with also()</h2>
-          <p data-syntax="jsx">There is no <code>also</code> in JSX. A JSX expression is the element, so keep it in a variable: <code>const surface = &lt;canvas width="100" height="100" /&gt;;</code>. It is not in the document yet either.</p>
+          <p data-syntax="jsx">The JSX equivalent of <code>also</code> is <code>ref</code>, a function that is called with the finished element, typed by its tag: <code>&lt;canvas width="100" height="100" ref={(element) =&gt; (surface = element)} /&gt;</code>. The element is not in the document yet either. See <a href="jsx.html#ref">Getting the element with ref</a>.</p>
           <p>
             <code>also(fn)</code> gets the created element after the listeners are attached. The
             element is not in the document yet, so focusing or measuring does not work there:

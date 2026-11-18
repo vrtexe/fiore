@@ -196,7 +196,8 @@ document.body.append(save);</code></pre>
           <p data-syntax="builder">
             <code>element(name)</code> returns the tag of any element by its name, with the same
             methods as a named export. It is useful when the name is data, or for an element that
-            has no named export, such as a custom element:
+            has no named export, such as a custom element. A name with a hyphen, such as <code>element('user-card')</code>,
+            is typed as a custom element tag that takes any attribute:
           </p>
           <div class="code-pair">
 <pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { element } from 'fiorejs';
