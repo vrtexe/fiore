@@ -10,7 +10,7 @@ import { enqueue, enterRun, exitRun, fail } from './scheduler.js';
 /**
  * @typedef {{ subs: Set<Computation>, version: number, release?(): void, missed?: boolean }} Source
  * @typedef {{ sources: Set<Source>, stale(maybe?: boolean): void, saw?(source: Computed<unknown>): void }} Computation
- * @typedef {{ owned: (() => void)[], done?: boolean }} Owner
+ * @typedef {{ owned: (() => void)[] }} Owner
  */
 
 /** @type {Computation | null} */
@@ -131,10 +131,7 @@ export function stopOwned(scope) {
 export function own(fn) {
   /** @type {Owner} */
   const scope = { owned: [] };
-  const stop = () => {
-    scope.done = true;
-    stopOwned(scope);
-  };
+  const stop = () => stopOwned(scope);
   try {
     return { value: runIn(null, scope, fn), stop };
   } catch (error) {
@@ -255,7 +252,6 @@ function createEffect(fn, phase) {
 
   function stop() {
     stopped = true;
-    scope.done = true;
     node.queued = false;
     reset();
     untrackSources(node);
@@ -327,28 +323,3 @@ export function untrack(fn) {
   return runIn(null, owner, fn);
 }
 
-/**
- * The owner that the running code belongs to, or null; give it to `runWithOwner` to create effects and bindings
- * under it later, in an event handler, a timer or after an `await`.
- * @returns {Owner | null}
- */
-export function getOwner() {
-  return owner;
-}
-
-/**
- * Runs `fn` under `scope`, outside any tracking, so what it creates stops with that owner. When the owner has already
- * stopped, what `fn` created is stopped as soon as `fn` returns.
- * @template T
- * @param {Owner | null} scope
- * @param {() => T} fn
- * @returns {T}
- */
-export function runWithOwner(scope, fn) {
-  if (!scope?.done) {
-    return runIn(null, scope, fn);
-  }
-  const { value, stop } = own(fn);
-  stop();
-  return value;
-}

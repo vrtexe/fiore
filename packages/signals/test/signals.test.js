@@ -10,7 +10,7 @@ Object.assign(globalThis, {
 });
 
 const { button, div, span, input } = await import('fiorejs');
-const { state, computed, effect, untrack, read, resource, classList, isSignal, flush, tick: flushed, root, getOwner, runWithOwner } = await import('@fiorejs/signals');
+const { state, computed, effect, untrack, read, resource, classList, isSignal, flush, tick: flushed, root } = await import('@fiorejs/signals');
 
 const tick = () => new Promise((resolve) => setTimeout(resolve));
 
@@ -128,48 +128,6 @@ test('what untrack creates belongs to the current owner', () => {
   flush();
 
   assert.equal(runs, 1);
-});
-
-test('runWithOwner creates effects under an owner kept from earlier', () => {
-  const count = state(0);
-  let runs = 0;
-  /** @type {ReturnType<typeof getOwner>} */
-  let kept = null;
-  const stop = root(() => {
-    kept = getOwner();
-  });
-  runWithOwner(kept, () => effect(() => (count.get(), runs++)));
-  count.set(1);
-  flush();
-  assert.equal(runs, 2);
-
-  stop();
-  count.set(2);
-  flush();
-  assert.equal(runs, 2);
-});
-
-test('runWithOwner stops at once what it creates under an owner that already stopped', () => {
-  const count = state(0);
-  let runs = 0;
-  let cleaned = 0;
-  /** @type {ReturnType<typeof getOwner>} */
-  let kept = null;
-  root(() => {
-    kept = getOwner();
-  })();
-  const value = runWithOwner(kept, () => {
-    effect(() => (count.get(), runs++, () => cleaned++));
-    return 'done';
-  });
-  count.set(1);
-  flush();
-
-  assert.deepEqual([value, runs, cleaned], ['done', 1, 1]);
-});
-
-test('getOwner is null outside any owner', () => {
-  assert.equal(getOwner(), null);
 });
 
 test('untrack reads without subscribing', () => {

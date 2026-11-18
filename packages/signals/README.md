@@ -45,7 +45,6 @@ document.body.append(
 | `tick()` | A promise that resolves after the waiting effects and bindings have run. |
 | `root(fn)` | Runs `fn` with an owner of its own and returns a function that stops everything `fn` created; see [Cleanup](#cleanup). |
 | `untrack(fn)` | Runs `fn` without subscribing to the signals it reads. What `fn` creates still belongs to the current owner and stops with it. |
-| `getOwner()`, `runWithOwner(owner, fn)` | `getOwner` returns the owner the running code belongs to. `runWithOwner` runs `fn` under that owner later, in an event handler, a timer or after an `await`, so what `fn` creates stops with the owner; if the owner has already stopped, it is stopped as soon as `fn` returns. |
 | `read(value)` | Returns the current value of a signal, a getter function or a plain value. |
 | `classList(entries)` | A computed value for `className` or the `class` attribute that lists classes by condition; see [Classes](#classes). |
 | `resource(source, fetcher)` | Loads a value asynchronously, like Solid's `createResource`; see [Loading data](#loading-data). |

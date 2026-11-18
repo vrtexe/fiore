@@ -70,13 +70,6 @@ export function tick(): Promise<void>;
 export function root(fn: () => void): () => void;
 /** Runs `fn` without subscribing to the signals it reads; what it creates still belongs to the current owner. */
 export function untrack<T>(fn: () => T): T;
-declare const ownerBrand: unique symbol;
-/** The owner of effects and bindings created in a run, from `getOwner`. */
-export type Owner = { readonly [ownerBrand]: true };
-/** The owner that the running code belongs to, or null. */
-export function getOwner(): Owner | null;
-/** Runs `fn` under `owner`, outside any tracking, so what it creates stops with that owner; an owner that already stopped stops it at once. */
-export function runWithOwner<T>(owner: Owner | null, fn: () => T): T;
 export function isSignal(value: unknown): value is Signal<unknown>;
 export function read<T>(value: Reactive<T> | (() => T)): T;
 /** A class list for `className` or the `class` attribute: strings are always on, object keys while their value is truthy. */
