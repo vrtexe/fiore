@@ -98,8 +98,12 @@ export function resource(source, fetcher) {
     }
     result._start();
     return () => {
-      result._controller?.abort();
-      result._controller = undefined;
+      // A load still running is aborted, and the resource no longer says it is loading.
+      if (result._controller) {
+        result._controller.abort();
+        result._controller = undefined;
+        result.loading.set(false);
+      }
     };
   });
   return result;

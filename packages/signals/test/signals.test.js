@@ -1206,6 +1206,19 @@ test('resource keeps its value while reloading, and mutate sets it without loadi
   assert.equal(calls.length, 2);
 });
 
+test('a resource stopped with its owner while loading is no longer loading', async () => {
+  /** @type {any} */
+  let users;
+  const stop = root(() => {
+    users = resource(() => new Promise(() => {}));
+  });
+  assert.equal(users.loading.get(), true);
+  stop();
+  await flushed();
+
+  assert.equal(users.loading.get(), false);
+});
+
 test('resource runs its fetcher untracked and aborts when its owner stops', async () => {
   const other = state(0);
   const { calls, fetcher } = manual();
