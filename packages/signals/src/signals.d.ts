@@ -88,15 +88,14 @@ export function classList(
     | readonly (string | Record<string, Reactive<unknown> | (() => unknown)>)[],
 ): Computed<string>;
 
-export interface Resource<T> extends Signal<T | undefined> {
+/** A loaded value; `set`, `update` and `mutate` change it without loading, as on a state. */
+export interface Resource<T> extends State<T | undefined> {
   /** True while a load is running. */
   readonly loading: Signal<boolean>;
   /** The error of the last load, cleared when a new load starts. */
   readonly error: Signal<unknown>;
   /** Loads again with the last source value. */
   refetch(): void;
-  /** Sets the value without loading. */
-  mutate(value: T | undefined): void;
 }
 
 export interface ResourceInfo {

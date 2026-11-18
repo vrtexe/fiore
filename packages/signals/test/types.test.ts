@@ -50,7 +50,9 @@ const busy: boolean = user.loading.get();
 void loaded;
 void busy;
 user.refetch();
-user.mutate({ value: 'x', aborted: false });
+user.set({ value: 'x', aborted: false });
+user.update((value) => value && { ...value, aborted: true });
+user.mutate((value) => value?.value.trim());
 div({ children: computed(() => user.get()?.value ?? 'loading') });
 const plain = resource(() => 42);
 const answer: number | undefined = plain.get();
@@ -78,7 +80,7 @@ void dispose;
 root((x: number) => x);
 
 // A resource can be cleared without loading.
-resource(() => ({ name: 'Ada' })).mutate(undefined);
+resource(() => ({ name: 'Ada' })).set(undefined);
 
 // A selector gives a boolean signal per key.
 const isPicked = selector(state(0));

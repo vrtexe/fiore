@@ -1204,7 +1204,7 @@ test('resource turns a synchronous throw of its fetcher into the error', async (
   assert.equal(data.loading.get(), false);
 });
 
-test('resource keeps its value while reloading, and mutate sets it without loading', async () => {
+test('resource keeps its value while reloading, and set changes it without loading', async () => {
   const { calls, fetcher } = manual();
   const data = resource(fetcher);
   calls[0].resolve('first');
@@ -1213,7 +1213,7 @@ test('resource keeps its value while reloading, and mutate sets it without loadi
   flush();
 
   assert.equal(data.get(), 'first');
-  data.mutate('local');
+  data.set('local');
   flush();
   assert.equal(data.get(), 'local');
   assert.equal(calls.length, 2);
@@ -2735,4 +2735,24 @@ test('case passes the value and builds its branch again when the value changes',
 
   assert.deepEqual(built, [11, 12]);
   assert.equal(el.textContent, 'few');
+});
+
+test('a resource changes its value like a state, with set, update and mutate, without loading', async () => {
+  const { calls, fetcher } = manual();
+  const data = resource(fetcher);
+  calls[0].resolve([1]);
+  await tick();
+  const seen = [];
+  effect(() => seen.push(data.get().length));
+
+  data.update((list) => [...list, 2]);
+  flush();
+  data.mutate((list) => list.push(3));
+  flush();
+  data.set([]);
+  flush();
+
+  assert.deepEqual(seen, [1, 2, 3, 0]);
+  assert.equal(calls.length, 1);
+  assert.equal(data.loading.get(), false);
 });

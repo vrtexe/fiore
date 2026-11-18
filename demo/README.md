@@ -106,7 +106,7 @@ What to look at:
 
 - **Next three quickly.** Three writes in one click would share one flush and start one load, so the button calls `flush()` after each: three loads start, the older ones are aborted (see the log), and only the last result is shown.
 - **loading and error.** Both are signals; the card shows them next to the name. Go to user 5 to see an error.
-- **Refetch** loads the current user again; **Rename locally** sets the value with `mutate` without loading.
+- **Refetch** loads the current user again; **Rename locally** sets the value with `set` without loading.
 
 ### 8. The live protocol (`flows/live-protocol.js`)
 

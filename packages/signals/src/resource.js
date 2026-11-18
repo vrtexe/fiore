@@ -36,8 +36,24 @@ class Resource extends Signal {
    * Sets the value without loading, for example after an optimistic change.
    * @param {unknown} value
    */
-  mutate(value) {
+  set(value) {
     this._value.set(value);
+  }
+
+  /**
+   * Sets the value that `fn` returns for the current value, without loading.
+   * @param {(value: unknown) => unknown} fn
+   */
+  update(fn) {
+    this._value.update(fn);
+  }
+
+  /**
+   * Changes the value in place without loading, and always notifies.
+   * @param {(value: unknown) => unknown} fn
+   */
+  mutate(fn) {
+    this._value.mutate(fn);
   }
 
   _active() {

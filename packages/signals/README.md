@@ -79,7 +79,7 @@ An effect or binding that throws is stopped. The other effects of the flush stil
 
 `resource(source, fetcher)` calls `fetcher` with the value of `source` and loads again whenever `source` changes; while `source` gives `null`, `undefined` or `false`, nothing is loaded. `resource(fetcher)` loads once. The fetcher runs untracked and gets an `AbortSignal` that aborts when a newer load starts or the effect or list row the resource was created in goes away; the result of an older load is ignored.
 
-The resource is a signal of the last loaded value, which it keeps while it reloads, with `loading` and `error` as signals, `refetch()` to load again and `mutate(value)` to set the value without loading. `error` is cleared when a new load starts and when the source becomes `null`, `undefined` or `false`. A failed load that nothing reads `error` of is also reported with `reportError`, so it does not go unnoticed.
+The resource is a signal of the last loaded value, which it keeps while it reloads, with `loading` and `error` as signals, `refetch()` to load again, and `set(value)`, `update(fn)` and `mutate(fn)` to change the value without loading, as on a state. `error` is cleared when a new load starts and when the source becomes `null`, `undefined` or `false`. A failed load that nothing reads `error` of is also reported with `reportError`, so it does not go unnoticed.
 
 ```js
 import { div } from 'fiorejs';
