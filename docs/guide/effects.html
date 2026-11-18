@@ -82,6 +82,8 @@ console.log(localStorage.getItem('theme')); // still dark: the effect is stopped
           <p>
             If <code>fn</code> returns a function, that function runs before the next run and when the
             effect stops. Use it to undo what the run set up, such as a listener or a timer.
+            <code>onCleanup(fn)</code> called during the run does the same, also from a function the effect calls;
+            see <a href="cleanup.html#on-cleanup">onCleanup</a>.
           </p>
 <pre class="code" tabindex="0"><code class="language-js">import { state, effect, flush } from '@fiorejs/signals';
 
@@ -105,9 +107,9 @@ stop();  // leave b</code></pre>
         <section id="untrack">
           <h2>untrack and read</h2>
           <p>
-            <code>untrack(fn)</code> runs <code>fn</code> without subscribing to the signals it reads, and without an
-            owner, so an effect or binding created inside it is not stopped when the surrounding effect reruns. Use it
-            when an effect should react to one signal but only look at another. See
+            <code>untrack(fn)</code> runs <code>fn</code> without subscribing to the signals it reads. It keeps the
+            current owner, so an effect or binding created inside it still stops when the surrounding effect reruns.
+            Use it when an effect should react to one signal but only look at another. See
             <a href="cleanup.html#no-owner">Where code has no owner</a>.
           </p>
           <p>

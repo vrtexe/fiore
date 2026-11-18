@@ -94,6 +94,20 @@ document.body.append(
             arrive in the props object, and whatever sits between the tags arrives as <code>props.children</code>.
             The name starts with a capital letter, so the compiler calls the function instead of creating an element.
           </p>
+          <p data-syntax="jsx">
+            A component may also return anything else a child can be, such as a live value, text, a list or
+            <code>null</code>. A result that is not a node comes back in a fragment, so it renders as that child
+            would, also when the component is appended at the top level and not placed in an element:
+          </p>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state } from '@fiorejs/signals';
+
+const open = state(false);
+
+const Panel = () =&gt; open.if(() =&gt; &lt;p&gt;Open&lt;/p&gt;);
+const Nothing = () =&gt; null;
+
+document.body.append(&lt;Panel /&gt;, &lt;Nothing /&gt;);
+open.set(true); // the panel appears</code></pre>
           <p>
             The function body runs one time per call. It does not run again when data changes, so a value
             read in the body, such as <code>props.items</code> above, is read once. The next sections show how
@@ -251,52 +265,73 @@ net.set(200);</code></pre>
           <h2>Lists of components</h2>
           <p>
             <code>signal.for(key).map(render)</code> calls a component once per item and reuses the rows of items it has
-            seen, so a change to the list does not rebuild the rest. A row is rendered once, for the item it was
-            created with. Fields that change over time therefore belong in signals inside the item.
+            seen, so a change to the list does not rebuild the rest. The component gets the item as a read-only
+            signal: when a new array keeps the key with a changed object, the row stays and only the bindings that
+            read the signal update.
           </p>
           <div class="code-pair">
 <pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { button, li, ul } from 'fiorejs';
-import { state } from '@fiorejs/signals';
+import { state, flush } from '@fiorejs/signals';
 
 const todos = state([
-  { id: 1, text: 'Write docs', done: state(false) },
-  { id: 2, text: 'Publish', done: state(false) },
+  { id: 1, text: 'Write docs', done: false },
+  { id: 2, text: 'Publish', done: false },
 ]);
 
 function Todo(todo) {
+  const toggle = () =&gt; todos.update((list) =&gt; list.map((t) =&gt; (t.id === todo.get().id ? { ...t, done: !t.done } : t)));
+  const remove = () =&gt; todos.update((list) =&gt; list.filter((t) =&gt; t.id !== todo.get().id));
   return li
-    .props({ className: todo.done.computed((done) =&gt; (done ? 'done' : '')) })
-    .on({ click: () =&gt; todo.done.update((done) =&gt; !done) })
-    .create([todo.text, button.on({ click: () =&gt; todos.update((list) =&gt; list.filter((t) =&gt; t !== todo)) }).create('Remove')]);
+    .props({ className: todo.computed((t) =&gt; (t.done ? 'done' : '')) })
+    .on({ click: toggle })
+    .create([todo.computed((t) =&gt; t.text), button.on({ click: remove }).create('Remove')]);
 }
 
-document.body.append(ul(todos.for((todo) =&gt; todo.id).map(Todo)));</code></pre>
-<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state } from '@fiorejs/signals';
+const list = ul(todos.for((todo) =&gt; todo.id).map(Todo));
+document.body.append(list);
+
+list.children[0].click();
+flush();
+console.log(list.children[0].className); // done
+list.children[1].querySelector('button').click();
+flush();
+console.log(list.children.length); // 1</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state, flush } from '@fiorejs/signals';
 
 const todos = state([
-  { id: 1, text: 'Write docs', done: state(false) },
-  { id: 2, text: 'Publish', done: state(false) },
+  { id: 1, text: 'Write docs', done: false },
+  { id: 2, text: 'Publish', done: false },
 ]);
 
 function Todo(todo) {
+  const toggle = () =&gt; todos.update((list) =&gt; list.map((t) =&gt; (t.id === todo.get().id ? { ...t, done: !t.done } : t)));
+  const remove = () =&gt; todos.update((list) =&gt; list.filter((t) =&gt; t.id !== todo.get().id));
   return (
-    &lt;li class={todo.done.computed((done) =&gt; (done ? 'done' : ''))} onclick={() =&gt; todo.done.update((done) =&gt; !done)}&gt;
-      {todo.text}
-      &lt;button onclick={() =&gt; todos.update((list) =&gt; list.filter((t) =&gt; t !== todo))}&gt;Remove&lt;/button&gt;
+    &lt;li class={todo.computed((t) =&gt; (t.done ? 'done' : ''))} onclick={toggle}&gt;
+      {todo.computed((t) =&gt; t.text)}
+      &lt;button onclick={remove}&gt;Remove&lt;/button&gt;
     &lt;/li&gt;
   );
 }
 
-document.body.append(&lt;ul&gt;{todos.for((todo) =&gt; todo.id).map(Todo)}&lt;/ul&gt;);</code></pre>
+const list = &lt;ul&gt;{todos.for((todo) =&gt; todo.id).map(Todo)}&lt;/ul&gt;;
+document.body.append(list);
+
+list.children[0].click();
+flush();
+console.log(list.children[0].className); // done
+list.children[1].querySelector('button').click();
+flush();
+console.log(list.children.length); // 1</code></pre>
 </div>
           <p data-syntax="jsx">
-            <code>.map(Todo)</code> calls <code>Todo</code> with the item itself, not with a props object, so here it is a
+            <code>.map(Todo)</code> calls <code>Todo</code> with the item signal, not with a props object, so here it is a
             plain function and not used as a tag. A row that needs props would be written
             <code>.map((todo) =&gt; &lt;Todo todo={todo} /&gt;)</code>.
           </p>
           <p>
             Replace the array to change the list: <code>todos.update((list) =&gt; list.filter(…))</code> removes a
-            row, and the other rows stay as they are. Pushing into the array does not notify; see
+            row, and the other rows stay as they are; a copy of one item with a changed field updates that row in place. Pushing into the array does not notify; see
             <a href="../signals.html#arrays">Arrays and objects</a> and <a href="lists.html">Lists</a>.
           </p>
         </section>

@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>Async data: fiore</title>
-    <meta name="description" content="Load data with resource(source, fetcher) and resource(fetcher): loading and error signals, refetch, mutate, aborting and stale results." />
+    <meta name="description" content="Load data with resource(source, fetcher) and resource(fetcher): loading and error signals, refetch, set, update and mutate, aborting and stale results." />
     <link rel="canonical" href="https://vrtexe.github.io/fiore/guide/resources.html" />
     <meta name="theme-color" content="#0a0c0f" />
     <link
@@ -82,16 +82,16 @@ await new Promise((resolve) =&gt; setTimeout(resolve, 20)); // logs "idle User 2
         </section>
 
         <section id="state">
-          <h2>Loading, error, refetch and mutate</h2>
+          <h2>Loading, error, refetch and writes</h2>
           <ul>
             <li><code>resource.loading</code> is a signal that is true while a load runs.</li>
             <li><code>resource.error</code> is a signal of the last error. It is cleared when a new load starts and when the source becomes <code>null</code>, <code>undefined</code> or <code>false</code>.</li>
             <li><code>refetch()</code> loads again with the last source value.</li>
-            <li><code>mutate(value)</code> sets the value without loading, for example for an optimistic change. A load that is already running still replaces the mutated value when it finishes.</li>
+            <li><code>set(value)</code>, <code>update(fn)</code> and <code>mutate(fn)</code> change the value without loading, as on a <a href="signals.html">state</a>, for example for an optimistic change. <code>set</code> also takes <code>undefined</code>, <code>update</code> sets what <code>fn</code> returns, and <code>mutate</code> changes the value in place and notifies. A load that is already running still replaces the changed value when it finishes.</li>
           </ul>
           <p>
-            A <code>mutate</code> is not a load, so it does not cancel one. Here the load for <code>'b'</code> is
-            running when <code>mutate</code> is called, and its result replaces the mutated value:
+            A write is not a load, so it does not cancel one. Here the load for <code>'b'</code> is
+            running when <code>set</code> is called, and its result replaces the value that was set:
           </p>
 <pre class="code" tabindex="0"><code class="language-js">import { resource, state, tick } from '@fiorejs/signals';
 
@@ -104,10 +104,23 @@ const rows = resource(query, async (q) =&gt; {
 await sleep(50);
 query.set('b');
 await tick(); // the load for "b" is running
-rows.mutate('optimistic');
+rows.set('optimistic');
 console.log(rows.get()); // optimistic
 await sleep(60);
 console.log(rows.get()); // loaded b</code></pre>
+          <p>
+            <code>update</code> and <code>mutate</code> work on the loaded value, which is <code>undefined</code> until the
+            first load finishes:
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { resource, tick } from '@fiorejs/signals';
+
+const todos = resource(async () =&gt; [{ text: 'Write docs' }]);
+await tick();
+await new Promise((resolve) =&gt; setTimeout(resolve, 10));
+
+todos.update((list) =&gt; [...list, { text: 'Publish' }]);
+todos.mutate((list) =&gt; list.push({ text: 'Release' })); // in place, readers still run
+console.log(todos.get().map((todo) =&gt; todo.text)); // [ 'Write docs', 'Publish', 'Release' ]</code></pre>
           <p>
             A failed load that nothing reads <code>error</code> of is also reported with
             <code>reportError</code>, so it does not go unnoticed. Show the states by binding them:
@@ -136,7 +149,7 @@ await new Promise((resolve) =&gt; setTimeout(resolve, 10));
 flush();
 console.log(view.textContent); // Could not load
 
-user.mutate({ name: 'Local' }); // sets the value; error stays until the next load</code></pre>
+user.set({ name: 'Local' }); // sets the value; error stays until the next load</code></pre>
 <pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { computed, resource, state, flush } from '@fiorejs/signals';
 
 const userId = state(1);
@@ -161,7 +174,7 @@ await new Promise((resolve) =&gt; setTimeout(resolve, 10));
 flush();
 console.log(view.textContent); // Could not load
 
-user.mutate({ name: 'Local' }); // sets the value; error stays until the next load</code></pre>
+user.set({ name: 'Local' }); // sets the value; error stays until the next load</code></pre>
 </div>
           <p>
             Setting <code>loading</code> or <code>error</code> yourself is not supported and confuses the

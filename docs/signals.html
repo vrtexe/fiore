@@ -798,6 +798,7 @@
           <a href="#computed">computed</a>
           <a href="#effect">effect</a>
           <a href="#helpers">untrack, read, isSignal</a>
+          <a href="#selector">selector</a>
 
           <p class="nav-group">Scheduling</p>
           <a href="#scheduling">When things run</a>
@@ -817,11 +818,13 @@
 
           <p class="nav-group">Lifecycle</p>
           <a href="#cleanup">Cleanup</a>
+          <a href="#oncleanup">onCleanup</a>
           <a href="#root">root</a>
 
           <p class="nav-group">Reference</p>
           <a href="#types">TypeScript types</a>
           <a href="#limits">Limits</a>
+          <a href="#upgrading-21">Upgrading from 2.1</a>
           <a href="#upgrading">Upgrading from 2.0</a>
         </nav>
       </aside>
@@ -874,7 +877,7 @@ document.body.<span class="fn">append</span>(
 
 <pre class="code" tabindex="0"><code>npm install fiorejs @fiorejs/signals</code></pre>
 <p>The package is ESM and has one entry point, <code>@fiorejs/signals</code>, with these exports:</p>
-<div class="table-wrap" tabindex="0"><table><thead><tr><th>Export</th><th>What it does</th></tr></thead><tbody><tr><td><a class="text-link" href="#state"><code>state(value)</code></a></td><td>A value you read with <code>get()</code> and write with <code>set</code>, <code>update</code> or <code>mutate</code>.</td></tr><tr><td><a class="text-link" href="#computed"><code>computed(fn)</code></a></td><td>A value derived from other signals, cached and recalculated after an input changed.</td></tr><tr><td><a class="text-link" href="#effect"><code>effect(fn)</code></a>, <code>effect.pre</code>, <code>effect.post</code></td><td>Runs <code>fn</code> now and again after a signal it read changed.</td></tr><tr><td><a class="text-link" href="#flush"><code>flush()</code></a>, <code>tick()</code></td><td>Runs the waiting effects and bindings now, or waits for them.</td></tr><tr><td><a class="text-link" href="#root"><code>root(fn)</code></a></td><td>Gives what <code>fn</code> creates an owner of its own and returns the function that stops it.</td></tr><tr><td><a class="text-link" href="#helpers"><code>untrack</code>, <code>read</code>, <code>isSignal</code></a></td><td>Read without subscribing, unwrap a signal or a getter, test for a signal.</td></tr><tr><td><a class="text-link" href="#classlist"><code>classList(entries)</code></a></td><td>A class name built from strings and conditions.</td></tr><tr><td><a class="text-link" href="#resource"><code>resource(source, fetcher)</code></a></td><td>A value loaded asynchronously, with <code>loading</code> and <code>error</code> signals.</td></tr></tbody></table></div>
+<div class="table-wrap" tabindex="0"><table><thead><tr><th>Export</th><th>What it does</th></tr></thead><tbody><tr><td><a class="text-link" href="#state"><code>state(value)</code></a></td><td>A value you read with <code>get()</code> and write with <code>set</code>, <code>update</code> or <code>mutate</code>.</td></tr><tr><td><a class="text-link" href="#computed"><code>computed(fn)</code></a></td><td>A value derived from other signals, cached and recalculated after an input changed.</td></tr><tr><td><a class="text-link" href="#effect"><code>effect(fn)</code></a>, <code>effect.pre</code>, <code>effect.post</code></td><td>Runs <code>fn</code> now and again after a signal it read changed.</td></tr><tr><td><a class="text-link" href="#flush"><code>flush()</code></a>, <code>tick()</code></td><td>Runs the waiting effects and bindings now, or waits for them.</td></tr><tr><td><a class="text-link" href="#root"><code>root(fn)</code></a></td><td>Gives what <code>fn</code> creates an owner of its own and returns the function that stops it.</td></tr><tr><td><a class="text-link" href="#oncleanup"><code>onCleanup(fn)</code></a></td><td>Runs <code>fn</code> when the current owner stops.</td></tr><tr><td><a class="text-link" href="#selector"><code>selector(source)</code></a></td><td>A boolean signal per key, true while <code>source</code> equals the key.</td></tr><tr><td><a class="text-link" href="#helpers"><code>untrack</code>, <code>read</code>, <code>isSignal</code></a></td><td>Read without subscribing, unwrap a signal or a getter, test for a signal.</td></tr><tr><td><a class="text-link" href="#classlist"><code>classList(entries)</code></a></td><td>A class name built from strings and conditions.</td></tr><tr><td><a class="text-link" href="#resource"><code>resource(source, fetcher)</code></a></td><td>A value loaded asynchronously, with <code>loading</code> and <code>error</code> signals.</td></tr></tbody></table></div>
 <p>
   Every signal also has <a class="text-link" href="#computed"><code>computed</code></a>,
   <a class="text-link" href="#computed"><code>with</code></a>, <a class="text-link" href="#lists"><code>map</code></a>,
@@ -962,7 +965,32 @@ effect.<span class="fn">post</span>(fn<span class="punc">:</span> () <span class
 <div class="signature" tabindex="0"><code>untrack&lt;T&gt;(fn<span class="punc">:</span> () <span class="punc">=&gt;</span> T)<span class="punc">:</span> T<br />
 read&lt;T&gt;(value<span class="punc">:</span> Reactive&lt;T&gt; | (() <span class="punc">=&gt;</span> T))<span class="punc">:</span> T<br />
 <span class="fn">isSignal</span>(value<span class="punc">:</span> unknown)<span class="punc">:</span> value is Signal&lt;unknown&gt;</code></div>
-<div class="table-wrap" tabindex="0"><table><thead><tr><th>Function</th><th>What it does</th></tr></thead><tbody><tr><td><code>untrack(fn)</code></td><td>Runs <code>fn</code> without subscribing to the signals it reads and without an owner.</td></tr><tr><td><code>read(value)</code></td><td>Returns the current value of a signal, a getter function or a plain value.</td></tr><tr><td><code>isSignal(value)</code></td><td>Whether a value is a signal of this package, also from another loaded copy of it.</td></tr></tbody></table></div>
+<div class="table-wrap" tabindex="0"><table><thead><tr><th>Function</th><th>What it does</th></tr></thead><tbody><tr><td><code>untrack(fn)</code></td><td>Runs <code>fn</code> without subscribing to the signals it reads. What <code>fn</code> creates still belongs to the current owner and stops with it.</td></tr><tr><td><code>read(value)</code></td><td>Returns the current value of a signal, a getter function or a plain value.</td></tr><tr><td><code>isSignal(value)</code></td><td>Whether a value is a signal of this package, also from another loaded copy of it.</td></tr></tbody></table></div>
+
+</section>
+
+<section id="selector">
+<h2>selector</h2>
+
+<div class="signature" tabindex="0"><code>selector&lt;T&gt;(source<span class="punc">:</span> Signal&lt;T&gt; | (() <span class="punc">=&gt;</span> T))<span class="punc">:</span> (key<span class="punc">:</span> T) <span class="punc">=&gt;</span> Signal&lt;boolean&gt;</code></div>
+<p>
+  Returns a function <code>isSelected(key)</code> that gives a boolean signal, true while <code>source</code> equals
+  <code>key</code> (<code>Object.is</code>). When <code>source</code> changes, only the readers of the old and the new key run
+  again, whatever the number of keys, so <code>classList({ selected: isSelected(row.id) })</code> on every row of a long list costs
+  two updates per selection. A key is forgotten when nothing reads it.
+</p>
+<pre class="code" tabindex="0"><code><span class="kw">import</span> { li } <span class="kw">from</span> <span class="str">'fiorejs'</span><span class="punc">;</span>
+<span class="kw">import</span> { classList, flush, selector, state } <span class="kw">from</span> <span class="str">'@fiorejs/signals'</span><span class="punc">;</span>
+
+<span class="kw">const</span> selected <span class="punc">=</span> <span class="fn">state</span>(1)<span class="punc">;</span>
+<span class="kw">const</span> isSelected <span class="punc">=</span> <span class="fn">selector</span>(selected)<span class="punc">;</span>
+
+<span class="kw">const</span> one <span class="punc">=</span> li.<span class="fn">props</span>({ className<span class="punc">:</span> <span class="fn">classList</span>({ danger<span class="punc">:</span> <span class="fn">isSelected</span>(1) }) }).<span class="fn">create</span>(<span class="str">'one'</span>)<span class="punc">;</span>
+<span class="kw">const</span> two <span class="punc">=</span> li.<span class="fn">props</span>({ className<span class="punc">:</span> <span class="fn">classList</span>({ danger<span class="punc">:</span> <span class="fn">isSelected</span>(2) }) }).<span class="fn">create</span>(<span class="str">'two'</span>)<span class="punc">;</span>
+
+selected.<span class="fn">set</span>(2)<span class="punc">;</span>
+<span class="fn">flush</span>()<span class="punc">;</span> <span class="com">// only the readers of keys 1 and 2 run again</span>
+console.<span class="fn">log</span>(one.className, two.className)<span class="punc">;</span> <span class="com">// "" danger</span></code></pre>
 
 </section>
 
@@ -1067,21 +1095,28 @@ circle.<span class="fn">attrs</span>({ class<span class="punc">:</span> <span cl
 <h2>Lists</h2>
 
 <div class="signature" tabindex="0"><code>signal.<span class="fn">map</span>(render<span class="punc">:</span> (item<span class="punc">:</span> T, index<span class="punc">:</span> number) <span class="punc">=&gt;</span> Node)<span class="punc">:</span> LiveValue&lt;Node[]&gt;<br />
-signal.<span class="kw">for</span>(key<span class="punc">?</span><span class="punc">:</span> (item<span class="punc">:</span> T) <span class="punc">=&gt;</span> unknown).<span class="fn">map</span>(render)<span class="punc">:</span> LiveValue&lt;Node[]&gt;</code></div>
+signal.<span class="kw">for</span>(key<span class="punc">?</span><span class="punc">:</span> (item<span class="punc">:</span> T) <span class="punc">=&gt;</span> unknown).<span class="fn">map</span>(render<span class="punc">:</span> (item<span class="punc">:</span> Signal&lt;T&gt;, index<span class="punc">:</span> number) <span class="punc">=&gt;</span> Node)<span class="punc">:</span> LiveValue&lt;Node[]&gt;</code></div>
 <p>
   <code>signal.map(render)</code> renders a list from a signal of an array and reuses the rows of items it has
   seen before, so it renders only new items. The item itself is the key, so an item replaced by a copy gets a new
   row. <code>signal.for().map(render)</code> keys rows by <code>item.key</code>, and
-  <code>signal.for((item) =&gt; item.id).map(render)</code> by what the function returns.
+  <code>signal.for((item) =&gt; item.id).map(render)</code> by what the function returns. In a keyed list
+  <code>render</code> gets a read-only signal of the item instead of the item, and <code>signal.map(render)</code>
+  still passes the plain item.
 </p>
-<pre class="code" tabindex="0"><code><span class="kw">const</span> todos <span class="punc">=</span> <span class="fn">state</span>([{ id<span class="punc">:</span> 1, text<span class="punc">:</span> <span class="str">'Write docs'</span>, done<span class="punc">:</span> <span class="fn">state</span>(<span class="kw">false</span>) }])<span class="punc">;</span>
+<pre class="code" tabindex="0"><code><span class="kw">const</span> todos <span class="punc">=</span> <span class="fn">state</span>([{ id<span class="punc">:</span> 1, text<span class="punc">:</span> <span class="str">'Write docs'</span> }])<span class="punc">;</span>
 
-<span class="fn">ul</span>(todos.<span class="kw">for</span>((todo) <span class="punc">=&gt;</span> todo.id).<span class="fn">map</span>((todo) <span class="punc">=&gt;</span> li.<span class="fn">create</span>(todo.text)))<span class="punc">;</span>
+<span class="kw">const</span> list <span class="punc">=</span> <span class="fn">ul</span>(todos.<span class="kw">for</span>((todo) <span class="punc">=&gt;</span> todo.id).<span class="fn">map</span>((todo) <span class="punc">=&gt;</span> li.<span class="fn">create</span>(todo.<span class="fn">computed</span>((item) <span class="punc">=&gt;</span> item.text))))<span class="punc">;</span>
+document.body.<span class="fn">append</span>(list)<span class="punc">;</span>
 
-todos.<span class="fn">set</span>([...todos.<span class="fn">get</span>(), { id<span class="punc">:</span> 2, text<span class="punc">:</span> <span class="str">'Publish'</span>, done<span class="punc">:</span> <span class="fn">state</span>(<span class="kw">false</span>) }])<span class="punc">;</span></code></pre>
+todos.<span class="fn">set</span>([...todos.<span class="fn">get</span>(), { id<span class="punc">:</span> 2, text<span class="punc">:</span> <span class="str">'Publish'</span> }])<span class="punc">;</span>
+todos.<span class="fn">set</span>(todos.<span class="fn">get</span>().<span class="fn">map</span>((todo) <span class="punc">=&gt;</span> (todo.id <span class="punc">=</span><span class="punc">=</span><span class="punc">=</span> 1 <span class="punc">?</span> { ...todo, text<span class="punc">:</span> <span class="str">'Write more docs'</span> } <span class="punc">:</span> todo)))<span class="punc">;</span> <span class="com">// row 1 updates in place</span>
+<span class="fn">flush</span>()<span class="punc">;</span>
+console.<span class="fn">log</span>(list.textContent)<span class="punc">;</span> <span class="com">// Write more docsPublish</span></code></pre>
 <ul>
-  <li>A row is rendered once, for the item it was created with. A copy with the same key reuses the row as it is, so put the fields that change in signals, like <code>done</code> above.</li>
-  <li>A key that appears more than once gets one row per occurrence. Items without a <code>key</code> field all get the key <code>undefined</code> and are matched by position.</li>
+  <li>A new array that keeps a key with another object, such as an immutable update of one record, keeps the row and its nodes and sets the item signal, so only the bindings that read it update. A key that leaves the list and comes back gets a new row.</li>
+  <li>A key that appears more than once gets one row per occurrence. Items without a <code>key</code> field all get the key <code>undefined</code> and are matched by position, and the item signal of each such row follows the item at its position.</li>
+  <li>To mark the selected row, use <a class="text-link" href="#selector"><code>selector</code></a>.</li>
   <li>A row can be a node or a fragment. <code>render</code> gets the item's index at the time its row is created.</li>
   <li>When the order changes, only the rows that are out of place move, so a focused input in an unmoved row keeps its focus; browsers with <code>moveBefore</code> keep it in moved rows too.</li>
   <li>If <code>render</code> throws, the list keeps the rows it had and stops updating, like any binding that throws.</li>
@@ -1093,16 +1128,19 @@ todos.<span class="fn">set</span>([...todos.<span class="fn">get</span>(), { id<
 <section id="conditions">
 <h2>Conditions</h2>
 
-<div class="signature" tabindex="0"><code>signal.<span class="kw">if</span>(then<span class="punc">:</span> () <span class="punc">=&gt;</span> A)<span class="punc">:</span> When<br />
-signal.<span class="fn">case</span>(match<span class="punc">:</span> T | ((value<span class="punc">:</span> T) <span class="punc">=&gt;</span> unknown), render<span class="punc">:</span> () <span class="punc">=&gt;</span> A)<span class="punc">:</span> When<br />
+<div class="signature" tabindex="0"><code>signal.<span class="kw">if</span>(then<span class="punc">:</span> (value<span class="punc">:</span> Truthy&lt;T&gt;) <span class="punc">=&gt;</span> A)<span class="punc">:</span> When<br />
+signal.<span class="fn">case</span>(match<span class="punc">:</span> T | ((value<span class="punc">:</span> T) <span class="punc">=&gt;</span> unknown), render<span class="punc">:</span> (value<span class="punc">:</span> T) <span class="punc">=&gt;</span> A)<span class="punc">:</span> When<br />
 when.<span class="fn">case</span>(match, render)<span class="punc">:</span> When<br />
 when.<span class="kw">else</span>(otherwise<span class="punc">:</span> () <span class="punc">=&gt;</span> B)<span class="punc">:</span> When</code></div>
 <p>
   A component runs once, so <code>open.get() ? a : b</code> in markup is read once and never switches.
-  <code>signal.if(then)</code> is the live version: it shows what <code>then</code> returns while the value is
-  truthy, and nothing otherwise; <code>.else(otherwise)</code> adds the other branch.
+  <code>signal.if(then)</code> is the live version: it shows what <code>then</code> returns for the value while it is
+  truthy, and nothing otherwise; <code>.else(otherwise)</code> adds the other branch. <code>then</code> gets the value,
+  narrowed to its truthy part in TypeScript.
 </p>
 <pre class="code" tabindex="0"><code><span class="fn">div</span>(open.<span class="kw">if</span>(() <span class="punc">=&gt;</span> <span class="fn">Details</span>()).<span class="kw">else</span>(() <span class="punc">=&gt;</span> <span class="fn">em</span>(<span class="str">'closed'</span>)))<span class="punc">;</span>
+<span class="fn">div</span>(user.<span class="kw">if</span>((u) <span class="punc">=&gt;</span> <span class="fn">Profile</span>(u)).<span class="kw">else</span>(() <span class="punc">=&gt;</span> <span class="fn">em</span>(<span class="str">'signed out'</span>)))<span class="punc">;</span>
+<span class="fn">div</span>(count.<span class="fn">computed</span>(Boolean).<span class="kw">if</span>(() <span class="punc">=&gt;</span> <span class="fn">em</span>(<span class="str">'many'</span>)))<span class="punc">;</span> <span class="com">// built again only when the truthiness flips</span>
 
 <span class="fn">div</span>(
   status
@@ -1114,7 +1152,8 @@ when.<span class="kw">else</span>(otherwise<span class="punc">:</span> () <span 
 <ul>
   <li>In <code>case</code>, a function is a test on the value; any other value is compared with <code>Object.is</code>. The first case that matches wins, and without <code>.else</code> nothing shows when none matches.</li>
   <li><code>.if(then)</code> is the case <code>Boolean</code>, so <code>.if(then).case(...)</code> works too.</li>
-  <li>Branches are functions, so only the shown branch is built. It is built once and rebuilt only when another case wins; <code>count.if(...)</code> does not rebuild when <code>count</code> goes from 1 to 2.</li>
+  <li>Branches are functions, so only the shown branch is built. <code>then</code> and <code>render</code> get the value, and the branch is built again whenever the value changes (<code>Object.is</code>), also while the same case keeps matching, so <code>user.if((u) =&gt; Profile(u))</code> always shows the current user.</li>
+  <li>To build the branch only when the truthiness flips, branch on a boolean: <code>count.computed(Boolean).if(...)</code> does not rebuild when <code>count</code> goes from 1 to 2, and <code>count.computed((n) =&gt; n &gt; 10).case(true, ...)</code> keeps its branch while the value moves within a case. The <code>else</code> branch is built when it is shown and stays while the value stays falsy.</li>
   <li>When the branch changes, the bindings and effects the old branch created stop. A branch that throws keeps the nodes the binding had and stops updating, like any binding that throws.</li>
   <li>A branch returns text, nodes or nothing. To show a live value in a branch, put it in an element: <code>.else(() =&gt; span(user.computed(...)))</code>.</li>
 </ul>
@@ -1138,7 +1177,7 @@ resource&lt;S, T&gt;(<br />
 <span class="kw">const</span> user <span class="punc">=</span> <span class="fn">resource</span>(userId, (id, { signal }) <span class="punc">=&gt;</span> <span class="fn">fetch</span>(<span class="str">`/users/${id}`</span>, { signal }).<span class="fn">then</span>((response) <span class="punc">=&gt;</span> response.<span class="fn">json</span>()))<span class="punc">;</span>
 
 <span class="fn">div</span>(<span class="fn">computed</span>(() <span class="punc">=&gt;</span> (user.error.<span class="fn">get</span>() <span class="punc">?</span> <span class="str">'Could not load'</span> <span class="punc">:</span> user.loading.<span class="fn">get</span>() <span class="punc">?</span> <span class="str">'Loading…'</span> <span class="punc">:</span> user.<span class="fn">get</span>()<span class="punc">?</span>.name)))<span class="punc">;</span></code></pre>
-<div class="table-wrap" tabindex="0"><table><thead><tr><th>Member</th><th>What it is</th></tr></thead><tbody><tr><td><code>get()</code></td><td>The last loaded value, kept while the resource reloads.</td></tr><tr><td><code>loading</code>, <code>error</code></td><td>Signals of the load state. <code>error</code> is cleared when a new load starts and when the source becomes inactive.</td></tr><tr><td><code>refetch()</code></td><td>Loads again with the last source value.</td></tr><tr><td><code>mutate(value)</code></td><td>Sets the value without loading, also to <code>undefined</code>.</td></tr></tbody></table></div>
+<div class="table-wrap" tabindex="0"><table><thead><tr><th>Member</th><th>What it is</th></tr></thead><tbody><tr><td><code>get()</code></td><td>The last loaded value, kept while the resource reloads.</td></tr><tr><td><code>loading</code>, <code>error</code></td><td>Signals of the load state. <code>error</code> is cleared when a new load starts and when the source becomes inactive.</td></tr><tr><td><code>refetch()</code></td><td>Loads again with the last source value.</td></tr><tr><td><code>set(value)</code>, <code>update(fn)</code>, <code>mutate(fn)</code></td><td>Change the value without loading, as on a state; <code>set</code> also takes <code>undefined</code>. A load that is already running still replaces the value when it finishes.</td></tr></tbody></table></div>
 <ul>
   <li>The fetcher runs untracked and gets an <code>AbortSignal</code> that aborts when a newer load starts while it is still running, or when the effect or list row the resource was created in goes away. The result of an older load is ignored.</li>
   <li>A failed load that nothing reads <code>error</code> of is also reported with <code>reportError</code>, so it does not go unnoticed.</li>
@@ -1188,6 +1227,7 @@ todos.<span class="fn">mutate</span>((list) <span class="punc">=&gt;</span> list
 <ul>
   <li>When a computed child, an <code>if</code>/<code>case</code> branch or a list replaces content it built, the bindings inside the old content stop for good.</li>
   <li>When a list drops an item, or the effect or computed around the list reruns, the bindings inside its rows stop for good.</li>
+  <li>When the owner stops, the functions given to <a class="text-link" href="#oncleanup"><code>onCleanup</code></a> run.</li>
   <li>When an element is removed from the document, its bindings pause; when it is inserted again, they resume with the current values. A live child among other children keeps its place between two comments, so this also works when its nodes move, for example out of a fragment.</li>
   <li>Content built outside any owner, for example <code>view = state(Home())</code>, only pauses when a live child replaces it and it leaves the document. Build it in a computed or a root to stop it for good.</li>
 </ul>
@@ -1195,6 +1235,40 @@ todos.<span class="fn">mutate</span>((list) <span class="punc">=&gt;</span> list
   Removal and insertion are detected with a <code>MutationObserver</code> on the document, so elements inside a
   shadow root are not paused. An element that is created but never inserted keeps its bindings for as long as its
   signals live, unless it was created in a root that is disposed.
+</p>
+
+</section>
+
+<section id="oncleanup">
+<h2>onCleanup</h2>
+
+<div class="signature" tabindex="0"><code><span class="fn">onCleanup</span>(fn<span class="punc">:</span> () <span class="punc">=&gt;</span> void)<span class="punc">:</span> void</code></div>
+<p>
+  Runs <code>fn</code> when the current owner stops: a <a class="text-link" href="#root">root</a> is stopped, a branch or a list row is
+  removed, or an effect runs again or stops. With no owner, it never runs. Use it to remove document listeners, timers or nodes
+  added outside the element.
+</p>
+<pre class="code" tabindex="0"><code><span class="kw">import</span> { div, p } <span class="kw">from</span> <span class="str">'fiorejs'</span><span class="punc">;</span>
+<span class="kw">import</span> { flush, onCleanup, state } <span class="kw">from</span> <span class="str">'@fiorejs/signals'</span><span class="punc">;</span>
+
+<span class="kw">const</span> open <span class="punc">=</span> <span class="fn">state</span>(<span class="kw">false</span>)<span class="punc">;</span>
+
+<span class="kw">function</span> <span class="fn">Panel</span>() {
+  <span class="kw">const</span> onKey <span class="punc">=</span> (event) <span class="punc">=&gt;</span> console.<span class="fn">log</span>(<span class="str">'key'</span>, event.key)<span class="punc">;</span>
+  document.<span class="fn">addEventListener</span>(<span class="str">'keydown'</span>, onKey)<span class="punc">;</span>
+  <span class="fn">onCleanup</span>(() <span class="punc">=&gt;</span> document.<span class="fn">removeEventListener</span>(<span class="str">'keydown'</span>, onKey))<span class="punc">;</span>
+  <span class="kw">return</span> <span class="fn">p</span>(<span class="str">'Panel'</span>)<span class="punc">;</span>
+}
+
+document.body.<span class="fn">append</span>(<span class="fn">div</span>(open.<span class="kw">if</span>(() <span class="punc">=&gt;</span> <span class="fn">Panel</span>())))<span class="punc">;</span>
+open.<span class="fn">set</span>(<span class="kw">true</span>)<span class="punc">;</span>
+<span class="fn">flush</span>()<span class="punc">;</span>
+open.<span class="fn">set</span>(<span class="kw">false</span>)<span class="punc">;</span>
+<span class="fn">flush</span>()<span class="punc">;</span> <span class="com">// the branch is gone, and the listener with it</span>
+document.<span class="fn">dispatchEvent</span>(<span class="kw">new</span> <span class="fn">KeyboardEvent</span>(<span class="str">'keydown'</span>))<span class="punc">;</span> <span class="com">// logs nothing</span></code></pre>
+<p>
+  <code>untrack(fn)</code> keeps the current owner, so what it creates, and an <code>onCleanup</code> in it, belong to the owner
+  as well.
 </p>
 
 </section>
@@ -1222,7 +1296,7 @@ todos.<span class="fn">mutate</span>((list) <span class="punc">=&gt;</span> list
 <h2>TypeScript types</h2>
 
 <p>The declarations ship with the package. The exported types:</p>
-<div class="table-wrap" tabindex="0"><table><thead><tr><th>Type</th><th>Describes</th></tr></thead><tbody><tr><td><code>Signal&lt;T&gt;</code></td><td>Any signal: <code>get()</code>, <code>computed</code>, <code>with</code>, <code>map</code>, <code>for</code>, <code>if</code>, <code>case</code>.</td></tr><tr><td><code>State&lt;T&gt;</code></td><td>A signal with <code>set</code>, <code>update</code> and <code>mutate</code>.</td></tr><tr><td><code>Computed&lt;T&gt;</code></td><td>A derived signal.</td></tr><tr><td><code>Resource&lt;T&gt;</code></td><td>A signal of <code>T | undefined</code> with <code>loading</code>, <code>error</code>, <code>refetch</code> and <code>mutate</code>.</td></tr><tr><td><code>ResourceInfo</code></td><td>The second argument of a fetcher: <code>{ signal: AbortSignal }</code>.</td></tr><tr><td><code>Reactive&lt;T&gt;</code></td><td>A plain value or a signal of it.</td></tr><tr><td><code>When&lt;A, B, T&gt;</code></td><td>The live value of <code>if</code> and <code>case</code>, with <code>case</code> and <code>else</code>.</td></tr><tr><td><code>Keyed&lt;T&gt;</code></td><td>What <code>for(key)</code> returns, waiting for <code>map</code>.</td></tr></tbody></table></div>
+<div class="table-wrap" tabindex="0"><table><thead><tr><th>Type</th><th>Describes</th></tr></thead><tbody><tr><td><code>Signal&lt;T&gt;</code></td><td>Any signal: <code>get()</code>, <code>computed</code>, <code>with</code>, <code>map</code>, <code>for</code>, <code>if</code>, <code>case</code>.</td></tr><tr><td><code>State&lt;T&gt;</code></td><td>A signal with <code>set</code>, <code>update</code> and <code>mutate</code>.</td></tr><tr><td><code>Computed&lt;T&gt;</code></td><td>A derived signal.</td></tr><tr><td><code>Resource&lt;T&gt;</code></td><td>A <code>State</code> of <code>T | undefined</code> with <code>loading</code>, <code>error</code> and <code>refetch</code>.</td></tr><tr><td><code>ResourceInfo</code></td><td>The second argument of a fetcher: <code>{ signal: AbortSignal }</code>.</td></tr><tr><td><code>Reactive&lt;T&gt;</code></td><td>A plain value or a signal of it.</td></tr><tr><td><code>When&lt;A, B, T&gt;</code></td><td>The live value of <code>if</code> and <code>case</code>, with <code>case</code> and <code>else</code>.</td></tr><tr><td><code>Keyed&lt;T&gt;</code></td><td>What <code>for(key)</code> returns, waiting for <code>map</code>, whose <code>render</code> gets a <code>Signal</code> of the item.</td></tr></tbody></table></div>
 <p>
   Signals fit the <code>Live&lt;T&gt;</code> type of fiorejs, so props, attributes and children check the type of
   a signal like that of a plain value.
@@ -1237,6 +1311,21 @@ todos.<span class="fn">mutate</span>((list) <span class="punc">=&gt;</span> list
   <li>A computed that returns a nested object, such as <code>style: computed(() =&gt; ({ color }))</code>, merges that object into the element on every update and never clears a key that disappears from it. Bind each key on its own instead: <code>style: { color: computed(() =&gt; ...) }</code>.</li>
   <li><code>refetch()</code> on a resource whose effect or list row has gone away still starts a load; call it only while the resource is in use.</li>
   <li>A page that loads two copies of the package can bind signals from both, but a computed or an effect only tracks signals from its own copy.</li>
+</ul>
+
+</section>
+
+<section id="upgrading-21">
+<h2>Upgrading from 2.1</h2>
+
+<ul>
+  <li>Keyed rows get their item as a read-only signal: in <code>signal.for(key).map(render)</code>, read it with <code>item.get()</code> or bind a field with <code>item.computed((value) =&gt; value.text)</code>. <code>signal.map(render)</code> without a key still passes the plain item.</li>
+  <li><code>.if</code> and <code>.case</code> pass the value to the branch and build it again when the value changes, not only when the truthiness flips. For truthiness only, use <code>signal.computed(Boolean).if(...)</code>.</li>
+  <li>A resource has <code>set</code>, <code>update</code> and <code>mutate(fn)</code> like a state. <code>resource.mutate(value)</code> is gone; use <code>resource.set(value)</code>.</li>
+  <li><code>untrack(fn)</code> keeps the current owner: what it creates stops with the owner instead of living forever.</li>
+  <li>A <code>select</code> with a <code>value</code> prop assigns its value again when options arrive later.</li>
+  <li>A computed below a computed whose value did not change is no longer calculated again.</li>
+  <li>New: <code>onCleanup(fn)</code> and <code>selector(source)</code>. In <code>@fiorejs/jsx</code>: <code>ref</code>, event names that keep their case after the first letter (<code>onClick</code> listens to <code>click</code>, <code>onvalueChanged</code> to <code>valueChanged</code>), components that return any child, and the <code>JSX</code> and <code>Child</code> types from the package root.</li>
 </ul>
 
 </section>
