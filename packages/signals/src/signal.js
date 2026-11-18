@@ -1,11 +1,24 @@
 import { LIVE } from "fiorejs";
-import { current, notify, owner, runTracked, stopOwned, track, untrackSources } from "./tracking.js";
+import {
+  COMPUTED,
+  DIRTY,
+  ERROR,
+  PENDING,
+  RUNNING,
+  checkDirty,
+  current,
+  link,
+  owner,
+  propagate,
+  release,
+  runTracked,
+  stopOwned,
+} from "./tracking.js";
 import { List, itemKey } from "./list.js";
 import { When } from "./when.js";
 import { attach } from "./dom.js";
 
-/** @typedef {import('./tracking.js').Source} Source */
-/** @typedef {import('./tracking.js').Computation} Computation */
+/** @typedef {import('./tracking.js').Edge} Edge */
 
 export const SIGNAL = Symbol.for("fiorejs.signal");
 
@@ -106,7 +119,7 @@ export class Signal {
 
 /** A computed derives a value; a write from its run would loop through its own inputs, so it throws instead. */
 function forbidInComputed() {
-  if (current instanceof Computed) {
+  if (current !== null && current.flags & COMPUTED) {
     throw new Error("A computed cannot set a signal; derive the value, or set it in an effect or an event handler.");
   }
 }
@@ -121,15 +134,20 @@ class State extends Signal {
   /** @param {T} value */
   constructor(value) {
     super();
-    this._value = value;
-    /** @type {Set<Computation>} */
-    this.subs = new Set();
+    this.flags = 0;
+    /** @type {Edge | undefined} */
+    this.subs = undefined;
+    /** @type {Edge | undefined} */
+    this.subsTail = undefined;
     /** Counts changes, so a reader can tell whether this signal changed since it last read it. */
     this.version = 0;
+    this._value = value;
   }
 
   get() {
-    track(this);
+    if (current !== null) {
+      link(this, current).version = this.version;
+    }
     return this._value;
   }
 
@@ -139,7 +157,9 @@ class State extends Signal {
     if (!Object.is(next, this._value)) {
       this._value = next;
       this.version++;
-      notify(this);
+      if (this.subs !== undefined) {
+        propagate(this.subs);
+      }
     }
   }
 
@@ -162,7 +182,9 @@ class State extends Signal {
       fn(this._value);
     } finally {
       this.version++;
-      notify(this);
+      if (this.subs !== undefined) {
+        propagate(this.subs);
+      }
     }
   }
 }
@@ -178,8 +200,8 @@ export function state(value) {
 
 /**
  * A cached value derived from other signals; recalculated on read after an input changed. The instance is its own
- * source, computation and owner: bindings and effects created by a run stop before the next run and when it loses its
- * readers. No cached result means it is dirty.
+ * source, reader and owner: bindings and effects created by a run stop before the next run and when it loses its
+ * readers. It has the fields of an effect in the same order, so the graph walks see one shape.
  * @template T
  * @extends {Signal<T>}
  */
@@ -187,100 +209,76 @@ export class Computed extends Signal {
   /** @param {() => T} fn */
   constructor(fn) {
     super();
-    this._fn = fn;
-    /** @typedef {{ value: T }} ComputedValue */
-    /** @typedef {{ error: unknown }} ComputedError */
-    /** @type {ComputedValue | ComputedError | undefined} The last result, an error cached like a value. */
-    this._result = undefined;
-    /** @type {Set<Computation>} */
-    this.subs = new Set();
-    /** @type {Set<Source>} */
-    this.sources = new Set();
-    this.missed = false;
-    /** @type {(() => void)[]} */
-    this.owned = [];
-    /** True while the computed runs, so a change during its own run still reaches its readers. */
-    this._running = false;
-    /** Set when an input changes during the current run, so that run is not cached. */
-    this._changed = false;
+    this.flags = COMPUTED | DIRTY;
+    /** @type {Edge | undefined} */
+    this.deps = undefined;
+    /** @type {Edge | undefined} */
+    this.depsTail = undefined;
+    /** @type {Edge | undefined} */
+    this.subs = undefined;
+    /** @type {Edge | undefined} */
+    this.subsTail = undefined;
     /** Counts recalculations that gave a different value or error, so readers can skip a run when nothing changed. */
     this.version = 0;
-    /** @type {ComputedValue | ComputedError | undefined} The last result, kept to compare with the next one. */
-    this._previous = undefined;
+    /** @type {(() => void)[] | undefined} */
+    this.owned = undefined;
+    this._fn = fn;
+    /** @type {unknown} The last result, an error when ERROR is set; kept to compare with the next one. */
+    this._value = undefined;
+    this.id = 0;
+    /** @type {0 | 1 | 2} */
+    this.phase = 1;
+    this.queued = false;
+    this.flush = 0;
+    this.runs = 0;
   }
 
-  stale() {
-    // Already dirty means the readers heard of the change, unless one of them failed before reading it again, or the
-    // change came during this computed's own run.
-    if (!this._result && !this.missed && !this._running) {
-      return;
-    }
-    this.missed = false;
-    this._result = undefined;
-    this._changed = this._running;
-    // The readers only learn that this value may have changed; they check its version before they run again.
-    for (const sub of this.subs) {
-      sub.stale(true);
-    }
-  }
-
-  /** Without readers a computed lets go of its sources, so it can be collected and is not visited on every set. */
-  release() {
-    untrackSources(this);
-    this._result = undefined;
-    stopOwned(this);
-  }
-
+  /** @returns {T} */
   get() {
     // The reader subscribes first, so it stays subscribed even when the calculation throws.
-    track(this);
-    let result = this._result;
-    if (!result) {
-      stopOwned(this);
-      this._running = true;
-      this._changed = false;
-      try {
-        // Without a reader the computed releases right after this read, so what the run creates belongs to the caller.
-        result = { value: runTracked(this, this.subs.size > 0 ? this : owner, this._fn) };
-      } catch (error) {
-        stopOwned(this);
-        result = { error };
-      } finally {
-        this._running = false;
-      }
-      if (!sameResult(this._previous, result)) {
-        this.version++;
-      }
-      this._previous = result;
-      // An input changed during the run: the readers were told, so the next read runs again instead of using this.
-      if (!this._changed) {
-        this._result = result;
-      }
+    const edge = current !== null ? link(this, current) : undefined;
+    const flags = this.flags;
+    if (flags & DIRTY || (flags & PENDING && checkDirty(this))) {
+      this._update();
+    } else if (flags & PENDING) {
+      this.flags &= ~PENDING;
     }
-    if (this.subs.size === 0) {
-      this.release();
+    if (this.subs === undefined) {
+      release(this);
     }
-    // An effect remembers the version it read, so it can skip a later run if this value did not change.
-    current?.saw?.(this);
-    if ("error" in result) {
-      throw result.error;
+    // The reader remembers the version it read, so it can skip a run when this value did not change.
+    if (edge !== undefined) {
+      edge.version = this.version;
     }
-    return result.value;
+    if (this.flags & ERROR) {
+      throw this._value;
+    }
+    return /** @type {T} */ (this._value);
   }
-}
 
-/**
- * Whether two results of a computed are the same value (Object.is) or the same error.
- * @param {{ value: unknown } | { error: unknown } | undefined} previous
- * @param {{ value: unknown } | { error: unknown }} next
- */
-function sameResult(previous, next) {
-  if (!previous) {
-    return false;
+  /** Calculates the value again; an error is kept as the result. */
+  _update() {
+    stopOwned(this);
+    this.flags = (this.flags & ~(DIRTY | PENDING)) | RUNNING;
+    /** @type {unknown} */
+    let value;
+    let failed = false;
+    try {
+      // Without a reader the computed releases right after this read, so what the run creates belongs to the caller.
+      value = runTracked(this, this.subs !== undefined ? this : owner, this._fn);
+    } catch (error) {
+      stopOwned(this);
+      value = error;
+      failed = true;
+    }
+    const flags = this.flags & ~RUNNING;
+    if (this.version === 0 || !Object.is(value, this._value) || failed !== ((flags & ERROR) !== 0)) {
+      this.version++;
+    }
+    this._value = value;
+    // An input changed during the run: the readers were told, and the computed stays dirty, so the next read runs again.
+    this.flags = failed ? flags | ERROR : flags & ~ERROR;
   }
-  return "value" in previous
-    ? "value" in next && Object.is(previous.value, next.value)
-    : "error" in next && Object.is(previous.error, next.error);
 }
 
 /**

@@ -67,7 +67,7 @@ class Resource extends Signal {
           this.error.set(reason);
           this.loading.set(false);
           // A failed load that nothing reads would otherwise go unnoticed.
-          if (this.error.subs.size === 0) {
+          if (this.error.subs === undefined) {
             report(reason);
           }
         }

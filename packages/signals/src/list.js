@@ -1,5 +1,5 @@
 import { LIVE } from 'fiorejs';
-import { owner, own } from './tracking.js';
+import { adopt, own } from './tracking.js';
 import { attach } from './dom.js';
 
 /**
@@ -47,7 +47,7 @@ export class List {
     /** Counts the passes; a row marked with the current pass is shown, so a repeated key takes the next row. */
     let pass = 0;
 
-    owner?.owned.push(() => {
+    adopt(() => {
       const old = rows;
       rows = new Map();
       for (const list of old.values()) {
