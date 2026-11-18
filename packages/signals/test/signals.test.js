@@ -2483,3 +2483,30 @@ test('an effect that changes a computed it read runs again, whoever else reads t
     stopOther();
   }
 });
+
+test('an effect that the check of its sources stops does not run', () => {
+  const log = [];
+  const items = state(1);
+  let made = 0;
+  const list = computed(() => {
+    const value = items.get();
+    const id = ++made;
+    effect(() => {
+      log.push(`run${id}`);
+      summary.get();
+      return () => log.push(`stop${id}`);
+    });
+    return value;
+  });
+  const summary = computed(() => list.get() * 10);
+  // The effect that list made still reads summary, and through it list, after the first reader stops.
+  effect(() => list.get())();
+
+  items.set(2);
+  flush();
+
+  for (let id = 1; id <= made; id++) {
+    const stopped = log.indexOf(`stop${id}`);
+    assert.ok(stopped === -1 || log.lastIndexOf(`run${id}`) < stopped, log.join(' '));
+  }
+});

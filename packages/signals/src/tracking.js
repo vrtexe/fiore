@@ -482,6 +482,10 @@ class Effect {
       this.flags &= ~PENDING;
       return;
     }
+    // The check recalculates computeds, and one of them may own this effect and stop it.
+    if (this.flags & STOPPED) {
+      return;
+    }
     this.flags &= ~(DIRTY | PENDING);
     this.reset();
     enterRun();
