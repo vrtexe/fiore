@@ -271,6 +271,21 @@ function createEffect(fn, phase) {
 }
 
 /**
+ * Runs `fn` when the current owner stops: a root, a branch, a list row, or the next run of an effect. With no owner it
+ * never runs. A cleanup that throws does not keep the others from running; its error is thrown at the end of the flush.
+ * @param {() => void} fn
+ */
+export function onCleanup(fn) {
+  owner?.owned.push(() => {
+    try {
+      fn();
+    } catch (error) {
+      fail(error);
+    }
+  });
+}
+
+/**
  * Runs `fn` with a new owner and returns a function that stops what `fn` created: effects, bindings, computeds and
  * lists. Reads in `fn` do not subscribe. A root belongs to no other owner, also when it is created inside one, so it
  * lives until its function is called. If `fn` throws, what it created is stopped.

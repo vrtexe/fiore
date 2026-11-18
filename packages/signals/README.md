@@ -44,6 +44,7 @@ document.body.append(
 | `flush()` | Runs the effects and bindings that wait for the flush now. |
 | `tick()` | A promise that resolves after the waiting effects and bindings have run. |
 | `root(fn)` | Runs `fn` with an owner of its own and returns a function that stops everything `fn` created; see [Cleanup](#cleanup). |
+| `onCleanup(fn)` | Runs `fn` when the current owner stops: the root is stopped, the branch or list row is removed, or the effect runs again or stops. With no owner it never runs. Use it to remove document listeners, timers or nodes added outside the element. |
 | `untrack(fn)` | Runs `fn` without subscribing to the signals it reads. |
 | `read(value)` | Returns the current value of a signal, a getter function or a plain value. |
 | `classList(entries)` | A computed value for `className` or the `class` attribute that lists classes by condition; see [Classes](#classes). |

@@ -10,7 +10,7 @@ Object.assign(globalThis, {
 });
 
 const { button, div, span, input } = await import('fiorejs');
-const { state, computed, effect, untrack, read, resource, classList, isSignal, flush, tick: flushed, root } = await import('@fiorejs/signals');
+const { state, computed, effect, untrack, read, resource, classList, isSignal, flush, tick: flushed, root, onCleanup } = await import('@fiorejs/signals');
 
 const tick = () => new Promise((resolve) => setTimeout(resolve));
 
@@ -421,6 +421,53 @@ test('a binding that fails while building is reported, leaves no subscriber behi
   assert.equal(reads, 1);
   assert.equal(errors.length, 1);
   assert.equal(element.tagName, 'DIV');
+});
+
+test('onCleanup runs when its root stops, and before the next run of its effect', () => {
+  const log = [];
+  const stop = root(() => onCleanup(() => log.push('root')));
+  const count = state(0);
+  const stopEffect = effect(() => {
+    const seen = count.get();
+    onCleanup(() => log.push(`run ${seen}`));
+  });
+  count.set(1);
+  flush();
+  stop();
+  stopEffect();
+
+  assert.deepEqual(log, ['run 0', 'root', 'run 1']);
+});
+
+test('onCleanup runs when a branch or a list row is removed', () => {
+  const log = [];
+  const open = state(true);
+  const items = state(['a', 'b']);
+  document.body.append(
+    div(open.if(() => (onCleanup(() => log.push('branch')), span('open')))),
+    div(items.map((item) => (onCleanup(() => log.push(item)), span(item)))),
+  );
+  open.set(false);
+  items.set(['a']);
+  flush();
+
+  assert.deepEqual(log.sort(), ['b', 'branch']);
+});
+
+test('onCleanup with no owner never runs, and one that throws does not stop the others', async () => {
+  let ran = 0;
+  onCleanup(() => ran++);
+  const stop = root(() => {
+    onCleanup(() => {
+      throw new Error('cleanup failed');
+    });
+    onCleanup(() => ran++);
+  });
+
+  const errors = await reported(() => stop());
+
+  assert.equal(ran, 1);
+  assert.equal(errors.length, 1);
 });
 
 test('a cleanup that throws does not stop the effect that owns it', async () => {
