@@ -1,13 +1,18 @@
-/** @import { Callback } from './builder.js' */
-/** @import { DeprecatedHTMLTag, ElementEventData, HTMLTag } from '../types/html.dom.d.ts' */
-/** @import { HTMLElementsAttributesMap } from '../types/attributes.d.ts' */
 /**
  * Returns the tag of any HTML element by name.
  * @template {keyof HTMLElementTagNameMap} K
+ * @overload
  * @param {K} name
  * @returns {HTMLTag<K>}
  */
 export function element<K extends keyof HTMLElementTagNameMap>(name: K): HTMLTag<K>;
+/**
+ * Returns the tag of a custom element, whose name has a hyphen; it takes any attribute.
+ * @overload
+ * @param {`${string}-${string}`} name
+ * @returns {CustomElementTag}
+ */
+export function element(name: `${string}-${string}`): CustomElementTag;
 /**
  * @deprecated
  * @template {keyof HTMLElementDeprecatedTagNameMap} K
@@ -64,6 +69,7 @@ export class DeprecatedHTMLBuilder<K extends keyof HTMLElementDeprecatedTagNameM
     #private;
 }
 import type { HTMLTag } from '../types/html.dom.d.ts';
+import type { CustomElementTag } from '../types/html.dom.d.ts';
 import type { DeprecatedHTMLTag } from '../types/html.dom.d.ts';
 import type { HTMLElementsAttributesMap } from '../types/attributes.d.ts';
 import type { ElementEventData } from '../types/html.dom.d.ts';
