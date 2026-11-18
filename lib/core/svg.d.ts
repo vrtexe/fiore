@@ -1,4 +1,4 @@
-/** @import { Callback } from './builder.js' */
+/** @import { Callback, Ref } from './builder.js' */
 /** @import { SVGElementEventData, SVGTag } from '../types/svg.dom.d.ts' */
 /** @import { HTMLElementsAttributesMap } from '../types/attributes.d.ts' */
 /**
@@ -19,17 +19,17 @@ export class SVGBuilder<K extends keyof SVGElementTagNameMap> extends Builder<SV
      * @param {object} [props]
      * @param {object} [attrs]
      * @param {readonly object[]} [on]
-     * @param {readonly Callback<SVGElementTagNameMap[K]>[]} [also]
+     * @param {readonly (Callback<SVGElementTagNameMap[K]> | Ref<any>)[]} [also]
      */
-    constructor(name: K, props?: object, attrs?: object, on?: readonly object[], also?: readonly Callback<SVGElementTagNameMap[K]>[]);
+    constructor(name: K, props?: object, attrs?: object, on?: readonly object[], also?: readonly (Callback<SVGElementTagNameMap[K]> | Ref<any>)[]);
     /**
      * @param {object} [props]
      * @param {object} [attrs]
      * @param {readonly object[]} [on]
-     * @param {readonly Callback<SVGElementTagNameMap[K]>[]} [also]
+     * @param {readonly (Callback<SVGElementTagNameMap[K]> | Ref<any>)[]} [also]
      * @override
      */
-    override next(props?: object, attrs?: object, on?: readonly object[], also?: readonly Callback<SVGElementTagNameMap[K]>[]): SVGBuilder<K>;
+    override next(props?: object, attrs?: object, on?: readonly object[], also?: readonly (Callback<SVGElementTagNameMap[K]> | Ref<any>)[]): SVGBuilder<K>;
     #private;
 }
 import type { SVGTag } from '../types/svg.dom.d.ts';
@@ -37,3 +37,4 @@ import type { HTMLElementsAttributesMap } from '../types/attributes.d.ts';
 import type { SVGElementEventData } from '../types/svg.dom.d.ts';
 import { Builder } from './builder.js';
 import type { Callback } from './builder.js';
+import type { Ref } from './builder.js';

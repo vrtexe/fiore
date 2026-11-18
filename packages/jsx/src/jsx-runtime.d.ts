@@ -1,5 +1,13 @@
 import type { HTMLElementsAttributesMap } from 'fiorejs/type/attributes.d.ts';
-import type { DatasetProps, ElementProps, Live, LiveAttributes, RecursivePartial } from 'fiorejs/type/base.dom.d.ts';
+import type {
+  DatasetProps,
+  ElementProps,
+  Live,
+  LiveAttributes,
+  LiveValue,
+  RecursivePartial,
+  RefSignal,
+} from 'fiorejs/type/base.dom.d.ts';
 import type { HTMLEventMapOf } from 'fiorejs/type/html.dom.d.ts';
 import type { SVGEventMapOf } from 'fiorejs/type/svg.dom.d.ts';
 
@@ -24,8 +32,11 @@ type CommonProps<T extends Element> = {
   /** Accepted and ignored, because nothing is diffed. */
   key?: string | number | bigint | null | undefined;
   children?: Child;
-  /** Called with the element once it is built, with its props, attributes, listeners and children, as the builder's `also`. */
-  ref?: ((element: T) => void) | undefined | null;
+  /**
+   * Called with the element once it is built, before it is in the document, as the builder's `also`; or a writable
+   * signal that holds the element while it is in the document and null otherwise.
+   */
+  ref?: ((element: T) => void) | RefSignal<T> | undefined | null;
   class?: Live<string | undefined | null>;
   /** A string, or an object of style properties whose values may be live, as in the builder's props. */
   style?: Live<string | RecursivePartial<CSSStyleDeclaration> | undefined | null>;
@@ -66,7 +77,11 @@ type LooseListener<E> =
  * still fit this index signature.
  */
 type CustomElementProps = Omit<CommonProps<HTMLElement>, 'ref' | `on${string}-${string}`> & {
-  ref?: { method(element: HTMLElement): void }['method'] | undefined | null;
+  ref?:
+    | { method(element: HTMLElement): void }['method']
+    | (LiveValue<HTMLElement | null> & { set(value: HTMLElement | null): void })
+    | undefined
+    | null;
   [event: `on${string}-${string}`]: LooseListener<CustomEvent> | undefined | null;
 } & {
   [K in keyof HTMLElementEventMap & string as `on${K}` | `on${Capitalize<K>}`]?: LooseListener<HTMLElementEventMap[K]> | undefined | null;

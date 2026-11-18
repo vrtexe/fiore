@@ -40,3 +40,13 @@ void (<label>{label}<TextInput type="email" /></label>);
 void (<input ref={(element: HTMLInputElement) => element.focus()} />);
 // @ts-expect-error a div is not an input
 void (<div ref={(element: HTMLInputElement) => element.focus()} />);
+
+// A writable signal of the element, or null, is a ref; a signal of another element or a computed is not.
+const field = state<HTMLInputElement | null>(null);
+void (<input ref={field} />);
+void (<circle ref={state<SVGCircleElement | null>(null)} />);
+void (<my-picker ref={state<HTMLElement | null>(null)} />);
+// @ts-expect-error a div is not an input
+void (<div ref={field} />);
+// @ts-expect-error a computed cannot be written
+void (<input ref={computed((): HTMLInputElement | null => null)} />);

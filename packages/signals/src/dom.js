@@ -5,7 +5,7 @@ import { report } from './scheduler.js';
  * @typedef {{
  *   anchor: Node,
  *   read: () => unknown,
- *   apply: (value: unknown) => void,
+ *   apply: (value: unknown) => unknown,
  *   effect: ReturnType<typeof bind> | undefined,
  * }} Binding
  */
@@ -102,9 +102,10 @@ function start(binding) {
 
 /**
  * Binds `read` to an element: `apply` gets its value now and whenever a signal it read changes, while its anchor is in
- * the document.
+ * the document; a function `apply` returns is called before the next run and when the binding stops. A ref binding
+ * starts when its element is in the document, at once or when it is inserted.
  * @param {() => unknown} read
- * @param {(value: unknown) => void} apply
+ * @param {(value: unknown) => unknown} apply
  * @param {import('fiorejs/type/base.dom.d.ts').BindContext} context
  */
 export function attach(read, apply, context) {
@@ -122,7 +123,10 @@ export function attach(read, apply, context) {
     bindings.set(binding.anchor, set);
   }
   set.add(binding);
-  start(binding);
+  // A ref holds the element only while it is in the document, so it starts when the observer sees it inserted.
+  if (context.kind !== 'ref' || binding.anchor.isConnected) {
+    start(binding);
+  }
   // The surrounding effect or list row ends the binding for good when it reruns or is removed.
   adopt(() => {
     bindings.get(binding.anchor)?.delete(binding);

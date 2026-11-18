@@ -2756,3 +2756,69 @@ test('a resource changes its value like a state, with set, update and mutate, wi
   assert.equal(calls.length, 1);
   assert.equal(data.loading.get(), false);
 });
+
+test('a signal as a ref holds the element while it is in the document, also when inserted later or through an ancestor', async () => {
+  const field = state(null);
+  const focused = [];
+  effect(() => {
+    const element = field.get();
+    element?.focus();
+    focused.push(element === null ? null : document.activeElement === element);
+  });
+  let built;
+  const open = button.on({ click: () => (built = div(input.also(field).create())) }).create('open');
+  document.body.append(open);
+  open.click();
+  await tick();
+  assert.equal(field.get(), null);
+
+  document.body.append(built);
+  await tick();
+  assert.equal(field.get(), built.firstChild);
+  built.remove();
+  await tick();
+  assert.equal(field.get(), null);
+  document.body.append(built);
+  await tick();
+
+  assert.equal(field.get(), built.firstChild);
+  assert.deepEqual(focused, [null, true, null, true]);
+  built.remove();
+  open.remove();
+  await tick();
+});
+
+test('a ref of an element already in the document is set at once, and its owner stops it for good', async () => {
+  const LIVE = Symbol.for('fiorejs.live');
+  const host = div();
+  document.body.append(host);
+  const early = state(null);
+  root(() => early[LIVE](() => {}, { element: host, kind: 'ref' }))();
+  assert.equal(early.get(), null);
+
+  const field = state(null);
+  let element;
+  const stop = root(() => {
+    element = input.also(field).create();
+  });
+  host.append(element);
+  await tick();
+  assert.equal(field.get(), element);
+  const writes = [];
+  effect(() => writes.push(field.get()));
+  stop();
+  host.remove();
+  await tick();
+  document.body.append(host);
+  await tick();
+  flush();
+
+  assert.equal(field.get(), null);
+  assert.deepEqual(writes, [element, null]);
+  const now = state(null);
+  root(() => now[LIVE](() => {}, { element: host, kind: 'ref' }));
+  assert.equal(now.get(), host);
+  host.remove();
+  await tick();
+  assert.equal(now.get(), null);
+});

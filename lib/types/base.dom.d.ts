@@ -33,6 +33,12 @@ export type LiveValue<T> = {
 
 export type Live<T> = T | LiveValue<T>;
 
+/**
+ * A writable signal given to `also` or the JSX `ref`: it holds the element while the element is in the document, and
+ * null otherwise. `set` is a function property, so the signal must accept this element, not only a similar one.
+ */
+export type RefSignal<T> = LiveValue<T | null> & { set: (value: T | null) => void };
+
 export type LiveAttributes<A> = {
   [K in keyof A as K extends `on${string}` ? never : K]: Live<A[K]>;
 };
@@ -46,6 +52,8 @@ export type BindContext =
       path: string[];
     }
   | { element: BaseElement; kind: 'attribute'; name: string }
+  /** A live value given as a ref, which holds the element while it is in the document. */
+  | { element: BaseElement; kind: 'ref' }
   | {
       /** The element, or the fragment, the child is built into. */
       element: BaseElement | DocumentFragment;

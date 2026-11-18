@@ -31,17 +31,17 @@ export class HTMLBuilder<K extends keyof HTMLElementTagNameMap> extends Builder<
      * @param {object} [props]
      * @param {object} [attrs]
      * @param {readonly object[]} [on]
-     * @param {readonly Callback<HTMLElementTagNameMap[K]>[]} [also]
+     * @param {readonly (Callback<HTMLElementTagNameMap[K]> | Ref<any>)[]} [also]
      */
-    constructor(name: K, props?: object, attrs?: object, on?: readonly object[], also?: readonly Callback<HTMLElementTagNameMap[K]>[]);
+    constructor(name: K, props?: object, attrs?: object, on?: readonly object[], also?: readonly (Callback<HTMLElementTagNameMap[K]> | Ref<any>)[]);
     /**
      * @param {object} [props]
      * @param {object} [attrs]
      * @param {readonly object[]} [on]
-     * @param {readonly Callback<HTMLElementTagNameMap[K]>[]} [also]
+     * @param {readonly (Callback<HTMLElementTagNameMap[K]> | Ref<any>)[]} [also]
      * @override
      */
-    override next(props?: object, attrs?: object, on?: readonly object[], also?: readonly Callback<HTMLElementTagNameMap[K]>[]): HTMLBuilder<K>;
+    override next(props?: object, attrs?: object, on?: readonly object[], also?: readonly (Callback<HTMLElementTagNameMap[K]> | Ref<any>)[]): HTMLBuilder<K>;
     #private;
 }
 /**
@@ -55,17 +55,17 @@ export class DeprecatedHTMLBuilder<K extends keyof HTMLElementDeprecatedTagNameM
      * @param {object} [props]
      * @param {object} [attrs]
      * @param {readonly object[]} [on]
-     * @param {readonly Callback<HTMLElementDeprecatedTagNameMap[K]>[]} [also]
+     * @param {readonly (Callback<HTMLElementDeprecatedTagNameMap[K]> | Ref<any>)[]} [also]
      */
-    constructor(name: K, props?: object, attrs?: object, on?: readonly object[], also?: readonly Callback<HTMLElementDeprecatedTagNameMap[K]>[]);
+    constructor(name: K, props?: object, attrs?: object, on?: readonly object[], also?: readonly (Callback<HTMLElementDeprecatedTagNameMap[K]> | Ref<any>)[]);
     /**
      * @param {object} [props]
      * @param {object} [attrs]
      * @param {readonly object[]} [on]
-     * @param {readonly Callback<HTMLElementDeprecatedTagNameMap[K]>[]} [also]
+     * @param {readonly (Callback<HTMLElementDeprecatedTagNameMap[K]> | Ref<any>)[]} [also]
      * @override
      */
-    override next(props?: object, attrs?: object, on?: readonly object[], also?: readonly Callback<HTMLElementDeprecatedTagNameMap[K]>[]): DeprecatedHTMLBuilder<K>;
+    override next(props?: object, attrs?: object, on?: readonly object[], also?: readonly (Callback<HTMLElementDeprecatedTagNameMap[K]> | Ref<any>)[]): DeprecatedHTMLBuilder<K>;
     #private;
 }
 import type { HTMLTag } from '../types/html.dom.d.ts';
@@ -75,3 +75,4 @@ import type { HTMLElementsAttributesMap } from '../types/attributes.d.ts';
 import type { ElementEventData } from '../types/html.dom.d.ts';
 import { Builder } from './builder.js';
 import type { Callback } from './builder.js';
+import type { Ref } from './builder.js';

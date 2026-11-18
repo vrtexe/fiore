@@ -98,6 +98,9 @@ function hasSetter(proto, name) {
   return false;
 }
 
+/** The apply function of a ref, which has nothing to apply. */
+function ignore() {}
+
 /** @param {unknown} error */
 function report(error) {
   if (typeof globalThis.reportError === 'function') {
@@ -143,7 +146,7 @@ export function jsx(type, props) {
     type.includes('-') && typeof customElements !== 'undefined' ? customElements.get(type) : undefined;
   /** @type {Record<string, any>} */
   const data = { props: {}, attrs: {}, on: {}, children };
-  /** @type {((element: Element) => void) | undefined} */
+  /** @type {unknown} A function called with the element, or a signal that holds it while it is in the document. */
   let ref;
 
   for (const [name, value] of Object.entries(rest)) {
@@ -152,7 +155,7 @@ export function jsx(type, props) {
       continue;
     }
     if (name === 'ref') {
-      ref = typeof value === 'function' ? /** @type {(element: Element) => void} */ (value) : undefined;
+      ref = value;
       continue;
     }
     if (HANDLER.test(name)) {
@@ -183,7 +186,11 @@ export function jsx(type, props) {
   }
   const node = create(data);
   // Like the builder's also: the element is complete, with its props, attributes, listeners and children.
-  ref?.(node);
+  if (typeof ref === 'function') {
+    ref(node);
+  } else if (ref != null && typeof (/** @type {any} */ (ref))[LIVE] === 'function') {
+    /** @type {any} */ (ref)[LIVE](ignore, { element: node, kind: 'ref' });
+  }
   return node;
 }
 

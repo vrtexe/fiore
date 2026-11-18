@@ -943,3 +943,13 @@ test('xlink:, xml: and xmlns: attributes are set in their namespaces, plain or l
   assert.equal(use.hasAttributeNS(xlink, 'href'), false);
   assert.equal(use.attributes.length, 1);
 });
+
+test('also with a live value gives it the element with the context kind ref, after the element is complete', () => {
+  const seen = [];
+  const ref = { [LIVE]: (apply, context) => seen.push([context.kind, context.element.textContent, context.element.className]) };
+  const callback = (element) => seen.push(['callback', element.textContent]);
+
+  div.props({ className: 'box' }).also(ref).also(callback).create('done');
+
+  assert.deepEqual(seen, [['ref', 'done', 'box'], ['callback', 'done']]);
+});

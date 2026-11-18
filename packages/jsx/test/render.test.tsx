@@ -12,6 +12,7 @@ Object.assign(globalThis, {
   Node: window.Node,
   customElements: window.customElements,
   HTMLElement: window.HTMLElement,
+  MutationObserver: window.MutationObserver,
 });
 
 test('flat props become properties, attributes and listeners', () => {
@@ -543,3 +544,34 @@ export function customElementTag() {
     </fiore-dialog>
   );
 }
+
+test('a signal as a JSX ref holds the element while it is in the document', async () => {
+  const { state, effect, root } = await import('@fiorejs/signals');
+  const wait = () => new Promise((resolve) => setTimeout(resolve));
+  const field = state<HTMLInputElement | null>(null);
+  const focused: boolean[] = [];
+  effect(() => {
+    const element = field.get();
+    element?.focus();
+    if (element) focused.push(document.activeElement === element);
+  });
+  let form!: Node;
+  const stop = root(() => {
+    form = (
+      <form>
+        <input ref={field} />
+      </form>
+    );
+  });
+  await wait();
+  assert.equal(field.get(), null);
+
+  document.body.append(form);
+  await wait();
+  assert.equal(field.get()?.tagName, 'INPUT');
+  stop();
+
+  assert.equal(field.get(), null);
+  assert.deepEqual(focused, [true]);
+  (form as HTMLFormElement).remove();
+});
