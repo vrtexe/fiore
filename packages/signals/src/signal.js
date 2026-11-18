@@ -3,9 +3,11 @@ import {
   COMPUTED,
   DIRTY,
   ERROR,
+  FORGETS,
   PENDING,
   RUNNING,
   checkDirty,
+  createEffect,
   current,
   link,
   owner,
@@ -292,4 +294,95 @@ export class Computed extends Signal {
  */
 export function computed(fn) {
   return new Computed(fn);
+}
+
+/**
+ * The readers of one key of a selector. The selector creates it on the first read of the key in an effect, computed or
+ * binding, and drops it when the last of them goes.
+ */
+class SelectorKey {
+  /**
+   * @param {Map<unknown, SelectorKey>} keys
+   * @param {unknown} key
+   */
+  constructor(keys, key) {
+    this.flags = FORGETS;
+    /** @type {Edge | undefined} */
+    this.subs = undefined;
+    /** @type {Edge | undefined} */
+    this.subsTail = undefined;
+    this.version = 0;
+    this._keys = keys;
+    this._key = key;
+  }
+
+  /** Tells the readers that the source moved to or away from the key. */
+  change() {
+    this.version++;
+    if (this.subs !== undefined) {
+      propagate(this.subs);
+    }
+  }
+
+  /** Leaves the selector once nothing reads the key. */
+  forget() {
+    if (this._keys.get(this._key) === this) {
+      this._keys.delete(this._key);
+    }
+  }
+}
+
+/**
+ * True while the selector's source equals the key.
+ * @extends {Signal<boolean>}
+ */
+class Selected extends Signal {
+  /**
+   * @param {{ value: unknown, keys: Map<unknown, SelectorKey> }} selection
+   * @param {unknown} key
+   */
+  constructor(selection, key) {
+    super();
+    this._selection = selection;
+    this._key = key;
+  }
+
+  get() {
+    const selection = this._selection;
+    if (current !== null) {
+      let node = selection.keys.get(this._key);
+      if (node === undefined) {
+        node = new SelectorKey(selection.keys, this._key);
+        selection.keys.set(this._key, node);
+      }
+      const edge = link(node, current);
+      if (edge !== undefined) {
+        edge.version = node.version;
+      }
+    }
+    return Object.is(selection.value, this._key);
+  }
+}
+
+/**
+ * Returns `select(key)`, a signal that is true while `source` equals `key` (`Object.is`). When `source` changes, only
+ * the readers of the old and the new key are told, whatever the number of keys. The selector follows `source` right
+ * after each write, and stops with the current owner.
+ * @template T
+ * @param {Signal<T> | (() => T)} source
+ * @returns {(key: T) => Signal<boolean>}
+ */
+export function selector(source) {
+  /** @type {{ value: unknown, keys: Map<unknown, SelectorKey> }} */
+  const selection = { value: undefined, keys: new Map() };
+  createEffect(() => {
+    const next = typeof source === "function" ? source() : source.get();
+    const previous = selection.value;
+    if (!Object.is(next, previous)) {
+      selection.value = next;
+      selection.keys.get(previous)?.change();
+      selection.keys.get(next)?.change();
+    }
+  }, 3);
+  return (key) => new Selected(selection, key);
 }

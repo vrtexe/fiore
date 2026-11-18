@@ -1,5 +1,5 @@
 import { div, input, li, span, ul } from 'fiorejs';
-import { classList, computed, effect, flush, read, resource, root, state, tick, type Reactive } from '@fiorejs/signals';
+import { classList, computed, effect, flush, read, resource, root, selector, state, tick, type Reactive } from '@fiorejs/signals';
 // @ts-expect-error the brand is not exported
 import { SIGNAL } from '@fiorejs/signals';
 void SIGNAL;
@@ -79,3 +79,9 @@ root((x: number) => x);
 
 // A resource can be cleared without loading.
 resource(() => ({ name: 'Ada' })).mutate(undefined);
+
+// A selector gives a boolean signal per key.
+const isPicked = selector(state(0));
+const picked: boolean = isPicked(1).get();
+div.props({ className: classList({ picked: isPicked(2) }) }).create(isPicked(3).if(() => 'yes'));
+void picked;

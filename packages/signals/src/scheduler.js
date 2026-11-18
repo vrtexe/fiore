@@ -9,6 +9,10 @@ const queues = [[], [], []];
 /** @type {[Queued[], Queued[], Queued[]]} Empty arrays that take the place of a queue while its batch runs. */
 const spares = [[], [], []];
 
+/** @type {Queued[]} Selectors a write told; they run as soon as the write has reached all its readers. */
+const sync = [];
+let syncing = false;
+
 /** Whether an effect joined a queue out of creation order, so the queue is sorted before it runs. */
 const unsorted = [false, false, false];
 
@@ -38,15 +42,19 @@ const MAX_RUNS = 100;
 
 /**
  * Queues an effect for the flush once, and the flush on a microtask unless it is queued or running; a running flush
- * takes new work itself.
+ * takes new work itself. Phase 3 is a selector, which runs right after the write instead.
  * @param {Queued} node
- * @param {0 | 1 | 2} phase
+ * @param {0 | 1 | 2 | 3} phase
  */
 export function enqueue(node, phase) {
   if (node.queued) {
     return;
   }
   node.queued = true;
+  if (phase === 3) {
+    sync.push(node);
+    return;
+  }
   const queue = queues[phase];
   const last = queue[queue.length - 1];
   if (last && last.id > node.id) {
@@ -78,6 +86,26 @@ function runTask() {
  */
 function byId(a, b) {
   return a.id - b.id;
+}
+
+/** Runs the selectors a write told; a selector's own writes add to the same run. */
+export function runSync() {
+  if (syncing || sync.length === 0) {
+    return;
+  }
+  syncing = true;
+  try {
+    for (let i = 0; i < sync.length; i++) {
+      const node = sync[i];
+      if (node.queued) {
+        node.queued = false;
+        node.run();
+      }
+    }
+  } finally {
+    sync.length = 0;
+    syncing = false;
+  }
 }
 
 /**

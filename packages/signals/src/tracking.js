@@ -1,4 +1,4 @@
-import { enqueue, enterRun, exitRun, fail } from './scheduler.js';
+import { enqueue, enterRun, exitRun, fail, runSync } from './scheduler.js';
 
 /** @typedef {import('./scheduler.js').Queued} Queued */
 
@@ -17,14 +17,16 @@ export const MISSED = 16;
 export const ERROR = 32;
 /** The effect is stopped. */
 const STOPPED = 64;
+/** The source is a selector key, which leaves its selector when it loses its last subscriber. */
+export const FORGETS = 128;
 
 /**
- * A source: a state or a computed.
- * @typedef {{ flags: number, subs: Edge | undefined, subsTail: Edge | undefined, version: number }} Source
+ * A source: a state, a computed or a selector key. `forget` drops a key from its selector.
+ * @typedef {{ flags: number, subs: Edge | undefined, subsTail: Edge | undefined, version: number, forget?(): void }} Source
  */
 /**
  * What reads sources: an effect or a computed. `_update` recalculates a computed; `phase` is the queue of an effect.
- * @typedef {Source & Owner & { deps: Edge | undefined, depsTail: Edge | undefined, phase: 0 | 1 | 2, _update(): void }} Reader
+ * @typedef {Source & Owner & { deps: Edge | undefined, depsTail: Edge | undefined, phase: 0 | 1 | 2 | 3, _update(): void }} Reader
  */
 /** @typedef {{ owned: (() => void)[] | undefined }} Owner */
 
@@ -113,13 +115,18 @@ export function link(dep, sub) {
 }
 
 /**
- * Removes an edge from the subscribers of its source; a computed left without subscribers lets go of its sources.
+ * Removes an edge from the subscribers of its source; a computed left without subscribers lets go of its sources, and
+ * a selector key leaves its selector.
  * @param {Edge} edge
  */
 function unsubscribe(edge) {
   const dep = removeSub(edge);
-  if (dep.subs === undefined && dep.flags & COMPUTED) {
-    release(/** @type {Reader} */ (dep));
+  if (dep.subs === undefined && dep.flags & (COMPUTED | FORGETS)) {
+    if (dep.flags & COMPUTED) {
+      release(/** @type {Reader} */ (dep));
+    } else {
+      dep.forget?.();
+    }
   }
 }
 
@@ -207,6 +214,9 @@ export function release(computed) {
         node = /** @type {Reader} */ (dep);
         edge = detach(node);
       } else {
+        if (dep.subs === undefined && dep.flags & FORGETS) {
+          dep.forget?.();
+        }
         edge = next;
       }
       continue;
@@ -249,6 +259,7 @@ export function propagate(edge) {
     }
     next = next.nextSub;
   } while (next !== undefined);
+  runSync();
 }
 
 /**
@@ -447,7 +458,7 @@ export function own(fn) {
 class Effect {
   /**
    * @param {() => unknown} fn
-   * @param {0 | 1 | 2} phase
+   * @param {0 | 1 | 2 | 3} phase
    */
   constructor(fn, phase) {
     this.flags = 0;
@@ -554,11 +565,13 @@ effect.pre = (fn) => createEffect(fn, 0);
 effect.post = (fn) => createEffect(fn, 2);
 
 /**
+ * Creates an effect that belongs to the current owner and returns its stop function. Phase 3 runs right after each
+ * write that reaches it, for selectors.
  * @param {() => void | (() => void)} fn
- * @param {0 | 1 | 2} phase
+ * @param {0 | 1 | 2 | 3} phase
  * @returns {() => void}
  */
-function createEffect(fn, phase) {
+export function createEffect(fn, phase) {
   const node = new Effect(fn, phase);
   const stop = () => node.stop();
   adopt(stop);

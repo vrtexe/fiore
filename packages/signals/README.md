@@ -48,6 +48,7 @@ document.body.append(
 | `untrack(fn)` | Runs `fn` without subscribing to the signals it reads. What `fn` creates still belongs to the current owner and stops with it. |
 | `read(value)` | Returns the current value of a signal, a getter function or a plain value. |
 | `classList(entries)` | A computed value for `className` or the `class` attribute that lists classes by condition; see [Classes](#classes). |
+| `selector(source)` | Returns `select(key)`, a signal that is true while `source` equals `key` (`Object.is`). When `source` changes, only the readers of the old and the new key run again, whatever the number of keys, so `classList({ danger: isSelected(row.id) })` on every row of a long list costs two updates per selection. A key is forgotten when nothing reads it. |
 | `resource(source, fetcher)` | Loads a value asynchronously, like Solid's `createResource`; see [Loading data](#loading-data). |
 
 ## Scheduling

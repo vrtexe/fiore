@@ -10,7 +10,7 @@ Object.assign(globalThis, {
 });
 
 const { button, div, span, input } = await import('fiorejs');
-const { state, computed, effect, untrack, read, resource, classList, isSignal, flush, tick: flushed, root, onCleanup } = await import('@fiorejs/signals');
+const { state, computed, effect, untrack, read, resource, classList, isSignal, flush, tick: flushed, root, onCleanup, selector } = await import('@fiorejs/signals');
 
 const tick = () => new Promise((resolve) => setTimeout(resolve));
 
@@ -2578,4 +2578,70 @@ test('a list alone in its element keeps the nodes of the rows that stay', () => 
 
   assert.equal(list.textContent, '425');
   assert.equal(list.children[1], two);
+});
+
+test('a selector tells only the readers of the old and the new key, and is current before the flush', () => {
+  const selected = state(1);
+  const isSelected = selector(selected);
+  let runs = 0;
+  for (let key = 0; key < 1_000; key++) {
+    effect(() => {
+      runs++;
+      isSelected(key).get();
+    });
+  }
+  const label = isSelected(5).computed((on) => (on ? 'selected' : ''));
+  effect(() => label.get());
+  runs = 0;
+
+  selected.set(5);
+  assert.equal(isSelected(5).get(), true);
+  assert.equal(isSelected(1).get(), false);
+  assert.equal(label.get(), 'selected');
+  flush();
+  assert.equal(runs, 2);
+  selected.set(7);
+  flush();
+
+  assert.equal(runs, 4);
+});
+
+test('a selector forgets the keys of removed rows', async () => {
+  const selected = state(null);
+  const isSelected = selector(selected);
+  let items = [{ id: 1 }, { id: 2 }];
+  const refs = items.map((item) => new WeakRef(item));
+  const list = state(items);
+  div(list.map((item) => span(isSelected(item).computed((on) => (on ? '*' : '-')))));
+  selected.set(items[0]);
+  flush();
+  selected.set(null);
+  flush();
+
+  list.set([]);
+  flush();
+  items = undefined;
+
+  for (const ref of refs) assert.equal(await collected(ref), true);
+});
+
+test('a selector marks the selected row of a keyed list through classList', () => {
+  const rows = state([1, 2, 3].map((id) => ({ id, label: `row ${id}` })));
+  const selected = state(0);
+  const isSelected = selector(selected);
+  const body = div(
+    rows.for((row) => row.id).map((row) => span.props({ className: classList(['row', { danger: isSelected(row.id) }]) }).create(row.label)),
+  );
+  const classes = () => [...body.children].map((row) => row.className);
+
+  selected.set(2);
+  flush();
+  assert.deepEqual(classes(), ['row', 'row danger', 'row']);
+  selected.set(3);
+  flush();
+  assert.deepEqual(classes(), ['row', 'row', 'row danger']);
+  rows.set(rows.get().slice(0, 2));
+  flush();
+
+  assert.deepEqual(classes(), ['row', 'row']);
 });

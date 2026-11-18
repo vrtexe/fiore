@@ -62,6 +62,8 @@ export const effect: {
   /** Like `effect`, but its runs come after the effects and bindings of a flush, and its first run waits for the next flush. */
   post(fn: () => void | (() => void)): () => void;
 };
+/** Returns `select(key)`, true while `source` equals `key`; a change of `source` tells only the readers of the old and the new key. */
+export function selector<T>(source: Signal<T> | (() => T)): (key: T) => Signal<boolean>;
 /** Runs the waiting effects and bindings now instead of on the next microtask. */
 export function flush(): void;
 /** Resolves after the waiting effects and bindings have run; rejects with the first error of that flush. */
