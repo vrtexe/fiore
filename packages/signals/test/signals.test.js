@@ -2263,3 +2263,133 @@ test('resource does not abort a load that has already failed', async () => {
   assert.equal(calls[0].signal.aborted, false);
   assert.equal(calls.length, 2);
 });
+
+test('a warmed chain of 20,000 computeds updates without throwing', () => {
+  const source = state(0);
+  const chain = [source];
+  const warm = [];
+  for (let i = 1; i <= 20_000; i++) {
+    const previous = chain[i - 1];
+    chain.push(computed(() => previous.get() + 1));
+    // The first read of a chain nests once per computed, so the chain is read in steps while it grows.
+    if (i % 1_000 === 0) warm.push(effect(() => chain[i].get()));
+  }
+  const seen = [];
+  effect(() => seen.push(chain[20_000].get()));
+  warm.forEach((stop) => stop());
+
+  source.set(1);
+  flush();
+  source.set(2);
+  flush();
+
+  assert.deepEqual(seen, [20_000, 20_001, 20_002]);
+});
+
+test('a source read twice in one run is followed once', () => {
+  const a = state(1);
+  const b = state(1);
+  const sum = computed(() => a.get() + a.get());
+  let runs = 0;
+  effect(() => {
+    runs++;
+    a.get();
+    b.get();
+    a.get();
+    sum.get();
+    sum.get();
+  });
+
+  a.set(2);
+  flush();
+  b.set(2);
+  flush();
+  a.set(3);
+  flush();
+
+  assert.equal(runs, 4);
+  assert.equal(sum.get(), 6);
+});
+
+test('a run that reads fewer sources, or reads them in another order, follows only what it read', () => {
+  const keys = state(['a', 'b', 'c']);
+  const values = { a: state(1), b: state(1), c: state(1) };
+  let reads = 0;
+  const doubled = computed(() => (reads++, values.c.get() * 2));
+  let runs = 0;
+  effect(() => {
+    runs++;
+    for (const key of keys.get()) (key === 'c' ? doubled : values[key]).get();
+  });
+
+  keys.set(['c', 'a']);
+  flush();
+  values.b.set(2);
+  flush();
+  values.c.set(2);
+  flush();
+  keys.set(['a']);
+  flush();
+  values.c.set(3);
+  flush();
+  values.a.set(2);
+  flush();
+
+  assert.equal(runs, 5);
+  assert.equal(reads, 2);
+});
+
+test('a cleanup that stops the reader while it lets go of its sources leaves nothing subscribed', () => {
+  const show = state(true);
+  const count = state(0);
+  let stop;
+  const view = computed(() => {
+    onCleanup(() => stop());
+    return count.get();
+  });
+  let runs = 0;
+  stop = effect(() => {
+    runs++;
+    if (show.get()) view.get();
+    count.get();
+  });
+
+  show.set(false);
+  flush();
+  count.set(1);
+  flush();
+  show.set(true);
+  flush();
+
+  assert.equal(runs, 2);
+});
+
+test('a computed that threw after reading a state passes on the next change of a dirty computed it did not read', () => {
+  const a = state(0);
+  const x = state(0);
+  const inner = computed(() => x.get() + 1);
+  let fail = false;
+  const outer = computed(() => {
+    a.get();
+    if (fail) throw new Error('outer');
+    return inner.get() * 10;
+  });
+  const seen = [];
+  effect(() => {
+    try {
+      seen.push(outer.get());
+    } catch {
+      seen.push('error');
+    }
+  });
+
+  fail = true;
+  a.set(1);
+  x.set(1);
+  flush();
+  fail = false;
+  x.set(2);
+  flush();
+
+  assert.deepEqual(seen, [10, 'error', 30]);
+});
