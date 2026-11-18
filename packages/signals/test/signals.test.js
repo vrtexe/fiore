@@ -2429,3 +2429,34 @@ test('a warmed chain of 20,000 computeds that each also read the changed state u
   assert.deepEqual(seen, [20_001, 40_002, 60_003]);
   assert.equal(chain[20_000].get(), 60_003);
 });
+
+test('checking a computed that threw does not calculate the sources it did not read', () => {
+  const user = state({ name: 'ann' });
+  const loggedIn = state(true);
+  let nameRuns = 0;
+  const name = computed(() => (nameRuns++, user.get().name));
+  const view = computed(() => {
+    if (!loggedIn.get()) throw new Error('logged out');
+    return `hi ${name.get()}`;
+  });
+  effect(() => {
+    try {
+      view.get();
+    } catch {
+      // Only what view calculates matters here.
+    }
+  });
+  const seen = [];
+  effect(() => seen.push(name.get()));
+
+  loggedIn.set(false);
+  flush();
+  const before = nameRuns;
+  user.set({ name: 'bob' });
+  assert.throws(() => view.get(), /logged out/);
+  assert.equal(nameRuns, before);
+  user.set({ name: 'ann' });
+  flush();
+
+  assert.deepEqual(seen, ['ann']);
+});

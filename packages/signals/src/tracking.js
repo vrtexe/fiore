@@ -59,7 +59,7 @@ export let owner = null;
 /** Numbers effects in creation order, so a parent runs before the effects it created. */
 let nextId = 0;
 
-/** Numbers runs, so a source read twice in one run is linked once. */
+/** Numbers runs, so a source read twice in one run is linked once. Edges a run that threw kept unread get cycle 0. */
 let cycles = 0;
 /** The number of the running run. */
 let cycle = 0;
@@ -301,6 +301,12 @@ export function checkDirty(node) {
       const dep = edge.dep;
       const flags = dep.flags;
       if (flags & COMPUTED && flags & (DIRTY | PENDING)) {
+        // The last run threw before reading this source: it may have changed, and the next run reads it if it gets
+        // that far, so it is not calculated here.
+        if (edge.cycle === 0) {
+          dirty = true;
+          continue;
+        }
         stack[top++] = edge;
         sub = /** @type {Reader} */ (dep);
         edge = sub.deps;
@@ -377,6 +383,7 @@ export function runTracked(node, nextOwner, fn) {
     // them that is still dirty passes its next change on, so the next change runs it again.
     for (let edge = node.depsTail !== undefined ? node.depsTail.nextDep : node.deps; edge; edge = edge.nextDep) {
       edge.dep.flags |= MISSED;
+      edge.cycle = 0;
     }
     throw error;
   } finally {
