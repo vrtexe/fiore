@@ -504,3 +504,13 @@ test('the runtime takes only the SVG element function, so a bundle without SVG l
   assert.match(source, /import \{ element as svgElement \} from 'fiorejs\/svg';/);
   assert.doesNotMatch(source, /import svg\b|import \* as/);
 });
+
+test('a JSX xlink:href is set in the XLink namespace', () => {
+  const icon = (
+    <svg>
+      <use xlink:href="#a" />
+    </svg>
+  ) as SVGSVGElement;
+
+  assert.equal(icon.firstElementChild?.getAttributeNS('http://www.w3.org/1999/xlink', 'href'), '#a');
+});

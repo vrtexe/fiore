@@ -921,3 +921,25 @@ test('a select keeps its value when its options arrive later', async () => {
   await Promise.resolve();
   assert.equal(bound.value, 'a');
 });
+
+test('xlink:, xml: and xmlns: attributes are set in their namespaces, plain or live, and serialize as XML', () => {
+  const href = signal('#a');
+  const icon = svg.svg({
+    attrs: { 'xmlns:xlink': 'http://www.w3.org/1999/xlink' },
+    children: svg.use({ attrs: { 'xlink:href': href, 'xml:lang': 'en' } }),
+  });
+  const use = icon.firstChild;
+  const xlink = 'http://www.w3.org/1999/xlink';
+
+  assert.equal(use.getAttributeNS(xlink, 'href'), '#a');
+  assert.equal(use.getAttributeNS('http://www.w3.org/XML/1998/namespace', 'lang'), 'en');
+  href.set('#b');
+  assert.equal(use.getAttributeNS(xlink, 'href'), '#b');
+  const xml = new window.XMLSerializer().serializeToString(icon);
+  const parsed = new window.DOMParser().parseFromString(xml, 'image/svg+xml');
+  assert.equal(parsed.querySelector('parsererror'), null);
+  assert.equal(parsed.documentElement.firstElementChild.getAttributeNS(xlink, 'href'), '#b');
+  href.set(null);
+  assert.equal(use.hasAttributeNS(xlink, 'href'), false);
+  assert.equal(use.attributes.length, 1);
+});
