@@ -319,6 +319,16 @@ console.log(input.value, document.activeElement === input); // Ada true</code></
             parameter of <code>ref</code> is typed by the tag. Or cast the expression when it is the element itself:
             <code>(&lt;input /&gt;) as HTMLInputElement</code>.
           </p>
+          <p>
+            <code>ref</code> runs when the element is created, before a parent inserts it, so the element is not in the
+            document yet, as with <code>also</code>: focusing or measuring it inside <code>ref</code> does nothing. The example
+            above focuses the input after <code>document.body.append(form)</code>. With <code>@fiorejs/signals</code>, run such
+            code in <code>effect.post</code>, whose first run waits for the next flush, when the element is usually in the
+            document:
+          </p>
+<pre class="code" tabindex="0"><code class="language-jsx">import { effect } from '@fiorejs/signals';
+
+const field = &lt;input ref={(element) =&gt; effect.post(() =&gt; element.focus())} /&gt;;</code></pre>
         </section>
 
         <section id="events">

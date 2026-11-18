@@ -110,6 +110,38 @@ document.body.append(
             updates the input.
           </p>
           <p>
+            The control is written only when the signal changes. Setting a signal to the value it already has does nothing,
+            so a handler that corrects the input, such as a clamp, a rounding or a rejected character, or a reset to the
+            current value, leaves the control showing what the user typed. Below, typing 15 while <code>amount</code> is
+            already 1 keeps 15 in the field; typing it while <code>amount</code> is 0.5 shows 1. Write the control in the
+            handler as well:
+          </p>
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">const amount = state(1);
+
+input
+  .props({ type: 'number', value: amount.computed(String) })
+  .on({
+    input: (event) =&gt; {
+      const next = Math.min(1, event.currentTarget.valueAsNumber);
+      amount.set(next);
+      event.currentTarget.value = String(next); // amount may already be 1, then set does not write the field
+    },
+  })
+  .create();</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const amount = state(1);
+
+&lt;input
+  type="number"
+  value={amount.computed(String)}
+  oninput={(event) =&gt; {
+    const next = Math.min(1, event.currentTarget.valueAsNumber);
+    amount.set(next);
+    event.currentTarget.value = String(next); // amount may already be 1, then set does not write the field
+  }}
+/&gt;;</code></pre>
+</div>
+          <p>
             A checkbox uses <code>checked</code> and the <code>change</code> event, and reads
             <code>event.currentTarget.checked</code>:
           </p>
