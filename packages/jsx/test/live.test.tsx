@@ -18,3 +18,8 @@ void (<input placeholder={() => 'Name'} />);
 void (<button onclick={'not a function'} />);
 
 export {};
+
+// ref is typed by the tag: an input gives HTMLInputElement, and a wrong element type is rejected.
+void (<input ref={(element: HTMLInputElement) => element.focus()} />);
+// @ts-expect-error a div is not an input
+void (<div ref={(element: HTMLInputElement) => element.focus()} />);

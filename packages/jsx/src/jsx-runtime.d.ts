@@ -23,6 +23,8 @@ type CommonProps<T extends Element> = {
   /** Accepted and ignored, because nothing is diffed. */
   key?: string | number | bigint | null | undefined;
   children?: Child;
+  /** Called with the element once it is built, with its props, attributes, listeners and children, as the builder's `also`. */
+  ref?: ((element: T) => void) | undefined | null;
   class?: Live<string | undefined | null>;
   style?: Live<string | Partial<CSSStyleDeclaration> | undefined | null>;
   [event: `on${string}-${string}`]: Listener<T, CustomEvent> | undefined | null;

@@ -360,3 +360,22 @@ test('a fragment with a very long child list does not overflow', () => {
 
   assert.equal((<>{items}</>).childNodes.length, 200000);
 });
+
+test('ref gets the finished element, typed by its tag', () => {
+  let field: HTMLInputElement | undefined;
+  let circle: SVGCircleElement | undefined;
+  let valueSeen = '';
+  const form = (
+    <form>
+      <input value="Ada" ref={(element) => ((field = element), (valueSeen = element.value))} />
+      <svg>
+        <circle r="5" ref={(element) => (circle = element)} />
+      </svg>
+    </form>
+  ) as HTMLFormElement;
+
+  assert.equal(field, form.querySelector('input'));
+  assert.equal(valueSeen, 'Ada');
+  assert.equal(circle?.namespaceURI, 'http://www.w3.org/2000/svg');
+  assert.equal(form.querySelector('input')?.hasAttribute('ref'), false);
+});
