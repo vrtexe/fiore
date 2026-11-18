@@ -1,5 +1,5 @@
 import type { HTMLElementsAttributesMap } from 'fiorejs/type/attributes.d.ts';
-import type { ElementProps, Live, LiveAttributes } from 'fiorejs/type/base.dom.d.ts';
+import type { ElementProps, Live, LiveAttributes, RecursivePartial } from 'fiorejs/type/base.dom.d.ts';
 import type { HTMLEventMapOf } from 'fiorejs/type/html.dom.d.ts';
 import type { SVGEventMapOf } from 'fiorejs/type/svg.dom.d.ts';
 
@@ -27,7 +27,8 @@ type CommonProps<T extends Element> = {
   /** Called with the element once it is built, with its props, attributes, listeners and children, as the builder's `also`. */
   ref?: ((element: T) => void) | undefined | null;
   class?: Live<string | undefined | null>;
-  style?: Live<string | Partial<CSSStyleDeclaration> | undefined | null>;
+  /** A string, or an object of style properties whose values may be live, as in the builder's props. */
+  style?: Live<string | RecursivePartial<CSSStyleDeclaration> | undefined | null>;
   [event: `on${string}-${string}`]: Listener<T, CustomEvent> | undefined | null;
 };
 
