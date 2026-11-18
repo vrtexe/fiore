@@ -94,8 +94,9 @@
           </p>
           <pre class="code" tabindex="0"><code>npm install fiorejs @fiorejs/jsx</code></pre>
           <p>
-            In TypeScript, set the automatic runtime in <code>tsconfig.json</code>. Vite reads the same setting for
-            TypeScript files, so it needs no plugin:
+            In TypeScript, set the automatic runtime in <code>tsconfig.json</code>. Vite reads the same setting, but only
+            for the files that tsconfig includes; a <code>.tsx</code> file elsewhere, such as in <code>test/</code>, is
+            compiled for React. Set the import source in the Vite config as well, as the table below shows:
           </p>
           <pre class="code" tabindex="0"><code>{
   "compilerOptions": {
@@ -108,7 +109,7 @@
             <table>
               <thead><tr><th>Tool</th><th>Setting</th></tr></thead>
               <tbody>
-                <tr><td>Vite, JavaScript files</td><td><code>oxc: { jsx: { importSource: '@fiorejs/jsx' } }</code> in <code>vite.config.js</code></td></tr>
+                <tr><td>Vite</td><td><code>oxc: { jsx: { importSource: '@fiorejs/jsx' } }</code> in <code>vite.config.js</code> or <code>vite.config.ts</code></td></tr>
                 <tr><td>esbuild</td><td><code>--jsx=automatic --jsx-import-source=@fiorejs/jsx</code></td></tr>
                 <tr><td>Babel</td><td><code>@babel/plugin-transform-react-jsx</code> with <code>{ runtime: 'automatic', importSource: '@fiorejs/jsx' }</code></td></tr>
                 <tr><td>a single file</td><td>a <code>/** @jsxImportSource @fiorejs/jsx */</code> comment at the top</td></tr>
