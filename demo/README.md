@@ -89,7 +89,7 @@ What to look at:
 - **Which rows render.** The log shows a line for every row that is rendered. Add, reverse, shuffle and clear: existing rows are never rendered again.
 - **Rows are moved, not rebuilt.** Type in or focus the input of a row, then press **Reverse** or **Shuffle**. The row keeps its input value, because only the rows out of place are moved.
 - **Fields in signals.** Each todo keeps `done` in a signal, so checking a box updates only that row's class and the "left" count.
-- **for(key) and copies.** The second card keys rows by `id`. **Replace with an edited copy** changes the data, but the rows keep showing the text they were created with: a keyed row is rendered once, and a copy with the same key reuses it. Put fields that change in signals, as the todo list does.
+- **for(key) and copies.** The second card keys rows by `id`. **Replace with an edited copy** changes the data, and the rows update in place: a keyed row gets a signal of its item, and a copy with the same key keeps the row and sets that signal, so the row is not rebuilt.
 
 ### 6. Lifecycle (`flows/lifecycle.js`)
 

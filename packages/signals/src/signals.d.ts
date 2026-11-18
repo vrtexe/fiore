@@ -9,7 +9,7 @@ export interface Signal<T> extends LiveValue<T> {
   computed<U>(fn: (value: T) => U): Computed<U>;
   /** Passes the signal to `fn` and returns its result, for reusable steps. */
   with<R>(fn: (signal: this) => R): R;
-  /** Renders a list and reuses the rows of items it has seen; the item itself is the key. */
+  /** Renders a list and reuses the rows of items it has seen; the item itself is the key, so `render` gets the item. */
   map<U>(this: Signal<readonly U[]>, render: (item: U, index: number) => Node): LiveValue<Node[]>;
   /** Keys the rows of a list by `item.key`, or by what `key` returns. */
   for<U>(this: Signal<readonly U[]>, key?: (item: U) => unknown): Keyed<U>;
@@ -35,8 +35,8 @@ export interface When<A, B, T = unknown> extends LiveValue<A | B> {
 
 /** A signal of a list with its key, waiting for `map`. */
 export interface Keyed<T> {
-  /** Renders the list and reuses the rows of items whose key it has seen. */
-  map(render: (item: T, index: number) => Node): LiveValue<Node[]>;
+  /** Renders the list and reuses the rows of items whose key it has seen; `render` gets a signal of the row's current item. */
+  map(render: (item: Signal<T>, index: number) => Node): LiveValue<Node[]>;
 }
 
 export interface State<T> extends Signal<T> {

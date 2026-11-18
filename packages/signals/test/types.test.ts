@@ -36,7 +36,7 @@ void doubled;
 
 ul({ children: state(['a', 'b']).map((item) => li({ children: item })) });
 ul({ children: [li('head'), state(['a', 'b']).map((item) => li(item))] });
-ul({ children: state([{ id: 1 }]).for((item) => item.id).map((item) => li({ children: String(item.id) })) });
+ul({ children: state([{ id: 1 }]).for((item) => item.id).map((item) => li({ children: item.computed((value) => String(value.id)) })) });
 const doubledName: number = state(2).computed((value) => value * 2).get();
 void doubledName;
 // @ts-expect-error map needs a signal of an array

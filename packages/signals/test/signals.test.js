@@ -182,7 +182,7 @@ test('map reuses rows by key and stops the bindings of removed rows', () => {
   const label = state('item');
   const items = state([{ id: 1 }, { id: 2 }, { id: 3 }]);
   const list = div({
-    children: items.for((item) => item.id).map((item) => span({ children: computed(() => `${label.get()} ${item.id}`) })),
+    children: items.for((item) => item.id).map((item) => span({ children: computed(() => `${label.get()} ${item.get().id}`) })),
   });
   const [one, two, three] = list.children;
 
@@ -1337,14 +1337,14 @@ test('map reuses the rows of items it has seen', () => {
 
 test('for() keys rows by item.key by default and by a function when given', () => {
   const items = state([{ key: 'a' }, { key: 'b' }]);
-  const list = div({ children: items.for().map((item) => span(item.key)) });
+  const list = div({ children: items.for().map((item) => span(item.get().key)) });
   const [a, b] = list.children;
   items.set([{ key: 'b' }, { key: 'a' }]);
   flush();
   assert.deepEqual([...list.children], [b, a]);
 
   const rows = state([{ id: 1 }, { id: 2 }]);
-  const other = div({ children: rows.for((item) => item.id).map((item) => span(String(item.id))) });
+  const other = div({ children: rows.for((item) => item.id).map((item) => span(String(item.get().id))) });
   const [one, two] = other.children;
   rows.set([{ id: 2 }, { id: 1 }]);
   flush();
@@ -1385,7 +1385,7 @@ test('one list bound in two places keeps separate rows', () => {
 
 test('for() without key fields matches rows by position and does not throw', () => {
   const items = state([{ n: 1 }, { n: 2 }]);
-  const list = div({ children: items.for().map((item) => span(String(item.n))) });
+  const list = div({ children: items.for().map((item) => span(String(item.get().n))) });
 
   assert.doesNotThrow(() => {
     items.set([{ n: 3 }, { n: 4 }, { n: 5 }]);
@@ -2630,7 +2630,7 @@ test('a selector marks the selected row of a keyed list through classList', () =
   const selected = state(0);
   const isSelected = selector(selected);
   const body = div(
-    rows.for((row) => row.id).map((row) => span.props({ className: classList(['row', { danger: isSelected(row.id) }]) }).create(row.label)),
+    rows.for((row) => row.id).map((row) => span.props({ className: classList(['row', { danger: isSelected(row.get().id) }]) }).create(row.get().label)),
   );
   const classes = () => [...body.children].map((row) => row.className);
 
@@ -2644,4 +2644,47 @@ test('a selector marks the selected row of a keyed list through classList', () =
   flush();
 
   assert.deepEqual(classes(), ['row', 'row']);
+});
+
+test('a keyed row gets its item as a signal: a new object under the same key updates that row in place', () => {
+  const todos = state([
+    { id: 1, text: 'a' },
+    { id: 2, text: 'b' },
+  ]);
+  let renders = 0;
+  const reads = { 1: 0, 2: 0 };
+  const list = div(
+    todos.for((todo) => todo.id).map((todo) => {
+      renders++;
+      const id = todo.get().id;
+      return span(todo.computed((value) => (reads[id]++, value.text)));
+    }),
+  );
+  const [first, second] = list.children;
+
+  todos.set([todos.get()[0], { id: 2, text: 'b2' }]);
+  flush();
+
+  assert.equal(list.textContent, 'ab2');
+  assert.deepEqual([...list.children], [first, second]);
+  assert.equal(renders, 2);
+  assert.deepEqual(reads, { 1: 1, 2: 2 });
+});
+
+test('a keyed row whose key leaves and comes back is built again, and a new order moves the rows', () => {
+  const items = state([{ id: 1 }, { id: 2 }, { id: 3 }]);
+  let renders = 0;
+  const list = div(items.for((item) => item.id).map((item) => (renders++, span(String(item.get().id)))));
+  const [one, two, three] = list.children;
+
+  items.set([{ id: 3 }, { id: 1 }]);
+  flush();
+  assert.deepEqual([...list.children], [three, one]);
+  items.set([{ id: 3 }, { id: 2 }, { id: 1 }]);
+  flush();
+
+  assert.equal(list.textContent, '321');
+  assert.equal(renders, 4);
+  assert.notEqual(list.children[1], two);
+  assert.deepEqual([list.children[0], list.children[2]], [three, one]);
 });

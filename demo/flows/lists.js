@@ -21,12 +21,12 @@ export default function lists() {
   const list = ul(todos.map(row));
   const left = todos.computed((items) => items.filter((item) => !item.done.get()).length);
 
-  // 2. for(key): keyed by id. A copy with the same id reuses the row as it is, so changing fields belong in signals.
+  // 2. for(key): keyed by id. render gets a signal of the item; a copy with the same id keeps the row and updates it.
   const plain = state([
     { id: 1, text: 'first' },
     { id: 2, text: 'second' },
   ]);
-  const keyed = ul(plain.for((item) => item.id).map((item) => li(item.text)));
+  const keyed = ul(plain.for((item) => item.id).map((item) => li(item.computed((value) => value.text))));
   const notes = logger();
 
   return flow('lists', 'Lists', 'signal.map(render) keeps the rows of items it has seen; signal.for(key).map(render) keys them by a field. Watch which rows render, and focus an input before reordering: the row is moved, not rebuilt.', [
@@ -47,7 +47,7 @@ export default function lists() {
       [
         action('Replace with an edited copy', () => {
           plain.set(plain.get().map((item) => ({ ...item, text: `${item.text}!` })));
-          notes.write(`data now: ${plain.get().map((item) => item.text).join(', ')} (rows show what they were created with)`);
+          notes.write(`data now: ${plain.get().map((item) => item.text).join(', ')} (the rows update in place)`);
         }),
         action('Add id 3', () => plain.update((list) => [...list, { id: 3, text: 'third' }])),
         action('Reverse', () => plain.update((list) => list.toReversed())),

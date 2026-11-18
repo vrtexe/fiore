@@ -69,13 +69,13 @@ export class Signal {
   }
 
   /**
-   * Renders a list and reuses the rows of items it has seen; the item itself is the key.
+   * Renders a list and reuses the rows of items it has seen; the item itself is the key, so `render` gets the item.
    * @template U
    * @this {Signal<readonly U[]>}
    * @param {(item: U, index: number) => Node} render
    */
   map(render) {
-    return new List(this, render, (item) => item);
+    return new List(this, render, (item) => item, false);
   }
 
   /**
@@ -87,10 +87,11 @@ export class Signal {
   for(key = itemKey) {
     return {
       /**
-       * Renders the list and reuses the rows of items whose key it has seen.
-       * @param {(item: U, index: number) => Node} render
+       * Renders the list and reuses the rows of items whose key it has seen. `render` gets a signal of the row's item,
+       * which changes when a new array keeps the key with another object, so the row updates in place.
+       * @param {(item: Signal<U>, index: number) => Node} render
        */
-      map: (render) => new List(this, render, key),
+      map: (render) => new List(this, render, key, true),
     };
   }
 
@@ -147,23 +148,13 @@ class State extends Signal {
   }
 
   get() {
-    const edge = current !== null ? link(this, current) : undefined;
-    if (edge !== undefined) {
-      edge.version = this.version;
-    }
-    return this._value;
+    return readValue(this);
   }
 
   /** @param {T} next */
   set(next) {
     forbidInComputed();
-    if (!Object.is(next, this._value)) {
-      this._value = next;
-      this.version++;
-      if (this.subs !== undefined) {
-        propagate(this.subs);
-      }
-    }
+    writeValue(this, next);
   }
 
   /**
@@ -188,6 +179,64 @@ class State extends Signal {
       if (this.subs !== undefined) {
         propagate(this.subs);
       }
+    }
+  }
+}
+
+/**
+ * The item of a keyed list row: a signal that only the list writes, when a new array keeps the row's key with another
+ * object.
+ * @template T
+ * @extends {Signal<T>}
+ */
+export class Item extends Signal {
+  /** @param {T} value */
+  constructor(value) {
+    super();
+    this.flags = 0;
+    /** @type {Edge | undefined} */
+    this.subs = undefined;
+    /** @type {Edge | undefined} */
+    this.subsTail = undefined;
+    this.version = 0;
+    this._value = value;
+  }
+
+  get() {
+    return readValue(this);
+  }
+
+  /** @param {T} next */
+  _replace(next) {
+    writeValue(this, next);
+  }
+}
+
+/**
+ * Subscribes the running reader to a state or an item and returns its value.
+ * @template T
+ * @param {State<T> | Item<T>} source
+ */
+function readValue(source) {
+  const edge = current !== null ? link(source, current) : undefined;
+  if (edge !== undefined) {
+    edge.version = source.version;
+  }
+  return source._value;
+}
+
+/**
+ * Sets the value of a state or an item; a different value (`Object.is`) tells its readers.
+ * @template T
+ * @param {State<T> | Item<T>} source
+ * @param {T} next
+ */
+function writeValue(source, next) {
+  if (!Object.is(next, source._value)) {
+    source._value = next;
+    source.version++;
+    if (source.subs !== undefined) {
+      propagate(source.subs);
     }
   }
 }

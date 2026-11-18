@@ -51,11 +51,9 @@ function App() {
         <button type="submit">Add</button>
       </form>
       <ul class="list">
-        {todos
-          .for((todo) => todo.id)
-          .map((todo) => (
-            <TodoItem todo={todo} />
-          ))}
+        {todos.map((todo) => (
+          <TodoItem todo={todo} />
+        ))}
       </ul>
       <p class="hint">Only the parts that read a signal update when it changes; there is no virtual DOM.</p>
     </main>

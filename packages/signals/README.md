@@ -34,7 +34,7 @@ document.body.append(
 | --- | --- |
 | `state(value)` | A value with `get()`, `set(value)`, `update(fn)` and `mutate(fn)`. `update` sets the value `fn` returns, `mutate` changes the value in place. Reading it inside an effect, a computed or a binding subscribes to it. Setting an equal value (`Object.is`) does nothing. |
 | `signal.computed(fn)` | A computed value derived from one signal's value: `count.computed((n) => n * 2)`. |
-| `signal.map(render)`, `signal.for(key).map(render)` | A list that reuses the rows of items it has seen; see [Lists](#lists). |
+| `signal.map(render)`, `signal.for(key).map(render)` | A list that reuses the rows of items it has seen; a keyed list gives `render` a signal of the row's item; see [Lists](#lists). |
 | `signal.if(then).else(otherwise)` | Shows one of two branches by the signal's truthiness; see [Conditions](#conditions). |
 | `signal.case(match, render).else(otherwise)` | Shows the branch of the first case the value matches; see [Conditions](#conditions). |
 | `signal.with(fn)` | Passes the signal to `fn` and returns its result, for reusable steps such as `todos.with(byId)`. |
@@ -169,7 +169,7 @@ div(count.case(0, () => 'none').case((n) => n > 10, () => 'many').else(() => 'so
 
 ## Lists
 
-`signal.map(render)` renders a list from a signal of an array and reuses the rows of items it has seen before, so it only renders new items. The item itself is the key, so an item replaced by a copy gets a new row. `signal.for().map(render)` keys rows by `item.key`, and `signal.for((item) => item.id).map(render)` by what the function returns. A row is rendered once, for the item it was created with: a copy with the same key reuses the row as it is, so put the fields that change in signals (`{ id, text, done: state(false) }`) when you key a list. A key that appears more than once gets one row per occurrence; items without a `key` field all get the key `undefined` and are matched by position, so such a row keeps showing the item it was created for. A row can be a node or a fragment. When the order changes, only the rows that are out of place are moved, so a focused input in an unmoved row keeps its focus; browsers with `moveBefore` keep it in moved rows too. If `render` throws, the list keeps the rows it had, but stops updating like any binding that throws, and the error is thrown at the end of the flush.
+`signal.map(render)` renders a list from a signal of an array and reuses the rows of items it has seen before, so it only renders new items. The item itself is the key, so an item replaced by a copy gets a new row. `signal.for().map(render)` keys rows by `item.key`, and `signal.for((item) => item.id).map(render)` by what the function returns. In a keyed list `render` gets a signal of the item instead of the item: a new array that keeps a key with another object, such as an immutable update of one record, keeps the row and sets its item signal, so only the bindings that read it update and the row's nodes stay. A key that leaves the list and comes back gets a new row. `signal.map(render)` keys by the item itself, which therefore never changes for a row, so it passes the plain item. A key that appears more than once gets one row per occurrence; items without a `key` field all get the key `undefined` and are matched by position, and each such row's item signal follows the item at its position. A row can be a node or a fragment. When the order changes, only the rows that are out of place are moved, so a focused input in an unmoved row keeps its focus; browsers with `moveBefore` keep it in moved rows too. If `render` throws, the list keeps the rows it had, but stops updating like any binding that throws, and the error is thrown at the end of the flush.
 
 A list is a live value, so pass it directly as the children. Each place it is bound keeps its own rows. Inside a computed child, give it its own element: `computed(() => (show.get() ? ul(todos.map(render)) : null))`; rows are then reused only while that computed does not recalculate. `render` gets the item's index at the time its row is created.
 
@@ -179,9 +179,10 @@ import { state } from '@fiorejs/signals';
 
 const todos = state([{ id: 1, text: 'Write docs' }]);
 
-ul(todos.for((todo) => todo.id).map((todo) => li.create(todo.text)));
+ul(todos.for((todo) => todo.id).map((todo) => li.create(todo.computed((value) => value.text))));
 
 todos.set([...todos.get(), { id: 2, text: 'Publish' }]);
+todos.set(todos.get().map((todo) => (todo.id === 1 ? { ...todo, text: 'Write more docs' } : todo))); // row 1 updates in place
 ```
 
 Lists of a few thousand rows are fine: in Chromium, 1,000 rows with three bound inputs each render in about 40 ms including layout, a change to one row takes well under a millisecond, and adding, removing or swapping rows moves only the rows involved. For much longer lists the number of DOM nodes becomes the limit, so paginate or render only the visible rows.
