@@ -73,3 +73,12 @@ void userCard;
 element('usercard');
 // @ts-expect-error the global attributes keep their types on a custom element
 element('user-card').attrs({ class: 42 });
+
+// With exactOptionalPropertyTypes, props take undefined like attributes do; undefined props are skipped.
+declare const maybeId: string | undefined;
+declare const maybeMax: number | undefined;
+div.attrs({ title: maybeId }).create();
+div.props({ title: maybeId, className: maybeId }).create();
+input.props({ maxLength: maybeMax }).create();
+// @ts-expect-error a prop still takes only its own type
+input.props({ maxLength: 'ten' }).create();

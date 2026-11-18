@@ -21,8 +21,9 @@ export type ReadonlyKeys<T> = {
   >;
 }[keyof T];
 
+/** Optional props, nested objects included; undefined is accepted and skipped, as for attributes. */
 export type RecursivePartial<T> = {
-  [P in keyof T]?: Live<T[P] extends object ? RecursivePartial<T[P]> : T[P]>;
+  [P in keyof T]?: Live<T[P] extends object ? RecursivePartial<T[P]> : T[P]> | undefined;
 };
 
 /** A live value: core calls its [LIVE] method with an `apply` to call now and whenever the value changes. */

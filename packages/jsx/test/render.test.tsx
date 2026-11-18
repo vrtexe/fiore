@@ -471,3 +471,8 @@ test('async components as list rows keep their rows when the list changes after 
 void (<form novalidate="" />);
 // @ts-expect-error a boolean attribute takes true, false or ''
 void (<input required="yes" />);
+
+// With exactOptionalPropertyTypes, property props take undefined like attribute props do.
+export function optionalProps(maybeId: string | undefined, maybeMax: number | undefined) {
+  return [<div class={maybeId} className={maybeId} />, <input maxlength={maybeMax} maxLength={maybeMax} />];
+}

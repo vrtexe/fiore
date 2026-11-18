@@ -4,6 +4,7 @@
     "module": "nodenext",
     "moduleResolution": "nodenext",
     "strict": true,
+    "exactOptionalPropertyTypes": true,
     "noEmit": true,
     "types": [],
     "lib": ["es2022", "dom", "dom.iterable"]
