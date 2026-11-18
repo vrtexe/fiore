@@ -1,6 +1,9 @@
 // Type checks for consumers, compiled with tsc --noEmit by npm test.
 import { a, button, div, element, form, input, section, span, type HTMLModifier } from '../lib/html.js';
 import svg from '../lib/svg.js';
+import type { Children } from '../lib/html.js';
+import type { Children as SVGChildren } from '../lib/svg.js';
+import type { Children as MathChildren } from '../lib/math.js';
 
 const isAdmin = false as boolean;
 
@@ -88,3 +91,12 @@ div.props({ dataset: { id: '42', kind: 'demo' } }).create('x');
 div({ props: { dataset: { id: undefined } } });
 // @ts-expect-error dataset values are strings
 div.props({ dataset: { id: 42 } }).create();
+
+// Children is exported from every entry point, for components that pass children on.
+const panel = (children: Children) => section(children);
+panel([span('a'), 'b', null]);
+const shapes: SVGChildren = [svg.circle()];
+const formula: MathChildren = 'x';
+void [shapes, formula];
+// @ts-expect-error a plain object is not a child
+panel({ text: 'a' });

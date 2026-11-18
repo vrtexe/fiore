@@ -197,7 +197,7 @@ span(new Observed(clock));
 
 Only values with a `[LIVE]` method are live. A plain function is a callback, never a getter, in props, attributes and children alike; strings, numbers, booleans, nodes and plain objects without `[LIVE]` are static. Attributes named `on` followed by letters only, such as `onclick` in any case, are never set or bound, because the browser may run their text as script; hyphenated names such as `on-tap` are. As a prop, a handler can be a live value whose value is a function: `props: { onclick: handler }` swaps the handler when `handler` changes. Listeners belong in `on`. A live child that has not called `apply` yet keeps an empty place until it does. A node that one live child places can be taken over by another live child, which then owns it; a node from a live child that is passed as a static child of another element is moved there without its live child being told, so give each node one owner.
 
-The key comes from `Symbol.for`, so live values also work when a page loads two copies of fiorejs. The `LiveValue`, `Live` and `BindContext` types are exported from `fiorejs`; a value whose `[LIVE]` method passes a `T` to `apply` fits `Live<T>`, so props, attributes and children check the type of a live value like that of a plain one.
+The key comes from `Symbol.for`, so live values also work when a page loads two copies of fiorejs. The `LiveValue`, `Live` and `BindContext` types are exported from `fiorejs`, and `Children`, the type of what a tag takes as children, from `fiorejs`, `fiorejs/svg` and `fiorejs/math`; a value whose `[LIVE]` method passes a `T` to `apply` fits `Live<T>`, so props, attributes and children check the type of a live value like that of a plain one.
 
 ## Upgrading from 1.x
 

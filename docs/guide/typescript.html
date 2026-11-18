@@ -266,8 +266,9 @@ document.body.append(&lt;TextInput type="email" oninput={(event) =&gt; console.l
           <h2>The type subpaths</h2>
           <p>
             The main types are exported from the entry points: <code>fiorejs</code> exports <code>HTMLModifier</code>,
-            <code>HTMLBuilder</code>, <code>Live</code>, <code>LiveValue</code> and <code>BindContext</code>, and <code>fiorejs/svg</code>
-            exports <code>SVGModifier</code>. The rest live in the declaration files under <code>lib/types</code>, which the
+            <code>HTMLBuilder</code>, <code>Children</code>, <code>Live</code>, <code>LiveValue</code> and <code>BindContext</code>, and <code>fiorejs/svg</code>
+            exports <code>SVGModifier</code>. <code>Children</code>, the type of what a tag takes as children, is exported from
+            <code>fiorejs/svg</code> and <code>fiorejs/math</code> too, for components that pass their children on. The rest live in the declaration files under <code>lib/types</code>, which the
             <code>fiorejs/type/*</code> subpath maps to. Use it for types such as <code>ElementData</code> and <code>HTMLTag</code>:
           </p>
           <pre class="code" tabindex="0"><code class="language-ts">import type { Live, LiveValue, HTMLBuilder } from 'fiorejs';

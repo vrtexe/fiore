@@ -1,6 +1,7 @@
 export { svgElement as element };
 /** @typedef {import('./types/svg.dom.d.ts').SVGBuilder} SVGBuilder */
 /** @typedef {import('./types/svg.dom.d.ts').SVGModifier} SVGModifier */
+/** @typedef {import('./types/base.dom.d.ts').Children} Children */
 export const a: import("./types/svg.dom.d.ts").SVGTag<"a">;
 export const animate: import("./types/svg.dom.d.ts").SVGTag<"animate">;
 export const animateMotion: import("./types/svg.dom.d.ts").SVGTag<"animateMotion">;
@@ -133,4 +134,5 @@ declare namespace _default {
 export default _default;
 export type SVGBuilder = import("./types/svg.dom.d.ts").SVGBuilder;
 export type SVGModifier = import("./types/svg.dom.d.ts").SVGModifier;
+export type Children = import("./types/base.dom.d.ts").Children;
 import { svgElement } from './core/svg.js';
