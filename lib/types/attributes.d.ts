@@ -34,6 +34,9 @@
 
 type Booleanish = boolean | "true" | "false";
 
+/** A boolean attribute: true or "" sets it, false removes it. */
+type BooleanAttribute = boolean | "";
+
 //
 // Event Handler Types
 // ----------------------------------------------------------------------
@@ -615,7 +618,7 @@ export interface HTMLAttributes<T extends EventTarget> extends AriaAttributes, D
   // Standard HTML Attributes
   accesskey?: string | undefined | null;
   autocapitalize?: "characters" | "off" | "on" | "none" | "sentences" | "words" | undefined | null;
-  autofocus?: boolean | undefined | null;
+  autofocus?: BooleanAttribute | undefined | null;
   class?: ClassValue | undefined | null;
   contenteditable?: Booleanish | "inherit" | "plaintext-only" | undefined | null;
   contextmenu?: string | undefined | null;
@@ -643,7 +646,7 @@ export interface HTMLAttributes<T extends EventTarget> extends AriaAttributes, D
   tabindex?: number | undefined | null;
   title?: string | undefined | null;
   translate?: "yes" | "no" | "" | undefined | null;
-  inert?: boolean | undefined | null;
+  inert?: BooleanAttribute | undefined | null;
   popover?: "auto" | "manual" | "hint" | "" | undefined | null;
   writingsuggestions?: Booleanish | undefined | null;
 
@@ -667,7 +670,7 @@ export interface HTMLAttributes<T extends EventTarget> extends AriaAttributes, D
   autosave?: string | undefined | null;
   color?: string | undefined | null;
   itemprop?: string | undefined | null;
-  itemscope?: boolean | undefined | null;
+  itemscope?: BooleanAttribute | undefined | null;
   itemtype?: string | undefined | null;
   itemid?: string | undefined | null;
   itemref?: string | undefined | null;
@@ -741,7 +744,7 @@ export interface HTMLBlockquoteAttributes extends HTMLAttributes<HTMLQuoteElemen
 }
 
 export interface HTMLButtonAttributes extends HTMLAttributes<HTMLButtonElement> {
-  disabled?: boolean | undefined | null;
+  disabled?: BooleanAttribute | undefined | null;
   form?: string | undefined | null;
   formaction?: string | undefined | null;
   formenctype?:
@@ -751,7 +754,7 @@ export interface HTMLButtonAttributes extends HTMLAttributes<HTMLButtonElement> 
     | undefined
     | null;
   formmethod?: "dialog" | "get" | "post" | "DIALOG" | "GET" | "POST" | undefined | null;
-  formnovalidate?: boolean | undefined | null;
+  formnovalidate?: BooleanAttribute | undefined | null;
   formtarget?: string | undefined | null;
   name?: string | undefined | null;
   type?: "submit" | "reset" | "button" | undefined | null;
@@ -790,7 +793,7 @@ export interface HTMLDataAttributes extends HTMLAttributes<HTMLDataElement> {
 }
 
 export interface HTMLDetailsAttributes extends HTMLAttributes<HTMLDetailsElement> {
-  open?: boolean | undefined | null;
+  open?: BooleanAttribute | undefined | null;
   name?: string | undefined | null;
 
   ontoggle?: EventHandler<Event, HTMLDetailsElement> | undefined | null;
@@ -803,7 +806,7 @@ export interface HTMLDelAttributes extends HTMLAttributes<HTMLModElement> {
 }
 
 export interface HTMLDialogAttributes extends HTMLAttributes<HTMLDialogElement> {
-  open?: boolean | undefined | null;
+  open?: BooleanAttribute | undefined | null;
   closedby?: "any" | "closerequest" | "none" | undefined | null;
 }
 
@@ -815,7 +818,7 @@ export interface HTMLEmbedAttributes extends HTMLAttributes<HTMLEmbedElement> {
 }
 
 export interface HTMLFieldsetAttributes extends HTMLAttributes<HTMLFieldSetElement> {
-  disabled?: boolean | undefined | null;
+  disabled?: BooleanAttribute | undefined | null;
   form?: string | undefined | null;
   name?: string | undefined | null;
 }
@@ -832,7 +835,7 @@ export interface HTMLFormAttributes extends HTMLAttributes<HTMLFormElement> {
     | null;
   method?: "dialog" | "get" | "post" | "DIALOG" | "GET" | "POST" | undefined | null;
   name?: string | undefined | null;
-  novalidate?: boolean | undefined | null;
+  novalidate?: BooleanAttribute | undefined | null;
   target?: string | undefined | null;
   rel?: string | undefined | null;
 }
@@ -843,8 +846,8 @@ export interface HTMLHtmlAttributes extends HTMLAttributes<HTMLHtmlElement> {
 
 export interface HTMLIframeAttributes extends HTMLAttributes<HTMLIFrameElement> {
   allow?: string | undefined | null;
-  allowfullscreen?: boolean | undefined | null;
-  allowtransparency?: boolean | undefined | null;
+  allowfullscreen?: BooleanAttribute | undefined | null;
+  allowtransparency?: BooleanAttribute | undefined | null;
   /** @deprecated */
   frameborder?: number | string | undefined | null;
   height?: number | string | undefined | null;
@@ -858,7 +861,7 @@ export interface HTMLIframeAttributes extends HTMLAttributes<HTMLIFrameElement> 
   sandbox?: string | undefined | null;
   /** @deprecated */
   scrolling?: string | undefined | null;
-  seamless?: boolean | undefined | null;
+  seamless?: BooleanAttribute | undefined | null;
   src?: string | undefined | null;
   srcdoc?: string | undefined | null;
   width?: number | string | undefined | null;
@@ -870,7 +873,7 @@ export interface HTMLImgAttributes extends HTMLAttributes<HTMLImageElement> {
   decoding?: "async" | "auto" | "sync" | undefined | null;
   fetchpriority?: "auto" | "high" | "low" | undefined | null;
   height?: number | string | undefined | null;
-  ismap?: boolean | undefined | null;
+  ismap?: BooleanAttribute | undefined | null;
   loading?: "eager" | "lazy" | undefined | null;
   referrerpolicy?: ReferrerPolicy | undefined | null;
   sizes?: string | undefined | null;
@@ -917,9 +920,9 @@ export interface HTMLInputAttributes extends HTMLAttributes<HTMLInputElement> {
   // Safari only https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input#autocorrect
   autocorrect?: "on" | "off" | "" | undefined | null;
   capture?: boolean | "user" | "environment" | undefined | null; // https://www.w3.org/TR/html-media-capture/#the-capture-attribute
-  checked?: boolean | undefined | null;
+  checked?: BooleanAttribute | undefined | null;
   dirname?: string | undefined | null;
-  disabled?: boolean | undefined | null;
+  disabled?: BooleanAttribute | undefined | null;
   files?: FileList | undefined | null;
   form?: string | undefined | null;
   formaction?: string | undefined | null;
@@ -930,22 +933,22 @@ export interface HTMLInputAttributes extends HTMLAttributes<HTMLInputElement> {
     | undefined
     | null;
   formmethod?: "dialog" | "get" | "post" | "DIALOG" | "GET" | "POST" | undefined | null;
-  formnovalidate?: boolean | undefined | null;
+  formnovalidate?: BooleanAttribute | undefined | null;
   formtarget?: string | undefined | null;
   group?: any | undefined | null;
   height?: number | string | undefined | null;
-  indeterminate?: boolean | undefined | null;
+  indeterminate?: BooleanAttribute | undefined | null;
   list?: string | undefined | null;
   max?: number | string | undefined | null;
   maxlength?: number | undefined | null;
   min?: number | string | undefined | null;
   minlength?: number | undefined | null;
-  multiple?: boolean | undefined | null;
+  multiple?: BooleanAttribute | undefined | null;
   name?: string | undefined | null;
   pattern?: string | undefined | null;
   placeholder?: string | undefined | null;
-  readonly?: boolean | undefined | null;
-  required?: boolean | undefined | null;
+  readonly?: BooleanAttribute | undefined | null;
+  required?: BooleanAttribute | undefined | null;
   size?: number | undefined | null;
   src?: string | undefined | null;
   step?: number | string | undefined | null;
@@ -954,17 +957,17 @@ export interface HTMLInputAttributes extends HTMLAttributes<HTMLInputElement> {
   // needs both casing variants because language tools does lowercase names of non-shorthand attributes
   defaultValue?: string | number | undefined | null;
   defaultvalue?: string | number | undefined | null;
-  defaultChecked?: boolean | undefined | null;
-  defaultchecked?: boolean | undefined | null;
+  defaultChecked?: BooleanAttribute | undefined | null;
+  defaultchecked?: BooleanAttribute | undefined | null;
   width?: number | string | undefined | null;
-  webkitdirectory?: boolean | undefined | null;
+  webkitdirectory?: BooleanAttribute | undefined | null;
 
   onchange?: ChangeEventHandler<HTMLInputElement> | undefined | null;
 }
 
 export interface HTMLKeygenAttributes extends HTMLAttributes<HTMLElement> {
   challenge?: string | undefined | null;
-  disabled?: boolean | undefined | null;
+  disabled?: BooleanAttribute | undefined | null;
   form?: string | undefined | null;
   keytype?: string | undefined | null;
   keyparams?: string | undefined | null;
@@ -1032,8 +1035,8 @@ export interface HTMLMenuAttributes extends HTMLAttributes<HTMLMenuElement> {
 }
 
 export interface HTMLMediaAttributes<T extends HTMLMediaElement> extends HTMLAttributes<T> {
-  autoplay?: boolean | undefined | null;
-  controls?: boolean | undefined | null;
+  autoplay?: BooleanAttribute | undefined | null;
+  controls?: BooleanAttribute | undefined | null;
   controlslist?:
     | "nodownload"
     | "nofullscreen"
@@ -1044,12 +1047,12 @@ export interface HTMLMediaAttributes<T extends HTMLMediaElement> extends HTMLAtt
     | null;
   crossorigin?: "anonymous" | "use-credentials" | "" | undefined | null;
   currenttime?: number | undefined | null;
-  defaultmuted?: boolean | undefined | null;
+  defaultmuted?: BooleanAttribute | undefined | null;
   defaultplaybackrate?: number | undefined | null;
-  loop?: boolean | undefined | null;
+  loop?: BooleanAttribute | undefined | null;
   mediagroup?: string | undefined | null;
-  muted?: boolean | undefined | null;
-  playsinline?: boolean | undefined | null;
+  muted?: BooleanAttribute | undefined | null;
+  playsinline?: BooleanAttribute | undefined | null;
   preload?: "auto" | "none" | "metadata" | "" | undefined | null;
   src?: string | undefined | null;
   srcobject?: MediaStream | MediaSource | File | Blob;
@@ -1102,20 +1105,20 @@ export interface HTMLObjectAttributes extends HTMLAttributes<HTMLObjectElement> 
 }
 
 export interface HTMLOlAttributes extends HTMLAttributes<HTMLOListElement> {
-  reversed?: boolean | undefined | null;
+  reversed?: BooleanAttribute | undefined | null;
   start?: number | undefined | null;
   type?: "1" | "a" | "A" | "i" | "I" | undefined | null;
 }
 
 export interface HTMLOptgroupAttributes extends HTMLAttributes<HTMLOptGroupElement> {
-  disabled?: boolean | undefined | null;
+  disabled?: BooleanAttribute | undefined | null;
   label?: string | undefined | null;
 }
 
 export interface HTMLOptionAttributes extends HTMLAttributes<HTMLOptionElement> {
-  disabled?: boolean | undefined | null;
+  disabled?: BooleanAttribute | undefined | null;
   label?: string | undefined | null;
-  selected?: boolean | undefined | null;
+  selected?: BooleanAttribute | undefined | null;
   value?: any;
 }
 
@@ -1140,14 +1143,14 @@ export interface HTMLSlotAttributes extends HTMLAttributes<HTMLSlotElement> {
 }
 
 export interface HTMLScriptAttributes extends HTMLAttributes<HTMLScriptElement> {
-  async?: boolean | undefined | null;
+  async?: BooleanAttribute | undefined | null;
   /** @deprecated */
   charset?: string | undefined | null;
   crossorigin?: "anonymous" | "use-credentials" | "" | undefined | null;
-  defer?: boolean | undefined | null;
+  defer?: BooleanAttribute | undefined | null;
   fetchpriority?: "auto" | "high" | "low" | undefined | null;
   integrity?: string | undefined | null;
-  nomodule?: boolean | undefined | null;
+  nomodule?: BooleanAttribute | undefined | null;
   nonce?: string | undefined | null;
   referrerpolicy?: ReferrerPolicy | undefined | null;
   src?: string | undefined | null;
@@ -1156,11 +1159,11 @@ export interface HTMLScriptAttributes extends HTMLAttributes<HTMLScriptElement> 
 
 export interface HTMLSelectAttributes extends HTMLAttributes<HTMLSelectElement> {
   autocomplete?: FullAutoFill | undefined | null;
-  disabled?: boolean | undefined | null;
+  disabled?: BooleanAttribute | undefined | null;
   form?: string | undefined | null;
-  multiple?: boolean | undefined | null;
+  multiple?: BooleanAttribute | undefined | null;
   name?: string | undefined | null;
-  required?: boolean | undefined | null;
+  required?: BooleanAttribute | undefined | null;
   size?: number | undefined | null;
   value?: any;
 
@@ -1180,7 +1183,7 @@ export interface HTMLSourceAttributes extends HTMLAttributes<HTMLSourceElement> 
 export interface HTMLStyleAttributes extends HTMLAttributes<HTMLStyleElement> {
   media?: string | undefined | null;
   nonce?: string | undefined | null;
-  scoped?: boolean | undefined | null;
+  scoped?: BooleanAttribute | undefined | null;
   type?: string | undefined | null;
 }
 
@@ -1190,7 +1193,7 @@ export interface HTMLTableAttributes extends HTMLAttributes<HTMLTableElement> {
   border?: number | undefined | null;
   cellpadding?: number | string | undefined | null;
   cellspacing?: number | string | undefined | null;
-  frame?: boolean | undefined | null;
+  frame?: BooleanAttribute | undefined | null;
   rules?: "none" | "groups" | "rows" | "columns" | "all" | undefined | null;
   summary?: string | undefined | null;
   width?: number | string | undefined | null;
@@ -1200,14 +1203,14 @@ export interface HTMLTextareaAttributes extends HTMLAttributes<HTMLTextAreaEleme
   autocomplete?: FullAutoFill | undefined | null;
   cols?: number | undefined | null;
   dirname?: string | undefined | null;
-  disabled?: boolean | undefined | null;
+  disabled?: BooleanAttribute | undefined | null;
   form?: string | undefined | null;
   maxlength?: number | undefined | null;
   minlength?: number | undefined | null;
   name?: string | undefined | null;
   placeholder?: string | undefined | null;
-  readonly?: boolean | undefined | null;
-  required?: boolean | undefined | null;
+  readonly?: BooleanAttribute | undefined | null;
+  required?: BooleanAttribute | undefined | null;
   rows?: number | undefined | null;
   value?: string | string[] | number | undefined | null;
   // needs both casing variants because language tools does lowercase names of non-shorthand attributes
@@ -1244,7 +1247,7 @@ export interface HTMLTimeAttributes extends HTMLAttributes<HTMLTimeElement> {
 }
 
 export interface HTMLTrackAttributes extends HTMLAttributes<HTMLTrackElement> {
-  default?: boolean | undefined | null;
+  default?: BooleanAttribute | undefined | null;
   kind?: "captions" | "chapters" | "descriptions" | "metadata" | "subtitles" | undefined | null;
   label?: string | undefined | null;
   src?: string | undefined | null;
@@ -1253,11 +1256,11 @@ export interface HTMLTrackAttributes extends HTMLAttributes<HTMLTrackElement> {
 
 export interface HTMLVideoAttributes extends HTMLMediaAttributes<HTMLVideoElement> {
   height?: number | string | undefined | null;
-  playsinline?: boolean | undefined | null;
+  playsinline?: BooleanAttribute | undefined | null;
   poster?: string | undefined | null;
   width?: number | string | undefined | null;
-  disablepictureinpicture?: boolean | undefined | null;
-  disableremoteplayback?: boolean | undefined | null;
+  disablepictureinpicture?: BooleanAttribute | undefined | null;
+  disableremoteplayback?: BooleanAttribute | undefined | null;
 }
 
 export interface SVGAttributes<T extends EventTarget> extends AriaAttributes, DOMAttributes<T> {
@@ -1561,18 +1564,18 @@ export interface HTMLTemplateAttributes extends HTMLAttributes<HTMLElement> {
 }
 
 export interface HTMLWebViewAttributes extends HTMLAttributes<HTMLElement> {
-  allowfullscreen?: boolean | undefined | null;
-  allowpopups?: boolean | undefined | null;
-  autosize?: boolean | undefined | null;
+  allowfullscreen?: BooleanAttribute | undefined | null;
+  allowpopups?: BooleanAttribute | undefined | null;
+  autosize?: BooleanAttribute | undefined | null;
   blinkfeatures?: string | undefined | null;
   disableblinkfeatures?: string | undefined | null;
-  disableguestresize?: boolean | undefined | null;
-  disablewebsecurity?: boolean | undefined | null;
+  disableguestresize?: BooleanAttribute | undefined | null;
+  disablewebsecurity?: BooleanAttribute | undefined | null;
   guestinstance?: string | undefined | null;
   httpreferrer?: string | undefined | null;
-  nodeintegration?: boolean | undefined | null;
+  nodeintegration?: BooleanAttribute | undefined | null;
   partition?: string | undefined | null;
-  plugins?: boolean | undefined | null;
+  plugins?: BooleanAttribute | undefined | null;
   preload?: string | undefined | null; // in the DOM it's only 'auto' | 'none' | 'metadata' | '', but electron allows arbitrary values
   src?: string | undefined | null;
   useragent?: string | undefined | null;

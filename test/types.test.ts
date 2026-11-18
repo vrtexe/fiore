@@ -1,5 +1,5 @@
 // Type checks for consumers, compiled with tsc --noEmit by npm test.
-import { a, button, div, input, section, span, type HTMLModifier } from '../lib/html.js';
+import { a, button, div, form, input, section, span, type HTMLModifier } from '../lib/html.js';
 import svg from '../lib/svg.js';
 
 const isAdmin = false as boolean;
@@ -59,3 +59,9 @@ div.create('a', 'b');
 // A bigint renders as text, like a number.
 void div(10n);
 void div([1n, ' items']);
+
+// Boolean attributes take '' as in HTML, besides true and false.
+form.attrs({ novalidate: '' }).create();
+input.attrs({ autofocus: '', required: true, disabled: false }).create();
+// @ts-expect-error a boolean attribute takes true, false or ''
+input.attrs({ required: 'yes' }).create();

@@ -466,3 +466,8 @@ test('async components as list rows keep their rows when the list changes after 
   assert.deepEqual(texts(), ['row 2,row 1,row 5', 'row 2,row 1,row 5']);
   assert.equal(keyed.children[1], first);
 });
+
+// Boolean attributes take '' as in HTML.
+void (<form novalidate="" />);
+// @ts-expect-error a boolean attribute takes true, false or ''
+void (<input required="yes" />);
