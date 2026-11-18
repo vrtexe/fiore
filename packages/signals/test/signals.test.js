@@ -2531,3 +2531,51 @@ test('effects queued while a flush runs run once in that flush, in creation orde
 
   assert.deepEqual(log, ['second1', 'first1', 'third1', 'second2', 'first2', 'third2', 'second3', 'first3', 'third3']);
 });
+
+test('a list alone in its element clears and replaces all its rows in one step and stops their bindings', (t) => {
+  const label = state('a');
+  const items = state([1, 2, 3]);
+  const list = div(items.map((item) => span(computed(() => `${label.get()}${item}`))));
+  const old = [...list.children];
+  const ranges = t.mock.method(document, 'createRange');
+
+  items.set([4, 5]);
+  flush();
+  assert.equal(list.textContent, 'a4a5');
+  items.set([]);
+  flush();
+  assert.equal(list.childNodes.length, 0);
+  items.set([6]);
+  flush();
+  label.set('b');
+  flush();
+
+  assert.equal(ranges.mock.callCount(), 0);
+  assert.equal(list.textContent, 'b6');
+  assert.deepEqual(old.map((row) => row.textContent), ['a1', 'a2', 'a3']);
+});
+
+test('a list that shares its element keeps the other children when it clears or replaces its rows', () => {
+  const items = state([1, 2]);
+  const list = div(['[', items.map((item) => span(String(item))), ']']);
+
+  items.set([3, 4]);
+  flush();
+  assert.equal(list.textContent, '[34]');
+  items.set([]);
+  flush();
+
+  assert.equal(list.textContent, '[]');
+});
+
+test('a list alone in its element keeps the nodes of the rows that stay', () => {
+  const items = state([1, 2, 3]);
+  const list = div(items.map((item) => span(String(item))));
+  const [, two] = list.children;
+
+  items.set([4, 2, 5]);
+  flush();
+
+  assert.equal(list.textContent, '425');
+  assert.equal(list.children[1], two);
+});

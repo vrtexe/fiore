@@ -47,6 +47,9 @@ export class List {
     /** Counts the passes; a row marked with the current pass is shown, so a repeated key takes the next row. */
     let pass = 0;
 
+    // Alone in its element, the list owns all of the element's nodes, so it can remove them in one step.
+    const parent = context.kind === 'child' && context.anchor === context.element ? context.element : null;
+
     adopt(() => {
       const old = rows;
       rows = new Map();
@@ -66,8 +69,9 @@ export class List {
         const created = [];
         /** @type {Node[]} */
         const nodes = [];
+        const items = this._source.get();
         try {
-          this._source.get().forEach((item, index) => {
+          items.forEach((item, index) => {
             const id = this._key(item);
             let row = rows.get(id)?.find((candidate) => candidate.pass !== pass);
             if (!row) {
@@ -93,6 +97,10 @@ export class List {
 
         const old = rows;
         rows = next;
+        // No row stays, so the old rows leave the element at once instead of one by one; the new ones are inserted next.
+        if (parent !== null && created.length === items.length && parent.firstChild !== null) {
+          parent.textContent = '';
+        }
         for (const list of old.values()) {
           for (const row of list) {
             if (row.pass !== pass) {
