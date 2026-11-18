@@ -145,8 +145,9 @@ class State extends Signal {
   }
 
   get() {
-    if (current !== null) {
-      link(this, current).version = this.version;
+    const edge = current !== null ? link(this, current) : undefined;
+    if (edge !== undefined) {
+      edge.version = this.version;
     }
     return this._value;
   }

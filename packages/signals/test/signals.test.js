@@ -2460,3 +2460,26 @@ test('checking a computed that threw does not calculate the sources it did not r
 
   assert.deepEqual(seen, ['ann']);
 });
+
+test('an effect that changes a computed it read runs again, whoever else reads the computed', () => {
+  for (const laterReader of [false, true]) {
+    const s = state(0);
+    const x = state(0);
+    const c = computed(() => s.get() * 2);
+    let runs = 0;
+    const stop = effect(() => {
+      runs++;
+      if (c.get() === 2) s.set(2);
+      x.get();
+      c.get();
+    });
+    const stopOther = laterReader ? effect(() => c.get()) : () => {};
+
+    s.set(1);
+    flush();
+
+    assert.equal(runs, 3, `another reader subscribed after it: ${laterReader}`);
+    stop();
+    stopOther();
+  }
+});

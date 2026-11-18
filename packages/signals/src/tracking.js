@@ -73,16 +73,18 @@ const stack = [];
 let top = 0;
 
 /**
- * Records that `sub` read `dep` in its running run and returns the edge. A read in the same order as the last run
- * reuses the edge at the cursor, and a source read again in the same run keeps its edge.
+ * Records that `sub` read `dep` in its running run and returns the edge, where the caller stores the version it read.
+ * A read in the same order as the last run reuses the edge at the cursor. A source read again in the same run keeps its
+ * edge and returns undefined, so the edge keeps the version of the first read: a change between the two reads, made
+ * by the run itself, still runs the reader again.
  * @param {Source} dep
  * @param {Reader} sub
- * @returns {Edge}
+ * @returns {Edge | undefined}
  */
 export function link(dep, sub) {
   const prevDep = sub.depsTail;
   if (prevDep !== undefined && prevDep.dep === dep) {
-    return prevDep;
+    return undefined;
   }
   const nextDep = prevDep !== undefined ? prevDep.nextDep : sub.deps;
   if (nextDep !== undefined && nextDep.dep === dep) {
@@ -92,7 +94,7 @@ export function link(dep, sub) {
   }
   const prevSub = dep.subsTail;
   if (prevSub !== undefined && prevSub.cycle === cycle && prevSub.sub === sub) {
-    return prevSub;
+    return undefined;
   }
   const edge = new Edge(dep, sub, nextDep, prevSub);
   sub.depsTail = edge;
