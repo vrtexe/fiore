@@ -155,8 +155,9 @@ export function jsx(type, props) {
     } else if (value === null) {
       // null removes the attribute instead of writing "null" into a property.
       data.attrs[name] = null;
-    } else if (name === 'style' && typeof value === 'object') {
-      data.props.style = value;
+    } else if ((name === 'style' || name === 'dataset') && typeof value === 'object') {
+      // Merged into the element's style or dataset, as in the builder's props.
+      data.props[name] = value;
     } else if (!isSvg && isProperty(type, name, value, definition)) {
       data.props[name] = value;
     } else {

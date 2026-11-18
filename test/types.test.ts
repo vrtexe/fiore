@@ -82,3 +82,9 @@ div.props({ title: maybeId, className: maybeId }).create();
 input.props({ maxLength: maybeMax }).create();
 // @ts-expect-error a prop still takes only its own type
 input.props({ maxLength: 'ten' }).create();
+
+// dataset is a prop whose keys are merged into the element's data-* attributes.
+div.props({ dataset: { id: '42', kind: 'demo' } }).create('x');
+div({ props: { dataset: { id: undefined } } });
+// @ts-expect-error dataset values are strings
+div.props({ dataset: { id: 42 } }).create();

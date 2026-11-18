@@ -54,7 +54,7 @@ Each JSX prop goes to one of the fiorejs inputs:
 | --- | --- | --- |
 | `on` + event name; the first letter of the event name is lowercased, the rest is kept | event listener | `onclick` and `onClick` listen to `click`, `onvalueChanged` and `onValueChanged` to `valueChanged`, `oncart-add` to `cart-add` |
 | `null` | removes the attribute | `title={null}` |
-| `style` with an object | style properties | `style={{ height: '10px' }}` |
+| `style` or `dataset` with an object | style properties, data attributes | `style={{ height: '10px' }}`, `dataset={{ id: '42' }}` |
 | a camel-case name the element has a writable property for | property | `className`, `textContent`, `htmlFor`, `selectedIndex` |
 | `value`, `checked`, `selected`, `muted`, `indeterminate`, `volume`, `text` or `files`, where the element has it | property | `<input value="Ada" />` |
 | an object or function on a custom element, or a prop its class defines a setter for | property | `<x-chart data={points} />` |

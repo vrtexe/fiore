@@ -476,3 +476,12 @@ void (<input required="yes" />);
 export function optionalProps(maybeId: string | undefined, maybeMax: number | undefined) {
   return [<div class={maybeId} className={maybeId} />, <input maxlength={maybeMax} maxLength={maybeMax} />];
 }
+
+test('a dataset object sets data attributes, plain or live', () => {
+  const live = { [LIVE]: (apply: (value: string) => void) => apply('live') };
+  const box = (<div dataset={{ id: '42', kind: live }} />) as HTMLDivElement;
+
+  assert.equal(box.getAttribute('data-id'), '42');
+  assert.equal(box.getAttribute('data-kind'), 'live');
+  assert.equal(box.hasAttribute('dataset'), false);
+});
