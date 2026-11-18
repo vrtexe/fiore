@@ -159,7 +159,13 @@ class State extends Signal {
   /** @param {T} next */
   set(next) {
     forbidInComputed();
-    writeValue(this, next);
+    if (!Object.is(next, this._value)) {
+      this._value = next;
+      this.version++;
+      if (this.subs !== undefined) {
+        propagate(this.subs);
+      }
+    }
   }
 
   /**
@@ -184,55 +190,6 @@ class State extends Signal {
       if (this.subs !== undefined) {
         propagate(this.subs);
       }
-    }
-  }
-}
-
-/**
- * The item of a keyed list row: a signal that only the list writes, when a new array keeps the row's key with another
- * object.
- * @template T
- * @extends {Signal<T>}
- */
-export class Item extends Signal {
-  /** @param {T} value */
-  constructor(value) {
-    super();
-    this.flags = 0;
-    /** @type {Edge | undefined} */
-    this.subs = undefined;
-    /** @type {Edge | undefined} */
-    this.subsTail = undefined;
-    this.version = 0;
-    this._value = value;
-  }
-
-  get() {
-    const edge = current !== null ? link(this, current) : undefined;
-    if (edge !== undefined) {
-      edge.version = this.version;
-    }
-    return this._value;
-  }
-
-  /** @param {T} next */
-  _replace(next) {
-    writeValue(this, next);
-  }
-}
-
-/**
- * Sets the value of a state or an item; a different value (`Object.is`) tells its readers.
- * @template T
- * @param {State<T> | Item<T>} source
- * @param {T} next
- */
-function writeValue(source, next) {
-  if (!Object.is(next, source._value)) {
-    source._value = next;
-    source.version++;
-    if (source.subs !== undefined) {
-      propagate(source.subs);
     }
   }
 }

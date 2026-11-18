@@ -161,16 +161,24 @@ function detach(sub) {
 }
 
 /**
- * Unsubscribes a reader from all its sources. The list is detached first, so a cleanup that runs meanwhile cannot
- * unlink the same edges again.
- * @param {Reader} sub
+ * Unsubscribes the edges of a source list that was detached first, so a cleanup that runs meanwhile cannot unlink
+ * them again.
+ * @param {Edge | undefined} edge
  */
-function unlinkAll(sub) {
-  for (let edge = detach(sub); edge !== undefined; ) {
+function unsubscribeFrom(edge) {
+  while (edge !== undefined) {
     const next = edge.nextDep;
     unsubscribe(edge);
     edge = next;
   }
+}
+
+/**
+ * Unsubscribes a reader from all its sources.
+ * @param {Reader} sub
+ */
+function unlinkAll(sub) {
+  unsubscribeFrom(detach(sub));
 }
 
 /**
@@ -179,20 +187,15 @@ function unlinkAll(sub) {
  */
 function purge(sub) {
   const tail = sub.depsTail;
-  let edge = tail !== undefined ? tail.nextDep : sub.deps;
-  if (edge === undefined) {
-    return;
+  const edge = tail !== undefined ? tail.nextDep : sub.deps;
+  if (edge !== undefined) {
+    if (tail !== undefined) {
+      tail.nextDep = undefined;
+    } else {
+      sub.deps = undefined;
+    }
+    unsubscribeFrom(edge);
   }
-  if (tail !== undefined) {
-    tail.nextDep = undefined;
-  } else {
-    sub.deps = undefined;
-  }
-  do {
-    const next = edge.nextDep;
-    unsubscribe(edge);
-    edge = next;
-  } while (edge !== undefined);
 }
 
 /**
