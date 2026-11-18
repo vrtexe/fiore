@@ -1,6 +1,6 @@
 {
   "name": "@fiorejs/jsx",
-  "version": "2.1.0",
+  "version": "2.2.0",
   "description": "JSX runtime for fiorejs. Write HTML and SVG as JSX and get real DOM nodes, with no virtual DOM and no re-rendering.",
   "license": "MIT",
   "author": "vrtexe",
@@ -36,7 +36,7 @@
     "test": "tsc -p test && tsc -p test/plain && node --test test/out/render.test.js"
   },
   "peerDependencies": {
-    "fiorejs": "^2.1.0"
+    "fiorejs": "^2.2.0"
   },
   "publishConfig": {
     "access": "public"
