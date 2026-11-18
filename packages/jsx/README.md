@@ -72,7 +72,7 @@ Everything after `on` is used as the event name as written, except that its firs
 <input onkeydown={{ handler: (event) => console.log(event.key), options: { once: true } }} />
 ```
 
-On SVG elements every prop except listeners and a `style` object is set as an attribute.
+On SVG elements every prop except listeners and a `style` or `dataset` object is set as an attribute.
 
 ## Components and fragments
 

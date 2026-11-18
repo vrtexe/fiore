@@ -1,5 +1,5 @@
 import type { HTMLElementsAttributesMap } from 'fiorejs/type/attributes.d.ts';
-import type { ElementProps, Live, LiveAttributes, RecursivePartial } from 'fiorejs/type/base.dom.d.ts';
+import type { DatasetProps, ElementProps, Live, LiveAttributes, RecursivePartial } from 'fiorejs/type/base.dom.d.ts';
 import type { HTMLEventMapOf } from 'fiorejs/type/html.dom.d.ts';
 import type { SVGEventMapOf } from 'fiorejs/type/svg.dom.d.ts';
 
@@ -46,7 +46,7 @@ type HTMLProps<K extends HTMLTag> = Omit<LiveAttributes<HTMLElementsAttributesMa
 
 type SVGProps<K extends SVGTag> = Omit<LiveAttributes<HTMLElementsAttributesMap[K]>, 'class' | 'className' | 'style'> &
   EventProps<SVGElementTagNameMap[K], SVGEventMapOf<SVGElementTagNameMap[K]>> &
-  CommonProps<SVGElementTagNameMap[K]>;
+  CommonProps<SVGElementTagNameMap[K]> & { dataset?: DatasetProps | undefined };
 
 type HTMLIntrinsicElements = { [K in HTMLTag]: HTMLProps<K> };
 type SVGIntrinsicElements = { [K in SVGTag]: SVGProps<K> };

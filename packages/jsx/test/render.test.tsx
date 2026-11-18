@@ -514,3 +514,15 @@ test('a JSX xlink:href is set in the XLink namespace', () => {
 
   assert.equal(icon.firstElementChild?.getAttributeNS('http://www.w3.org/1999/xlink', 'href'), '#a');
 });
+
+test('a dataset object on an SVG element sets data attributes', () => {
+  const icon = (
+    <svg>
+      <rect dataset={{ id: '3' }} />
+    </svg>
+  ) as SVGSVGElement;
+
+  assert.equal(icon.firstElementChild?.getAttribute('data-id'), '3');
+});
+// @ts-expect-error dataset values on SVG elements are strings too
+void (<rect dataset={{ id: 3 }} />);
