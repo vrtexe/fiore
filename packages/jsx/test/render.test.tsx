@@ -526,3 +526,20 @@ test('a dataset object on an SVG element sets data attributes', () => {
 });
 // @ts-expect-error dataset values on SVG elements are strings too
 void (<rect dataset={{ id: 3 }} />);
+
+// A custom element declared in HTMLElementTagNameMap is typed by its class in JSX: ref, props and children.
+declare global {
+  interface HTMLElementTagNameMap {
+    'fiore-dialog': HTMLElement & { heading: string; open(): void };
+  }
+}
+export function customElementTag() {
+  // @ts-expect-error a custom element that is not declared is an HTMLElement in ref
+  void (<other-el ref={(element) => ((): number => element)()} />);
+  void (<other-el onclick={(event) => event.currentTarget.focus()} any-prop={1} />);
+  return (
+    <fiore-dialog heading="Settings" ref={(dialog) => dialog.open()}>
+      <p>Hello</p>
+    </fiore-dialog>
+  );
+}

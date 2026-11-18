@@ -100,3 +100,18 @@ const formula: MathChildren = 'x';
 void [shapes, formula];
 // @ts-expect-error a plain object is not a child
 panel({ text: 'a' });
+
+// A custom element declared in HTMLElementTagNameMap gets its class from element() and its properties as props.
+class FioreModal extends HTMLElement {
+  heading = '';
+  open() {}
+}
+declare global {
+  interface HTMLElementTagNameMap {
+    'fiore-modal': FioreModal;
+  }
+}
+const modal: FioreModal = element('fiore-modal').props({ heading: 'Settings' }).create();
+modal.open();
+// @ts-expect-error heading is a string
+element('fiore-modal').props({ heading: 1 });

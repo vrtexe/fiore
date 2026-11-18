@@ -167,6 +167,47 @@ declare global {
 // @ts-expect-error a div has no `value` property
 &lt;div value="x" /&gt;;</code></pre>
 </div>
+          <h3 id="custom-element-tags">Typing a custom element</h3>
+          <p>
+            A tag with a hyphen is typed as a plain <code>HTMLElement</code>. To give it its class, declare the tag in
+            <code>HTMLElementTagNameMap</code>, the standard declaration that <code>document.createElement</code> reads too.
+            Then <code>ref</code> gets the class, the element's own properties are accepted as props (typed in the builder's
+            <code>props</code>; JSX accepts any prop on a custom element), and <code>element('fiore-modal')</code> returns a tag
+            that builds the class:
+          </p>
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-ts">import { element } from 'fiorejs';
+
+class FioreModal extends HTMLElement {
+  heading = '';
+  open() {}
+}
+customElements.define('fiore-modal', FioreModal);
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'fiore-modal': FioreModal;
+  }
+}
+
+const modal = element('fiore-modal').props({ heading: 'Settings' }).create(); // FioreModal
+modal.open();</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-tsx">class FioreModal extends HTMLElement {
+  heading = '';
+  open() {}
+}
+customElements.define('fiore-modal', FioreModal);
+
+declare global {
+  interface HTMLElementTagNameMap {
+    'fiore-modal': FioreModal;
+  }
+}
+
+&lt;fiore-modal heading="Settings" ref={(modal) =&gt; modal.open()}&gt;
+  &lt;p&gt;Hello&lt;/p&gt;
+&lt;/fiore-modal&gt;;</code></pre>
+</div>
         </section>
 
         <section id="modifiers">

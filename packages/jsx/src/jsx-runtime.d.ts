@@ -49,6 +49,28 @@ type SVGProps<K extends SVGTag> = Omit<LiveAttributes<HTMLElementsAttributesMap[
   CommonProps<SVGElementTagNameMap[K]> & { dataset?: DatasetProps | undefined };
 
 type HTMLIntrinsicElements = { [K in HTMLTag]: HTMLProps<K> };
+
+/** A function of the element, written as a method so its element is checked both ways. */
+type ElementMethod<T extends Element, E> = { method(this: T, ev: E & { readonly currentTarget: T }): unknown }['method'];
+
+type LooseListener<E> =
+  | ElementMethod<HTMLElement, E>
+  | {
+      handler?: ElementMethod<HTMLElement, E> | undefined | null;
+      options?: boolean | AddEventListenerOptions | undefined | null;
+    };
+
+/**
+ * The props of a custom element that is not declared in HTMLElementTagNameMap: those of an HTMLElement and any other.
+ * Its ref and listeners take the element as a method does, so the stricter props of a declared custom element class
+ * still fit this index signature.
+ */
+type CustomElementProps = Omit<CommonProps<HTMLElement>, 'ref' | `on${string}-${string}`> & {
+  ref?: { method(element: HTMLElement): void }['method'] | undefined | null;
+  [event: `on${string}-${string}`]: LooseListener<CustomEvent> | undefined | null;
+} & {
+  [K in keyof HTMLElementEventMap & string as `on${K}` | `on${Capitalize<K>}`]?: LooseListener<HTMLElementEventMap[K]> | undefined | null;
+} & { [name: string]: unknown };
 type SVGIntrinsicElements = { [K in SVGTag]: SVGProps<K> };
 
 export namespace JSX {
@@ -70,8 +92,7 @@ export namespace JSX {
   }
 
   interface IntrinsicElements extends HTMLIntrinsicElements, SVGIntrinsicElements {
-    [tag: `${string}-${string}`]: CommonProps<HTMLElement> &
-      EventProps<HTMLElement, HTMLElementEventMap> & { [name: string]: unknown };
+    [tag: `${string}-${string}`]: CustomElementProps;
   }
 }
 
