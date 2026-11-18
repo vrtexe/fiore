@@ -149,7 +149,11 @@ class State extends Signal {
   }
 
   get() {
-    return readValue(this);
+    const edge = current !== null ? link(this, current) : undefined;
+    if (edge !== undefined) {
+      edge.version = this.version;
+    }
+    return this._value;
   }
 
   /** @param {T} next */
@@ -204,26 +208,17 @@ export class Item extends Signal {
   }
 
   get() {
-    return readValue(this);
+    const edge = current !== null ? link(this, current) : undefined;
+    if (edge !== undefined) {
+      edge.version = this.version;
+    }
+    return this._value;
   }
 
   /** @param {T} next */
   _replace(next) {
     writeValue(this, next);
   }
-}
-
-/**
- * Subscribes the running reader to a state or an item and returns its value.
- * @template T
- * @param {State<T> | Item<T>} source
- */
-function readValue(source) {
-  const edge = current !== null ? link(source, current) : undefined;
-  if (edge !== undefined) {
-    edge.version = source.version;
-  }
-  return source._value;
 }
 
 /**
