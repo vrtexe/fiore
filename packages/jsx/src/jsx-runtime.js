@@ -121,10 +121,16 @@ export function jsx(type, props) {
     type.includes('-') && typeof customElements !== 'undefined' ? customElements.get(type) : undefined;
   /** @type {Record<string, any>} */
   const data = { props: {}, attrs: {}, on: {}, children };
+  /** @type {((element: Element) => void) | undefined} */
+  let ref;
 
   for (const [name, value] of Object.entries(rest)) {
     // A key inside a spread object is ignored like a key written on the element.
     if (name === 'key') {
+      continue;
+    }
+    if (name === 'ref') {
+      ref = typeof value === 'function' ? /** @type {(element: Element) => void} */ (value) : undefined;
       continue;
     }
     if (HANDLER.test(name)) {
@@ -150,7 +156,10 @@ export function jsx(type, props) {
     create = isSvg ? svgElement(type) : element(type);
     tags.set(type, create);
   }
-  return create(data);
+  const node = create(data);
+  // Like the builder's also: the element is complete, with its props, attributes, listeners and children.
+  ref?.(node);
+  return node;
 }
 
 /**

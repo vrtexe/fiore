@@ -19,7 +19,7 @@ Create HTML, SVG and MathML elements in JavaScript with one function per tag.
 ## Install
 
 ```sh
-npm install -D fiorejs
+npm install fiorejs
 ```
 
 > Fiore was published as `html-dom-js` up to version 1.1.2. Version 2 changes the API; see [Upgrading from 1.x](#upgrading-from-1x).
@@ -121,7 +121,7 @@ import svg from 'fiorejs/svg';
 import math from 'fiorejs/math';
 ```
 
-`fiorejs/global` exports the same three objects by name: `import { html, svg, math } from 'fiorejs/global'`.
+`fiorejs/global` exports the same objects by name, together with `deprecatedHtml`: `import { html, svg, math, deprecatedHtml } from 'fiorejs/global'`.
 
 The [MDN](https://developer.mozilla.org/en-US/docs/Web/API) documentation of each element applies to its props and attributes. TypeScript declarations are included.
 

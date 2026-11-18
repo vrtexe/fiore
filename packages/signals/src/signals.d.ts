@@ -68,6 +68,8 @@ export function flush(): void;
 export function tick(): Promise<void>;
 /** Runs `fn` with a new owner and returns a function that stops everything `fn` created. */
 export function root(fn: () => void): () => void;
+/** Runs `fn` when the current owner stops: a root, a branch, a list row, or the next run of an effect. With no owner it never runs. */
+export function onCleanup(fn: () => void): void;
 /** Runs `fn` without subscribing to the signals it reads; what it creates still belongs to the current owner. */
 export function untrack<T>(fn: () => T): T;
 export function isSignal(value: unknown): value is Signal<unknown>;

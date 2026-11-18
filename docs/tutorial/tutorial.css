@@ -1,0 +1,325 @@
+/* The tutorial: lesson text on the left, editor, preview and console on the right, with draggable dividers. */
+body.tutorial {
+  /* Lines and control borders here reach at least 3:1 against the background (WCAG 1.4.11). */
+  --tut-line: rgba(244, 242, 236, 0.3);
+  --tut-control: rgba(244, 242, 236, 0.42);
+  --lesson: 40%;
+  --editor: 55%;
+  /* The picker and the editor bar share one height so their bottom lines meet at the divider. */
+  --tut-head: 52px;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tut {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(280px, var(--lesson)) 6px minmax(360px, 1fr);
+  /* The site header is fixed and draws the line above. */
+  margin-top: var(--nav);
+}
+
+.tut-lesson {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  min-width: 0;
+}
+
+.tut-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--tut-head);
+  padding: 6px 20px;
+  border-bottom: 1px solid var(--tut-line);
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.tut-picker select {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--tut-control);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+
+.tut-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 24px 28px 32px;
+}
+
+/* Lesson text is brighter than the docs' muted gray, so it holds up next to the editor. */
+.tut-body p,
+.tut-body li {
+  color: #d9dcd6;
+}
+
+.tut-body code {
+  background: rgba(244, 242, 236, 0.12);
+  color: var(--ink);
+}
+
+.tut-body pre {
+  margin: 18px 0 20px;
+  padding: 14px 16px;
+  overflow-x: auto;
+  border: 1px solid var(--tut-line);
+  border-radius: 10px;
+  background: var(--surface);
+  font-size: 13px;
+  line-height: 1.7;
+  color: #d7dce0;
+}
+
+.tut-body pre code {
+  padding: 0;
+  background: none;
+}
+
+.tut-body h1 {
+  margin: 0 0 16px;
+  font-size: 26px;
+  letter-spacing: -0.02em;
+}
+
+.tut-body .tut-chapter {
+  margin: 0 0 18px;
+  color: var(--accent);
+  font-size: 12.5px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.tut-steps {
+  display: flex;
+  gap: 8px;
+  padding: 12px 20px;
+  border-top: 1px solid var(--tut-line);
+}
+
+.tut-btn {
+  padding: 8px 14px;
+  border: 1px solid var(--tut-control);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.tut-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.tut-btn:disabled {
+  border-style: dashed;
+  color: var(--muted);
+  cursor: default;
+}
+
+.tut-btn:focus-visible,
+.tut-link:focus-visible,
+.tut-picker select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.tut-solve {
+  margin-left: auto;
+}
+
+.tut-next {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.tut-next:disabled {
+  background: var(--surface);
+  border-color: var(--tut-control);
+  color: var(--muted);
+}
+
+/* Dividers: a wide hit area with a visible line in the middle. */
+.tut-split {
+  position: relative;
+  background: var(--bg);
+  touch-action: none;
+}
+
+.tut-split::after {
+  content: '';
+  position: absolute;
+  background: var(--tut-line);
+}
+
+.tut-split-x {
+  cursor: col-resize;
+}
+
+.tut-split-x::after {
+  inset: 0 2px;
+}
+
+.tut-split-y {
+  cursor: row-resize;
+}
+
+.tut-split-y::after {
+  inset: 2px 0;
+}
+
+.tut-split:hover::after,
+.tut-split:focus-visible::after,
+.tut-split.is-dragging::after {
+  background: var(--accent);
+}
+
+.tut-split:focus-visible {
+  outline: none;
+}
+
+.tut-work {
+  display: grid;
+  grid-template-rows: auto minmax(80px, var(--editor)) 6px auto minmax(80px, 1fr) auto;
+  min-height: 0;
+  min-width: 0;
+}
+
+.tut-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  height: var(--tut-head);
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--tut-line);
+  background: var(--bg-2);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  color: var(--muted);
+}
+
+.tut-tools {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.tut-tools .syntax-switch {
+  border-bottom: 1px solid rgba(244, 242, 236, 0.32);
+  border-radius: 9px;
+  font-family: var(--sans);
+}
+
+.tut-link {
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.tut-link:hover {
+  color: var(--accent);
+}
+
+.tut-status.is-error {
+  color: #ff8f80;
+}
+
+.tut-editor {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.tut-editor .cm-editor {
+  height: 100%;
+  font-size: 13.5px;
+}
+
+/* A darker ground than One Dark's own lifts every token color above 4.5:1; the line numbers get a lighter gray. */
+.tut-editor .cm-editor,
+.tut-editor .cm-gutters {
+  background: var(--surface);
+}
+
+.tut-editor .cm-gutters {
+  border-right: 1px solid var(--tut-line);
+  color: #9aa2ab;
+}
+
+.tut-editor .cm-activeLineGutter {
+  background: rgba(244, 242, 236, 0.06);
+  color: var(--ink);
+}
+
+.tut-preview {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: #fff;
+}
+
+.tut-dragging .tut-preview {
+  pointer-events: none;
+}
+
+.tut-console {
+  max-height: 120px;
+  margin: 0;
+  padding: 8px 14px;
+  overflow-y: auto;
+  border-top: 1px solid var(--tut-line);
+  background: var(--bg);
+  font-family: var(--mono);
+  font-size: 12.5px;
+  line-height: 1.6;
+  color: var(--muted);
+  white-space: pre-wrap;
+}
+
+.tut-console:empty {
+  display: none;
+}
+
+.tut-console .is-error {
+  color: #ff8f80;
+}
+
+@media (max-width: 860px) {
+  body.tutorial {
+    height: auto;
+    overflow: visible;
+  }
+
+  .tut {
+    grid-template-columns: 1fr;
+  }
+
+  .tut-split-x {
+    display: none;
+  }
+
+  .tut-lesson {
+    border-bottom: 1px solid var(--tut-line);
+  }
+
+  .tut-work {
+    grid-template-rows: auto 360px 6px auto 320px auto;
+  }
+}

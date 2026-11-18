@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Create a project: fiore</title>
+    <meta name="description" content="Scaffold a fiore app with npm create @fiorejs: the questions, every flag, and what each template contains." />
+    <link rel="canonical" href="https://vrtexe.github.io/fiore/guide/create-project.html" />
+    <meta name="theme-color" content="#0a0c0f" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
+    <link rel="stylesheet" href="../assets/site.css" />
+    <script type="module" src="../assets/docs.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <nav class="nav-links" aria-label="Main">
+          <a href="../index.html">Home</a>
+          <a href="../tutorial/">Tutorial</a>
+          <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
+          <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+        </nav>
+        <a class="btn" href="quick-start.html">Quick start</a>
+      </div>
+    </header>
+
+    <div class="wrap docs-layout">
+      <aside class="docs-side">
+        <nav class="docs-nav" aria-label="Documentation" data-nav></nav>
+      </aside>
+
+      <main class="docs-main" id="main">
+        <header class="docs-head">
+          <h1>Create a project</h1>
+          <p class="docs-lead">
+            <code>npm create @fiorejs</code> asks a few questions and writes a ready project with a small example app, a README and the tools you chose. Every question can also be answered with a flag, so it runs in scripts too.
+          </p>
+        </header>
+
+        <section id="run">
+          <h2>Create the project</h2>
+          <p>
+            Run the command and answer the questions. Node.js 20.16 or later is required:
+          </p>
+          <pre class="code" tabindex="0"><code>npm create @fiorejs</code></pre>
+          <p>
+            Pass a folder name to skip the first question. The folder must be empty or not exist yet;
+            the command stops with an error otherwise. When it finishes it prints the next steps for
+            your package manager:
+          </p>
+          <pre class="code" tabindex="0"><code>npm create @fiorejs my-app
+cd my-app
+npm install
+npm run dev</code></pre>
+        </section>
+
+        <section id="options">
+          <h2>Options and flags</h2>
+          <p>
+            The questions are, in order: the project name, the build tool, the language, JSX,
+            signals, a linter and a formatter. A flag answers its question, and the question is not
+            asked. <code>--yes</code> (or <code>-y</code>) takes the default for every question that
+            has no flag. The defaults also apply when the input is not a terminal.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Flag</th><th>Values</th><th>Default</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>--build</code></td><td><code>vite</code>, <code>none</code></td><td><code>vite</code></td></tr>
+                <tr><td><code>--template</code></td><td><code>ts</code>, <code>js</code></td><td><code>ts</code></td></tr>
+                <tr><td><code>--jsx</code>, <code>--no-jsx</code></td><td>on or off</td><td>JSX on</td></tr>
+                <tr><td><code>--signals</code>, <code>--no-signals</code></td><td>on or off</td><td>signals on</td></tr>
+                <tr><td><code>--linter</code></td><td><code>eslint</code>, <code>oxlint</code>, <code>none</code></td><td><code>oxlint</code></td></tr>
+                <tr><td><code>--formatter</code></td><td><code>prettier</code>, <code>oxfmt</code>, <code>none</code></td><td><code>prettier</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            With npm, flags after the folder name need the <code>--</code> separator, because npm
+            would otherwise read them itself:
+          </p>
+          <pre class="code" tabindex="0"><code>npm create @fiorejs my-app -- --template js --no-jsx --linter eslint</code></pre>
+          <p>
+            A value that is not in the table stops the command with a message that lists the allowed
+            values. The build tool decides what else is possible:
+          </p>
+          <ul>
+            <li><code>--build none</code> is always JavaScript without JSX. <code>--template ts</code> and <code>--jsx</code> with it are errors, and the language and JSX questions are skipped.</li>
+            <li><code>--template ts</code> and JSX need <code>--build vite</code>, which is the default.</li>
+          </ul>
+          <p>
+            A project with every answer given runs without a prompt, which suits a script:
+          </p>
+          <pre class="code" tabindex="0"><code>npm create @fiorejs my-app -- --build vite --template ts --jsx --signals --linter oxlint --formatter prettier</code></pre>
+        </section>
+
+        <section id="build">
+          <h2>What the build tool gives you</h2>
+          <ul>
+            <li><strong>Vite.</strong> A Vite project with <code>dev</code>, <code>build</code> and <code>preview</code> scripts. TypeScript templates build with <code>tsc &amp;&amp; vite build</code>, so type errors fail the build. JSX uses <code>@fiorejs/jsx</code> as the import source, set in <code>tsconfig.json</code> for TypeScript, and in <code>vite.config.js</code> and <code>jsconfig.json</code> for JavaScript.</li>
+            <li><strong>None.</strong> Plain ES modules with an import map in <code>index.html</code> that points at the files in <code>node_modules</code>. There is no build step, and <code>npm run dev</code> serves the folder with <code>serve</code>. Install the dependencies first, because the import map reads them from <code>node_modules</code>. See <a href="installation.html#no-bundler">Installation</a> for the idea.</li>
+          </ul>
+        </section>
+
+        <section id="example-app">
+          <h2>The example app</h2>
+          <p>
+            Every project has a small to-do list in <code>src/main.ts</code>, <code>src/main.tsx</code>,
+            <code>src/main.js</code> or <code>src/main.jsx</code>, with a stylesheet in
+            <code>src/style.css</code>. The code depends on your answers:
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Answers</th><th>The app</th></tr>
+              </thead>
+              <tbody>
+                <tr><td>Signals, no JSX</td><td>Builders and <code>@fiorejs/signals</code>: the list is a state, the count is derived with <code>computed</code>, and the rows use <code>.for(key).map(...)</code>.</td></tr>
+                <tr><td>No signals, no JSX</td><td>Builders only. The code updates the DOM directly: it counts the children, toggles classes and removes the row it clicked.</td></tr>
+                <tr><td>JSX, with or without signals</td><td>The same app written in JSX, which returns real DOM nodes, with or without signals.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            Compare the plain and the signals version to see what signals remove: the manual updates.
+            The <a href="builders.html">Builders</a> page explains the code of the plain version.
+          </p>
+          <p data-syntax="jsx">With JSX on, the app is in <code>src/main.tsx</code> or <code>src/main.jsx</code>, and the setting that points the compiler at <code>@fiorejs/jsx</code> is already in <code>tsconfig.json</code>, <code>jsconfig.json</code> or <code>vite.config.js</code>. <a href="jsx.html">JSX</a> explains the rest.</p>
+        </section>
+
+        <section id="tools">
+          <h2>Linter, formatter and files</h2>
+          <p>
+            The chosen linter and formatter come with their configuration and a script:
+            <code>npm run lint</code> and <code>npm run format</code>. Oxlint and oxfmt use a
+            <code>.oxlintrc.json</code> and a <code>.oxfmtrc.json</code>, Prettier a
+            <code>.prettierrc.json</code>, and ESLint an <code>eslint.config.js</code>, with the
+            TypeScript rules when the language is TypeScript. With <code>none</code> the files and
+            the script are left out.
+          </p>
+          <p>
+            Besides the source, the project holds an <code>index.html</code>, a
+            <code>package.json</code>, a <code>.gitignore</code> and a README that lists the scripts
+            of this project. The dependency versions use the current major versions of fiorejs,
+            <code>@fiorejs/signals</code> and <code>@fiorejs/jsx</code>.
+          </p>
+          <p>
+            Next: <a href="elements.html">Elements and tags</a>.
+          </p>
+        </section>
+
+        <nav class="pager" aria-label="Pages" data-pager></nav>
+      </main>
+    </div>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <p class="footer-note">MIT licensed. Source on GitHub.</p>
+        <div class="footer-links">
+          <a href="https://www.npmjs.com/package/fiorejs">npm</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+          <a href="https://github.com/vrtexe/fiore/issues">Issues</a>
+          <a href="https://github.com/vrtexe/fiore/releases">Releases</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

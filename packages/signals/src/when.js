@@ -1,5 +1,5 @@
 import { LIVE } from 'fiorejs';
-import { owner, own } from './tracking.js';
+import { adopt, own } from './tracking.js';
 import { attach } from './dom.js';
 
 /**
@@ -59,7 +59,7 @@ export class When {
     let value;
     /** Stops what the shown branch created. */
     let stopBranch = () => {};
-    owner?.owned.push(() => stopBranch());
+    adopt(() => stopBranch());
 
     attach(
       () => {

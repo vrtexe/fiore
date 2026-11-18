@@ -1,0 +1,227 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Timing and batching: fiore</title>
+    <meta name="description" content="When effects and bindings run: writes apply at once, readers flush on a microtask, flush() and tick(), the order of the phases, and testing." />
+    <link rel="canonical" href="https://vrtexe.github.io/fiore/guide/timing.html" />
+    <meta name="theme-color" content="#0a0c0f" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
+    <link rel="stylesheet" href="../assets/site.css" />
+    <script type="module" src="../assets/docs.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <nav class="nav-links" aria-label="Main">
+          <a href="../index.html">Home</a>
+          <a href="../tutorial/">Tutorial</a>
+          <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
+          <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+        </nav>
+        <a class="btn" href="quick-start.html">Quick start</a>
+      </div>
+    </header>
+
+    <div class="wrap docs-layout">
+      <aside class="docs-side">
+        <nav class="docs-nav" aria-label="Documentation" data-nav></nav>
+      </aside>
+
+      <main class="docs-main" id="main">
+        <header class="docs-head">
+          <h1>Timing and batching</h1>
+          <p class="docs-lead">A write applies at once, but the effects and bindings that read it run later, together, in one flush on a microtask. This page explains the order inside a flush and how to run it early with <code>flush()</code> or wait for it with <code>tick()</code>.</p>
+        </header>
+
+        <section id="writes">
+          <h2>Writes apply at once</h2>
+          <p>
+            After <code>count.set(1)</code>, <code>count.get()</code> and every computed that reads
+            <code>count</code> return the new value. Only the readers that are effects or bindings wait for
+            the flush. Several writes in a row cost one run of each reader, and an effect is never
+            re-entered.
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { state, computed, effect, flush } from '@fiorejs/signals';
+
+const count = state(0);
+const double = computed(() =&gt; count.get() * 2);
+effect(() =&gt; console.log('effect sees', count.get())); // logs "effect sees 0"
+
+count.set(1);
+count.set(2);
+console.log(count.get(), double.get()); // 2 4, at once
+flush();                                // logs "effect sees 2", once</code></pre>
+          <p>
+            A new effect or binding runs at once, so <code>div(count)</code> shows its value before the next
+            line runs.
+          </p>
+        </section>
+
+        <section id="microtask">
+          <h2>The flush</h2>
+          <p>
+            The first write that finds a reader waiting queues a flush on a microtask. It runs after the
+            code that wrote has finished, which is why the DOM updates after an event handler, not inside
+            it. Writes made during the flush are handled in the same flush.
+          </p>
+          <ul>
+            <li><code>flush()</code> runs the waiting effects and bindings now. Inside an effect it does nothing, because the running flush handles everything before it ends.</li>
+            <li><code>tick()</code> returns a promise that resolves after the waiting effects and bindings have run, or right away when none wait. It rejects with the first error of that flush.</li>
+          </ul>
+          <p>
+            Use <code>flush()</code> when the next line needs the DOM, for example to focus or measure an
+            element. In async code, <code>await tick()</code> waits for the flush instead.
+          </p>
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div, input } from 'fiorejs';
+import { state, flush, tick } from '@fiorejs/signals';
+
+const submitted = state(false);
+const field = input();
+document.body.append(div(submitted.if(() =&gt; field)));
+
+console.log(field.isConnected); // false: the branch was not built yet
+submitted.set(true);
+flush();
+console.log(field.isConnected); // true: flush() applied the binding
+field.focus();
+
+submitted.set(false);
+await tick();
+console.log(field.isConnected); // false</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state, flush, tick } from '@fiorejs/signals';
+
+const submitted = state(false);
+const field = &lt;input /&gt;;
+document.body.append(&lt;div&gt;{submitted.if(() =&gt; field)}&lt;/div&gt;);
+
+console.log(field.isConnected); // false: the branch was not built yet
+submitted.set(true);
+flush();
+console.log(field.isConnected); // true: flush() applied the binding
+field.focus();
+
+submitted.set(false);
+await tick();
+console.log(field.isConnected); // false</code></pre>
+</div>
+        </section>
+
+        <section id="phases">
+          <h2>Order of the phases</h2>
+          <p>
+            A flush runs three phases, each in creation order:
+          </p>
+          <ol>
+            <li><code>effect.pre</code> effects;</li>
+            <li>the other effects and the bindings, so an effect runs before the effects it created;</li>
+            <li><code>effect.post</code> effects, which see the DOM after the bindings have updated it.</li>
+          </ol>
+          <p>
+            A write during the flush queues more work, and the flush goes back to the first phase that has
+            some. The first run of an <code>effect.post</code> waits for the next flush.
+          </p>
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div } from 'fiorejs';
+import { state, effect, flush, tick } from '@fiorejs/signals';
+
+const n = state(0);
+const box = div(n);
+document.body.append(box);
+
+effect.pre(() =&gt; console.log('pre', n.get()));      // logs "pre 0"
+effect(() =&gt; console.log('effect', n.get()));      // logs "effect 0"
+effect.post(() =&gt; console.log('post', n.get(), 'DOM shows', box.textContent));
+
+await tick(); // logs "post 0 DOM shows 0": the post effect's first run
+n.set(1);
+flush();      // logs "pre 1", "effect 1", "post 1 DOM shows 1"</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state, effect, flush, tick } from '@fiorejs/signals';
+
+const n = state(0);
+const box = &lt;div&gt;{n}&lt;/div&gt;;
+document.body.append(box);
+
+effect.pre(() =&gt; console.log('pre', n.get()));      // logs "pre 0"
+effect(() =&gt; console.log('effect', n.get()));      // logs "effect 0"
+effect.post(() =&gt; console.log('post', n.get(), 'DOM shows', box.textContent));
+
+await tick(); // logs "post 0 DOM shows 0": the post effect's first run
+n.set(1);
+flush();      // logs "pre 1", "effect 1", "post 1 DOM shows 1"</code></pre>
+</div>
+        </section>
+
+        <section id="tests">
+          <h2>Tests</h2>
+          <p>
+            Tests call <code>flush()</code> after their writes and before their assertions, so they do not
+            depend on microtasks. An error of an effect or binding is thrown by <code>flush()</code>, so a
+            test fails on it instead of seeing an uncaught error later.
+          </p>
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import assert from 'node:assert/strict';
+import { span } from 'fiorejs';
+import { state, flush } from '@fiorejs/signals';
+
+const count = state(0);
+const view = span(count);
+
+count.update((n) =&gt; n + 1);
+assert.equal(view.textContent, '0'); // the binding has not run yet
+flush();
+assert.equal(view.textContent, '1');</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import assert from 'node:assert/strict';
+import { state, flush } from '@fiorejs/signals';
+
+const count = state(0);
+const view = &lt;span&gt;{count}&lt;/span&gt;;
+
+count.update((n) =&gt; n + 1);
+assert.equal(view.textContent, '0'); // the binding has not run yet
+flush();
+assert.equal(view.textContent, '1');</code></pre>
+</div>
+          <p>
+            An effect or binding that throws is stopped, the other effects of the flush still run, and the
+            first error is thrown at the end. See <a href="effects.html#errors">Effects</a> for errors and
+            the 100-runs loop limit, and <a href="../signals.html#scheduling">Signals reference</a> for the exact
+            rules.
+          </p>
+        </section>
+
+        <nav class="pager" aria-label="Pages" data-pager></nav>
+      </main>
+    </div>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <p class="footer-note">MIT licensed. Source on GitHub.</p>
+        <div class="footer-links">
+          <a href="https://www.npmjs.com/package/fiorejs">npm</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+          <a href="https://github.com/vrtexe/fiore/issues">Issues</a>
+          <a href="https://github.com/vrtexe/fiore/releases">Releases</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

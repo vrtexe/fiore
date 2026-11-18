@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Signals: fiore</title>
+    <meta name="description" content="What a signal is in fiore, how to create one with state(), and how get, set, update and mutate work." />
+    <link rel="canonical" href="https://vrtexe.github.io/fiore/guide/signals.html" />
+    <meta name="theme-color" content="#0a0c0f" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
+    <link rel="stylesheet" href="../assets/site.css" />
+    <script type="module" src="../assets/docs.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <nav class="nav-links" aria-label="Main">
+          <a href="../index.html">Home</a>
+          <a href="../tutorial/">Tutorial</a>
+          <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
+          <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+        </nav>
+        <a class="btn" href="quick-start.html">Quick start</a>
+      </div>
+    </header>
+
+    <div class="wrap docs-layout">
+      <aside class="docs-side">
+        <nav class="docs-nav" aria-label="Documentation" data-nav></nav>
+      </aside>
+
+      <main class="docs-main" id="main">
+        <header class="docs-head">
+          <h1>Signals</h1>
+          <p class="docs-lead">A signal is a value that remembers who reads it. When the value changes, the readers run again and nothing else does. This page covers <code>state()</code>, the one signal you write to, and the rules for reading and writing it.</p>
+        </header>
+
+        <section id="what">
+          <h2>What a signal is</h2>
+          <p>
+            A signal is an object that holds one value. Reading it with <code>get()</code> inside an
+            effect, a computed value or a DOM binding subscribes that reader to the signal. Writing a new
+            value schedules every subscribed reader to run again. A signal that no reader has subscribed to
+            costs nothing and does nothing.
+          </p>
+          <p>
+            <code>state(value)</code> creates a signal you can write to. Derived signals, made with
+            <a href="computed.html"><code>computed()</code></a>, are read-only. Both come from
+            <code>@fiorejs/signals</code>; fiorejs itself needs no setup to accept them.
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { state, effect, flush } from '@fiorejs/signals';
+
+const count = state(0);
+
+effect(() =&gt; console.log('count is', count.get())); // logs "count is 0" now
+
+count.set(1);
+count.update((n) =&gt; n + 1);
+flush(); // logs "count is 2", once</code></pre>
+          <p>
+            The effect ran once for two writes. The runs are batched; <a href="timing.html">Timing and
+            batching</a> explains when they happen.
+          </p>
+        </section>
+
+        <section id="read">
+          <h2>Reading a signal</h2>
+          <p>
+            <code>get()</code> returns the current value and, when a reader is running, subscribes it.
+            Reading outside any reader, for example in an event handler, only returns the value.
+            Subscription follows what the reader actually reads on its latest run, so a signal read only
+            inside an <code>if</code> branch is a dependency only while that branch runs.
+          </p>
+          <p>
+            Call the methods on the signal itself. <code>count.set(1)</code> works, but a detached
+            <code>const { set } = count; set(1)</code> does not. Where a function is needed, pass
+            <code>(value) => count.set(value)</code>.
+          </p>
+        </section>
+
+        <section id="write">
+          <h2>Writing a signal</h2>
+          <p>There are three ways to write, and they differ in what they do with the old value:</p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Method</th><th>What it does</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>set(value)</code></td><td>Replaces the value.</td></tr>
+                <tr><td><code>update(fn)</code></td><td>Sets the value that <code>fn(current)</code> returns.</td></tr>
+                <tr><td><code>mutate(fn)</code></td><td>Lets <code>fn</code> change the current value in place, then always notifies. The return value of <code>fn</code> is ignored.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <p>
+            A write is visible at once: after <code>count.set(5)</code>, <code>count.get()</code> returns 5.
+            Only the readers run later.
+          </p>
+        </section>
+
+        <section id="equality">
+          <h2>Equality</h2>
+          <p>
+            <code>set</code> and <code>update</code> compare the new value with the old one using
+            <code>Object.is</code>. An equal value does nothing: no reader runs. Objects and arrays are
+            compared by reference, so a copy always counts as a change.
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { state, effect, flush } from '@fiorejs/signals';
+
+const name = state('Ada');
+const user = state({ name: 'Ada' });
+
+effect(() =&gt; console.log('name', name.get()));
+effect(() =&gt; console.log('user', user.get().name));
+
+name.set('Ada');          // equal: nothing runs
+user.set({ name: 'Ada' }); // a new object: the second effect runs
+flush();                  // logs "user Ada" again</code></pre>
+          <p>
+            <code>mutate</code> skips the comparison. It always notifies, even when <code>fn</code> changed
+            nothing, and it notifies also when <code>fn</code> throws, because the value may already have
+            changed.
+          </p>
+        </section>
+
+        <section id="objects">
+          <h2>Arrays and objects</h2>
+          <p>
+            A signal tracks its value, not what is inside it. Pushing to an array you read from a signal
+            changes nothing for the readers. Replace the value instead; copying is cheap because only
+            references are copied.
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { state, effect, flush } from '@fiorejs/signals';
+
+const todos = state([]);
+effect(() =&gt; console.log('todos:', todos.get().length));
+
+todos.set([...todos.get(), 'write docs']);     // a new array: readers run
+todos.mutate((list) =&gt; list.push('publish'));  // same array: readers still run
+flush();                                       // logs "todos: 2", once</code></pre>
+          <p>
+            Use <code>mutate</code> for very large arrays or objects, where copying costs more than it is
+            worth. For deeply nested data, give each field that changes on its own a signal of its own.
+          </p>
+        </section>
+
+        <section id="next">
+          <h2>Where to go next</h2>
+          <ul>
+            <li><a href="computed.html">Derived values</a> builds new signals from existing ones.</li>
+            <li><a href="effects.html">Effects</a> run code when signals change.</li>
+            <li><a href="binding.html">Binding to the DOM</a> puts a signal into an element.</li>
+            <li><a href="../signals.html#state">Signals reference</a> lists the same API in table form.</li>
+          </ul>
+        </section>
+
+        <nav class="pager" aria-label="Pages" data-pager></nav>
+      </main>
+    </div>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <p class="footer-note">MIT licensed. Source on GitHub.</p>
+        <div class="footer-links">
+          <a href="https://www.npmjs.com/package/fiorejs">npm</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+          <a href="https://github.com/vrtexe/fiore/issues">Issues</a>
+          <a href="https://github.com/vrtexe/fiore/releases">Releases</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

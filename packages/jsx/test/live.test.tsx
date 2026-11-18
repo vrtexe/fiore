@@ -27,3 +27,8 @@ function TextInput(props: JSX.IntrinsicElements['input']) {
 }
 const label: Child = 'Email';
 void (<label>{label}<TextInput type="email" /></label>);
+
+// ref is typed by the tag: an input gives HTMLInputElement, and a wrong element type is rejected.
+void (<input ref={(element: HTMLInputElement) => element.focus()} />);
+// @ts-expect-error a div is not an input
+void (<div ref={(element: HTMLInputElement) => element.focus()} />);

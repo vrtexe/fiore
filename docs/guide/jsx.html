@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>JSX: fiore</title>
+    <meta name="description" content="Set up @fiorejs/jsx, learn what JSX compiles to, how props become properties or attributes, and how to use signals and fragments." />
+    <link rel="canonical" href="https://vrtexe.github.io/fiore/guide/jsx.html" />
+    <meta name="theme-color" content="#0a0c0f" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
+    <link rel="stylesheet" href="../assets/site.css" />
+    <script type="module" src="../assets/docs.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <nav class="nav-links" aria-label="Main">
+          <a href="../index.html">Home</a>
+          <a href="../tutorial/">Tutorial</a>
+          <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
+          <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+        </nav>
+        <a class="btn" href="quick-start.html">Quick start</a>
+      </div>
+    </header>
+
+    <div class="wrap docs-layout">
+      <aside class="docs-side">
+        <nav class="docs-nav" aria-label="Documentation" data-nav></nav>
+      </aside>
+
+      <main class="docs-main" id="main">
+        <header class="docs-head">
+          <h1>JSX</h1>
+          <p class="docs-lead">
+            <code>@fiorejs/jsx</code> lets you write the same elements as JSX. Each JSX expression creates its
+            elements once and returns real DOM nodes, so there is no virtual DOM and no re-rendering.
+          </p>
+        </header>
+
+        <section id="builder-vs-jsx">
+          <h2>Builder or JSX</h2>
+          <p>
+            Both syntaxes create the same DOM nodes with the same signals. Pick the one you like; this page is about JSX.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th></th><th>Builder</th><th>JSX</th></tr></thead>
+              <tbody>
+                <tr><td>Package</td><td><code>fiorejs</code></td><td><code>@fiorejs/jsx</code> next to <code>fiorejs</code></td></tr>
+                <tr><td>Build step</td><td>none</td><td>a compiler with the automatic JSX runtime</td></tr>
+                <tr><td>An element</td><td><code>div.props({ className: 'card' }).create('Hi')</code></td><td><code>&lt;div class="card"&gt;Hi&lt;/div&gt;</code></td></tr>
+                <tr><td>Props and attributes</td><td>separate: <code>props</code>, <code>attrs</code></td><td>one list, the name decides</td></tr>
+                <tr><td>Listeners</td><td><code>on({ click })</code></td><td><code>onclick</code> or <code>onClick</code></td></tr>
+                <tr><td>Reuse</td><td>builders, <code>with</code> and <code>also</code></td><td>components and spread props</td></tr>
+                <tr><td>Type of an expression</td><td>the exact element</td><td><code>Node</code>, cast it when needed</td></tr>
+                <tr><td>Signals, <code>if</code>, <code>for</code></td><td colspan="2">the same in both, from <code>@fiorejs/signals</code></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="setup">
+          <h2>Setup</h2>
+          <h3 id="new-project">New project</h3>
+          <p>
+            Run <code>npm create @fiorejs</code> and pick JSX, which is the default answer. There is nothing to configure: the
+            generator adds <code>@fiorejs/jsx</code> to the dependencies and writes the compiler setting for you, so you can
+            write JSX in <code>src/main.tsx</code> straight away.
+          </p>
+          <pre class="code" tabindex="0"><code>npm create @fiorejs my-app</code></pre>
+          <p>
+            For a TypeScript project it writes the setting to <code>tsconfig.json</code>. For a JavaScript project
+            (<code>--template js</code>) it writes <code>vite.config.js</code> and <code>jsconfig.json</code>. JSX needs the Vite
+            build, which is the default; <code>--build none</code> has no JSX, and <code>--no-jsx</code> turns it off. See
+            <a href="create-project.html">Create a project</a> for all options.
+          </p>
+          <h3 id="existing-project">Existing project</h3>
+          <p>
+            Install the runtime next to <code>fiorejs</code> and tell the compiler to import JSX helpers from it:
+          </p>
+          <pre class="code" tabindex="0"><code>npm install fiorejs @fiorejs/jsx</code></pre>
+          <p>
+            In TypeScript, set the automatic runtime in <code>tsconfig.json</code>. Vite reads the same setting for
+            TypeScript files, so it needs no plugin:
+          </p>
+          <pre class="code" tabindex="0"><code>{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fiorejs/jsx"
+  }
+}</code></pre>
+          <p>Other tools take the import source in their own options:</p>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Tool</th><th>Setting</th></tr></thead>
+              <tbody>
+                <tr><td>Vite, JavaScript files</td><td><code>oxc: { jsx: { importSource: '@fiorejs/jsx' } }</code> in <code>vite.config.js</code></td></tr>
+                <tr><td>esbuild</td><td><code>--jsx=automatic --jsx-import-source=@fiorejs/jsx</code></td></tr>
+                <tr><td>Babel</td><td><code>@babel/plugin-transform-react-jsx</code> with <code>{ runtime: 'automatic', importSource: '@fiorejs/jsx' }</code></td></tr>
+                <tr><td>a single file</td><td>a <code>/** @jsxImportSource @fiorejs/jsx */</code> comment at the top</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section id="compiled">
+          <h2>What JSX compiles to</h2>
+          <p>
+            The automatic runtime turns each element into a call of <code>jsx</code>, or <code>jsxs</code> when there are
+            several static children, and each fragment into <code>Fragment</code>. All three come from
+            <code>@fiorejs/jsx/jsx-runtime</code>. You can call them yourself, and the result is the same node you
+            would get from the element functions:
+          </p>
+          <pre class="code" tabindex="0"><code class="language-js">import { jsx, jsxs, Fragment } from '@fiorejs/jsx/jsx-runtime';
+import { state } from '@fiorejs/signals';
+
+const count = state(1);
+
+// &lt;p class="note"&gt;Clicks: {count}&lt;/p&gt;
+const note = jsx('p', { class: 'note', children: ['Clicks: ', count] });
+
+// &lt;ul&gt;&lt;li&gt;A&lt;/li&gt;&lt;li&gt;B&lt;/li&gt;&lt;/ul&gt;  (several static children use jsxs)
+const list = jsxs('ul', { children: [jsx('li', { children: 'A' }), jsx('li', { children: 'B' })] });
+
+// &lt;&gt;text&lt;/&gt;
+const fragment = jsx(Fragment, { children: 'text' });
+
+document.body.append(note, list, fragment);</code></pre>
+          <p>
+            Because the function runs once per expression, a signal in a child or prop is bound at that moment and keeps
+            the spot up to date, exactly as in <a href="binding.html">Binding to the DOM</a>.
+          </p>
+        </section>
+
+        <section id="props">
+          <h2>Props and attributes</h2>
+          <p>
+            JSX has one list of props, so the runtime decides, per name, whether to set a property or an attribute. The
+            name decides, never the value. Names that start with <code>on</code> are listeners, written in any case, so
+            <code>onclick</code> and <code>onClick</code> both listen to <code>click</code>. <code>value</code>, <code>checked</code>,
+            <code>selected</code>, <code>muted</code>, <code>indeterminate</code>, <code>volume</code>, <code>text</code> and <code>files</code> are
+            properties where the element has them, and camel-case names that the element has a writable property for, such as
+            <code>className</code> or <code>htmlFor</code>, are properties too. Every other name is an attribute, so
+            <code>class</code>, <code>for</code>, <code>aria-label</code> and <code>width="50%"</code> work as in HTML.
+          </p>
+          <pre class="code" tabindex="0"><code class="language-tsx">import { computed, state } from '@fiorejs/signals';
+
+const name = state('Ada');
+const invalid = computed(() =&gt; (name.get() === '' ? 'true' : null));
+
+document.body.append(
+  &lt;form onsubmit={(event) =&gt; event.preventDefault()}&gt;
+    &lt;label for="name"&gt;Name&lt;/label&gt;
+    &lt;input
+      id="name"
+      class="field"
+      value={name}
+      aria-invalid={invalid}
+      style={{ width: '12rem' }}
+      oninput={(event) =&gt; name.set(event.currentTarget.value)}
+    /&gt;
+    &lt;img src="/a.png" alt="" title={null} /&gt;
+    &lt;button type="submit" disabled={false}&gt;
+      Save
+    &lt;/button&gt;
+  &lt;/form&gt;,
+);</code></pre>
+          <p>
+            <code>title={null}</code> removes the attribute and <code>disabled={false}</code> leaves it out. A
+            <code>style</code> object sets style properties. On SVG elements every prop except listeners and a
+            <code>style</code> object is set as an attribute. Full table: the
+            <a href="https://github.com/vrtexe/fiore/tree/main/packages/jsx">package README</a>.
+          </p>
+        </section>
+
+        <section id="signals">
+          <h2>Signals in JSX</h2>
+          <p>
+            A signal works as a child or as a prop value, and a derived value is a <code>computed</code>. A bare function is
+            never live: <code>class={() =&gt; …}</code> passes the function itself, so write
+            <code>class={computed(() =&gt; …)}</code>. A component runs once and returns nodes:
+          </p>
+          <pre class="code" tabindex="0"><code class="language-tsx">import { computed, state } from '@fiorejs/signals';
+
+function Counter(props: { start?: number }) {
+  const count = state(props.start ?? 0);
+
+  return (
+    &lt;div class={computed(() =&gt; (count.get() &gt; 5 ? 'many' : 'few'))}&gt;
+      &lt;button type="button" onclick={() =&gt; count.update((n) =&gt; n + 1)}&gt;
+        Add one
+      &lt;/button&gt;
+      &lt;span&gt;{count}&lt;/span&gt;
+    &lt;/div&gt;
+  );
+}
+
+document.body.append(&lt;Counter start={3} /&gt;);</code></pre>
+          <p>
+            The class of the <code>div</code> and the text of the <code>span</code> change with <code>count</code>. Nothing else is
+            created again. For conditions and lists use <code>signal.if(...)</code> and <code>signal.for(...).map(...)</code> inside
+            the markup, since <code>count.get() &gt; 5 ? a : b</code> would be read once.
+          </p>
+        </section>
+
+        <section id="fragments">
+          <h2>Fragments and children</h2>
+          <p>
+            <code>&lt;&gt;...&lt;/&gt;</code> returns a <code>DocumentFragment</code>, so a component can return several siblings. Children can be
+            nodes, strings, numbers or nested arrays; <code>null</code>, <code>undefined</code>, <code>true</code> and
+            <code>false</code> are skipped. A live child of a fragment keeps updating after the fragment is inserted.
+          </p>
+          <pre class="code" tabindex="0"><code class="language-tsx">import { state } from '@fiorejs/signals';
+
+const todos = state([
+  { id: 1, text: 'Write docs' },
+  { id: 2, text: 'Publish' },
+]);
+
+function Term(props: { name: string; text: string }) {
+  return (
+    &lt;&gt;
+      &lt;dt&gt;{props.name}&lt;/dt&gt;
+      &lt;dd&gt;{props.text}&lt;/dd&gt;
+    &lt;/&gt;
+  );
+}
+
+document.body.append(
+  &lt;dl&gt;
+    &lt;Term name="HTML" text="Markup" /&gt;
+    &lt;Term name="CSS" text="Styles" /&gt;
+  &lt;/dl&gt;,
+  &lt;ul&gt;{todos.for((todo) =&gt; todo.id).map((todo) =&gt; &lt;li&gt;{todo.text}&lt;/li&gt;)}&lt;/ul&gt;,
+);</code></pre>
+          <div class="note">
+            A JSX expression is typed as <code>Node</code>. Cast it when you need the element type:
+            <code>(&lt;input /&gt;) as HTMLInputElement</code>. <code>key</code> is accepted and ignored; key list rows with
+            <code>signal.for(...)</code>. Do not spread objects whose keys come from users; see
+            <a href="security.html">Security</a>.
+          </div>
+        </section>
+
+        <nav class="pager" aria-label="Pages" data-pager></nav>
+      </main>
+    </div>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <p class="footer-note">MIT licensed. Source on GitHub.</p>
+        <div class="footer-links">
+          <a href="https://www.npmjs.com/package/fiorejs">npm</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+          <a href="https://github.com/vrtexe/fiore/issues">Issues</a>
+          <a href="https://github.com/vrtexe/fiore/releases">Releases</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

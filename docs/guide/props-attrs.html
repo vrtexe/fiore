@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Props and attributes: fiore</title>
+    <meta name="description" content="The difference between element properties and attributes in fiore, nested props such as style and dataset, and the rules for attribute values." />
+    <link rel="canonical" href="https://vrtexe.github.io/fiore/guide/props-attrs.html" />
+    <meta name="theme-color" content="#0a0c0f" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
+    <link rel="stylesheet" href="../assets/site.css" />
+    <script type="module" src="../assets/docs.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <nav class="nav-links" aria-label="Main">
+          <a href="../index.html">Home</a>
+          <a href="../tutorial/">Tutorial</a>
+          <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
+          <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+        </nav>
+        <a class="btn" href="quick-start.html">Quick start</a>
+      </div>
+    </header>
+
+    <div class="wrap docs-layout">
+      <aside class="docs-side">
+        <nav class="docs-nav" aria-label="Documentation" data-nav></nav>
+      </aside>
+
+      <main class="docs-main" id="main">
+        <header class="docs-head">
+          <h1>Props and attributes</h1>
+          <p class="docs-lead">
+            <code>props</code> sets JavaScript properties on the element, and <code>attrs</code> sets HTML attributes. They are separate on purpose, so you always know which one you changed.
+          </p>
+        </header>
+
+        <section id="difference">
+          <h2>Properties and attributes</h2>
+          <p>
+            A property lives on the JavaScript object: <code>input.value</code>,
+            <code>element.className</code>, <code>checkbox.checked</code>. An attribute lives in the
+            markup: <code>value="..."</code>, <code>class="..."</code>, <code>checked</code>. They
+            often mirror each other, but not always. The <code>value</code> attribute of an input is
+            only its default, while the <code>value</code> property is what the user sees.
+          </p>
+          <p data-syntax="jsx">JSX has no separate <code>props</code> and <code>attrs</code>. JSX decides by the name of the prop, as the table at the end of this page shows. <code>className</code> and <code>htmlFor</code> are properties; <code>class</code>, <code>for</code> and <code>aria-describedby</code> are attributes.</p>
+          <p data-syntax="builder">
+            <code>props</code> assigns with <code>element[name] = value</code>. <code>attrs</code>
+            calls <code>setAttribute(name, value)</code>. The names follow the platform: props use
+            <code>className</code> and <code>htmlFor</code>, attributes use <code>class</code> and
+            <code>for</code>.
+          </p>
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { input, label } from 'fiorejs';
+
+const email = input
+  .props({ id: 'email', type: 'email', value: 'ada@example.com' })
+  .attrs({ placeholder: 'you@example.com', 'aria-describedby': 'email-help' })
+  .create();
+
+const caption = label.props({ htmlFor: 'email' }).create('Email');
+
+document.body.append(caption, email);
+console.log(email.value, email.getAttribute('value'));
+// ada@example.com null
+          </code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const email = (
+  &lt;input
+    id="email"
+    type="email"
+    value="ada@example.com"
+    placeholder="you@example.com"
+    aria-describedby="email-help"
+  /&gt;
+);
+
+const caption = &lt;label htmlFor="email"&gt;Email&lt;/label&gt;;
+
+document.body.append(caption, email);
+console.log(email.value, email.getAttribute('value'));
+// ada@example.com null</code></pre>
+          </div>
+          <p>
+            The prop <code>value</code> changed what the field shows, but no
+            <code>value</code> attribute was written. In JSX too, <code>value</code> is a property.
+          </p>
+        </section>
+
+        <section id="nested">
+          <h2>Nested props</h2>
+          <p data-syntax="builder">Some properties hold an object, such as <code>style</code> and <code>dataset</code>.
+            Pass a plain object and fiore merges it into the existing one instead of replacing it.
+            That is the same as assigning each key on <code>element.style</code>:</p>
+          <p data-syntax="jsx"><code>style</code> takes an object, and each key is set on <code>element.style</code>. <code>dataset</code> is read-only, so write each key as a <code>data-*</code> attribute instead:</p>
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div } from 'fiorejs';
+
+const box = div
+  .props({
+    className: 'box',
+    style: { color: 'tomato', paddingBlock: '8px' },
+    dataset: { id: '42', kind: 'demo' },
+  })
+  .create('Styled');
+
+document.body.append(box);
+console.log(box.dataset.id, box.style.color);
+// 42 tomato
+          </code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const box = (
+  &lt;div className="box" style={{ color: 'tomato', paddingBlock: '8px' }} data-id="42" data-kind="demo"&gt;
+    Styled
+  &lt;/div&gt;
+);
+
+document.body.append(box);
+console.log(box.dataset.id, box.style.color);
+// 42 tomato</code></pre>
+          </div>
+          <p data-syntax="builder">
+            On one builder, a later <code>props</code> call replaces an earlier value of the same
+            top-level key, so a second <code>style</code> object replaces the first. A nested object
+            is merged into the element after the other keys of its map.
+          </p>
+        </section>
+
+        <section id="attribute-rules">
+          <h2>Attribute rules</h2>
+          <p>
+            An attribute value is converted to a string by <code>setAttribute</code>. Three rules
+            decide whether an attribute is written at all. They are the same for the builder and for
+            JSX:
+          </p>
+          <ul>
+            <li><code>null</code>, <code>undefined</code> and <code>false</code> leave the attribute out, or remove it if an earlier call set it.</li>
+            <li>Every other value is written, including <code>0</code> and the empty string. <code>true</code> becomes the string <code>"true"</code>.</li>
+            <li><code>aria-*</code> and <code>data-*</code> attributes, and the enumerated attributes <code>contenteditable</code>, <code>draggable</code> and <code>spellcheck</code>, keep <code>false</code> as the string <code>"false"</code>, because that value has a meaning.</li>
+          </ul>
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { button } from 'fiorejs';
+
+const toggle = button
+  .attrs({
+    'aria-pressed': false,
+    'data-count': 0,
+    disabled: false,
+    hidden: null,
+    title: '',
+    spellcheck: false,
+  })
+  .create('Mute');
+
+document.body.append(toggle);
+          </code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const toggle = (
+  &lt;button aria-pressed={false} data-count={0} disabled={false} hidden={null} title="" spellcheck={false}&gt;
+    Mute
+  &lt;/button&gt;
+);
+
+document.body.append(toggle);</code></pre>
+          </div>
+          <p>
+            The result is <code>aria-pressed="false"</code>, <code>data-count="0"</code>,
+            <code>title=""</code> and <code>spellcheck="false"</code>. There is no
+            <code>disabled</code> and no <code>hidden</code>. Merging two <code>attrs</code> calls
+            works the same way:
+          </p>
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { a } from 'fiorejs';
+
+const base = a.attrs({ target: '_blank', rel: 'noopener' });
+const same = base.attrs({ target: null }).create('Same tab');
+
+console.log(same.outerHTML);
+// &lt;a rel="noopener"&gt;Same tab&lt;/a&gt;
+          </code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const base = { target: '_blank', rel: 'noopener' };
+const same = (
+  &lt;a {...base} target={null}&gt;
+    Same tab
+  &lt;/a&gt;
+);
+
+console.log(same.outerHTML);
+// &lt;a rel="noopener"&gt;Same tab&lt;/a&gt;</code></pre>
+          </div>
+          <div class="note">
+            <strong>Values are not checked.</strong> A <code>javascript:</code> URL in
+            <code>href</code> or <code>src</code> runs when it is followed. Check the scheme of a URL
+            that comes from untrusted data, and never take attribute names from it.
+          </div>
+        </section>
+
+        <section id="handlers">
+          <h2>Inline handler attributes are ignored</h2>
+          <p>
+            An attribute whose name is <code>on</code> followed by letters only, such as
+            <code>onclick</code> or <code>onunload</code>, in any case, is never set. Browsers run
+            the text of such attributes as script, so fiore skips them. A hyphenated name such as
+            <code>on-tap</code> is set. Listeners belong in <code>on</code>; see
+            <a href="events.html">Events</a>.
+          </p>
+          <p data-syntax="jsx">In JSX every prop that starts with <code>on</code> is a listener, so <code>onclick</code> takes a function and is never an attribute. The text of an inline handler cannot be written as a prop.</p>
+          <pre class="code" tabindex="0"><code class="language-js">import { button } from 'fiorejs';
+
+const bad = button.attrs({ onclick: 'alert(1)', 'on-tap': 'open' }).create('Press');
+
+console.log(bad.outerHTML);
+// &lt;button on-tap="open"&gt;Press&lt;/button&gt;
+          </code></pre>
+        </section>
+
+        <section id="which">
+          <h2>When to use which</h2>
+          <div data-syntax="jsx">
+            <p>JSX decides by the name of the prop, never by the value:</p>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>Prop</th><th>Applied as</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td><code>on</code> and an event name, in any case: <code>onclick</code>, <code>onClick</code></td><td>An event listener, for <code>click</code>.</td></tr>
+                  <tr><td><code>null</code>, as in <code>title={null}</code></td><td>Removes the attribute.</td></tr>
+                  <tr><td><code>style</code> with an object</td><td>Style properties.</td></tr>
+                  <tr><td>A camel-case name the element has a writable property for: <code>className</code>, <code>textContent</code>, <code>htmlFor</code></td><td>A property.</td></tr>
+                  <tr><td><code>value</code>, <code>checked</code>, <code>selected</code>, <code>muted</code>, <code>indeterminate</code>, <code>volume</code>, <code>text</code>, <code>files</code>, where the element has it</td><td>A property.</td></tr>
+                  <tr><td>Any other name: <code>class</code>, <code>for</code>, <code>id</code>, <code>type</code>, <code>disabled</code>, <code>aria-label</code>, <code>width</code></td><td>An attribute.</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p>
+              Because only the name counts, <code>width="50%"</code> stays an attribute and
+              <code>disabled={false}</code> removes the attribute. On SVG elements every prop except
+              listeners and a <code>style</code> object is an attribute. On a custom element, an object
+              or a function goes to the property of that name.
+            </p>
+          </div>
+          <ul data-syntax="builder">
+            <li>Use <code>props</code> for state the element holds: <code>value</code>, <code>checked</code>, <code>disabled</code>, <code>className</code>, <code>textContent</code>, <code>style</code>.</li>
+            <li>Use <code>attrs</code> for names that have no property, such as <code>aria-*</code>, <code>data-*</code>, <code>role</code> and <code>list</code>, and for the geometry and presentation attributes of SVG elements, which are read-only objects as properties.</li>
+            <li>Use <code>attrs</code> when the markup itself must carry the value, for example a default that a form reset restores.</li>
+            <li>A prop with the value <code>undefined</code> leaves the element's property unchanged. Use an attribute with <code>null</code> to remove something.</li>
+          </ul>
+          <p>
+            The MDN page of each element lists its properties and attributes, and both apply here.
+            Next: <a href="children.html">Children</a>.
+          </p>
+        </section>
+
+        <nav class="pager" aria-label="Pages" data-pager></nav>
+      </main>
+    </div>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <p class="footer-note">MIT licensed. Source on GitHub.</p>
+        <div class="footer-links">
+          <a href="https://www.npmjs.com/package/fiorejs">npm</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+          <a href="https://github.com/vrtexe/fiore/issues">Issues</a>
+          <a href="https://github.com/vrtexe/fiore/releases">Releases</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

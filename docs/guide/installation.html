@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Installation: fiore</title>
+    <meta name="description" content="Install fiorejs with npm, the package entry points, use without a bundler through an import map and jsDelivr, and TypeScript setup." />
+    <link rel="canonical" href="https://vrtexe.github.io/fiore/guide/installation.html" />
+    <meta name="theme-color" content="#0a0c0f" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
+    <link rel="stylesheet" href="../assets/site.css" />
+    <script type="module" src="../assets/docs.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <nav class="nav-links" aria-label="Main">
+          <a href="../index.html">Home</a>
+          <a href="../tutorial/">Tutorial</a>
+          <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
+          <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+        </nav>
+        <a class="btn" href="quick-start.html">Quick start</a>
+      </div>
+    </header>
+
+    <div class="wrap docs-layout">
+      <aside class="docs-side">
+        <nav class="docs-nav" aria-label="Documentation" data-nav></nav>
+      </aside>
+
+      <main class="docs-main" id="main">
+        <header class="docs-head">
+          <h1>Installation</h1>
+          <p class="docs-lead">
+            Install <code>fiorejs</code> from npm and import the tags you need. It is plain ES modules with TypeScript declarations and no runtime dependencies, so it also runs in a browser without a build step.
+          </p>
+        </header>
+
+        <section id="npm">
+          <h2>Install with npm</h2>
+          <pre class="code" tabindex="0"><code>npm install fiorejs</code></pre>
+          <p>
+            Add <code>@fiorejs/signals</code> if the page has state that changes, and
+            <code>@fiorejs/jsx</code> if you want JSX that returns real DOM nodes:
+          </p>
+          <pre class="code" tabindex="0"><code>npm install fiorejs @fiorejs/signals @fiorejs/jsx</code></pre>
+          <p data-syntax="jsx">JSX also needs the compiler to use the runtime of <code>@fiorejs/jsx</code>. In <code>tsconfig.json</code> set the import source; <a href="jsx.html">JSX</a> lists the settings of other tools:</p>
+          <pre class="code" tabindex="0" data-syntax="jsx"><code>{
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "@fiorejs/jsx"
+  }
+}</code></pre>
+          <p>
+            fiorejs creates elements with the global <code>document</code>, so it runs in a browser
+            or in a DOM environment such as jsdom. Versions up to 1.1.2 were published as
+            <code>html-dom-js</code>; version 2 changed the API, and the notes are in the
+            <a href="https://github.com/vrtexe/fiore#upgrading-from-1x">upgrade section of the README</a>.
+          </p>
+          <p>
+            To start from a working project instead, use
+            <a href="create-project.html">npm create @fiorejs</a>.
+          </p>
+        </section>
+
+        <section id="entry-points">
+          <h2>Entry points</h2>
+          <p>
+            The package has several entry points, so a module only imports the namespace it needs.
+          </p>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Import</th><th>What it exports</th></tr>
+              </thead>
+              <tbody>
+                <tr><td><code>fiorejs</code></td><td>One function per HTML tag, <code>element</code>, <code>fragment</code>, <code>LIVE</code>, and a default export with every HTML tag as an object. The same as <code>fiorejs/html</code>.</td></tr>
+                <tr><td><code>fiorejs/html</code></td><td>The same as <code>fiorejs</code>.</td></tr>
+                <tr><td><code>fiorejs/svg</code></td><td>One function per SVG tag and the SVG <code>element</code>. The default export is an object of the tags.</td></tr>
+                <tr><td><code>fiorejs/math</code></td><td>One function per MathML tag and the MathML <code>element</code>. The default export is an object of the tags.</td></tr>
+                <tr><td><code>fiorejs/html/deprecated</code></td><td>Tags of obsolete HTML elements, such as <code>center</code> and <code>marquee</code>, each marked deprecated.</td></tr>
+                <tr><td><code>fiorejs/global</code></td><td>The default exports of the other modules as named exports: <code>html</code>, <code>svg</code> and <code>math</code>, and <code>deprecatedHtml</code>.</td></tr>
+                <tr><td><code>fiorejs/type/*</code></td><td>The type declaration files in <code>lib/types</code>. The entry points above already carry their types, so most code never imports from here.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <pre class="code" tabindex="0"><code class="language-js">import { div, fragment } from 'fiorejs';
+import { circle, svg } from 'fiorejs/svg';
+import { math, mi } from 'fiorejs/math';
+import { html } from 'fiorejs/global';
+
+document.body.append(
+  div('Plain tags'),
+  svg.attrs({ viewBox: '0 0 10 10' }).create(circle.attrs({ r: '4' }).create()),
+  math(mi('x')),
+  fragment([html.span('From the global entry')]),
+);
+          </code></pre>
+          <p>
+            SVG and MathML tags share some names with HTML, such as <code>a</code> and
+            <code>title</code>. Import them as a namespace when you use both; see
+            <a href="svg-math.html">SVG and MathML</a>. <code>fiorejs/global</code> is meant for
+            code that wants the three namespaces as objects, such as
+            <code>html.div</code> and <code>svg.circle</code>.
+          </p>
+          <p data-syntax="jsx">In JSX you import no tags: <code>&lt;div&gt;</code> and <code>&lt;svg&gt;</code> in the markup are enough, and the names that clash in the builder do not clash. JSX has no MathML tags, so import the nodes from <code>fiorejs/math</code> when you need MathML; see <a href="svg-math.html">SVG and MathML</a>.</p>
+        </section>
+
+        <section id="no-bundler">
+          <h2>Use without a bundler</h2>
+          <p>
+            Browsers load ES modules natively. An import map tells the browser where a bare name
+            such as <code>fiorejs</code> lives, and a CDN serves the files. This page works as it
+            is, with nothing installed:
+          </p>
+          <pre class="code" tabindex="0"><code>&lt;script type="importmap"&gt;
+  {
+    "imports": {
+      "fiorejs": "https://cdn.jsdelivr.net/npm/fiorejs@2.1.0/lib/html.js",
+      "fiorejs/svg": "https://cdn.jsdelivr.net/npm/fiorejs@2.1.0/lib/svg.js",
+      "fiorejs/math": "https://cdn.jsdelivr.net/npm/fiorejs@2.1.0/lib/math.js",
+      "@fiorejs/signals": "https://cdn.jsdelivr.net/npm/@fiorejs/signals@2.1.0/src/signals.js"
+    }
+  }
+&lt;/script&gt;
+&lt;script type="module"&gt;
+  import { h1, button } from 'fiorejs';
+  import { state } from '@fiorejs/signals';
+
+  const count = state(0);
+  document.body.append(
+    h1(['Clicked ', count]),
+    button.on({ click: () =&gt; count.update((n) =&gt; n + 1) }).create('Add one'),
+  );
+&lt;/script&gt;</code></pre>
+          <p>
+            The import map must come before the first module script. Pin an exact version in the
+            URL, as above, so that a new release never changes a deployed page. List only the
+            entries the page uses. <code>@fiorejs/signals</code> imports <code>fiorejs</code> by
+            name, so keep that entry in the map whenever you use signals.
+          </p>
+          <div class="note">
+            <strong>Self-hosted files.</strong> The same map works with local copies. Point the
+            entries at <code>./node_modules/fiorejs/lib/html.js</code> and
+            <code>./node_modules/@fiorejs/signals/src/signals.js</code> and serve the folder with any
+            static server. The no-build template of <a href="create-project.html">Create a project</a>
+            does this.
+          </div>
+          <div class="note" data-syntax="jsx">
+            <strong>No JSX here.</strong> The browser cannot read JSX, so a page without a build step
+            uses the builders. JSX needs a compiler or a bundler.
+          </div>
+        </section>
+
+        <section id="typescript">
+          <h2>TypeScript</h2>
+          <p>
+            The declarations ship with the package, and there is nothing to install from
+            <code>@types</code>. The subpath entry points need a module resolution that reads the
+            <code>exports</code> field of a package. Use <code>"moduleResolution": "bundler"</code>
+            for an app with a bundler, or <code>"node16"</code> or <code>"nodenext"</code> for
+            Node. Include the DOM library, because the element types come from it:
+          </p>
+          <pre class="code" tabindex="0"><code>{
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "lib": ["es2022", "dom", "dom.iterable"]
+  }
+}
+          </code></pre>
+          <p>
+            Every tag returns the exact element type. <code>input</code> gives
+            <code>HTMLInputElement</code>, and <code>circle</code> from <code>fiorejs/svg</code>
+            gives <code>SVGCircleElement</code>. For a function that accepts a modifier for any
+            tag, use the <code>HTMLModifier</code> and <code>SVGModifier</code> types exported by
+            the modules, as <a href="builders.html#with">Builders</a> shows.
+          </p>
+          <p data-syntax="jsx">A JSX expression is typed as <code>Node</code>, not as the element. Cast it when you need the element type: <code>(&lt;input /&gt;) as HTMLInputElement</code>. The tags, props and listeners are still checked per element.</p>
+          <p>
+            Next: <a href="create-project.html">Create a project</a>, or go straight to
+            <a href="elements.html">Elements and tags</a>.
+          </p>
+        </section>
+
+        <nav class="pager" aria-label="Pages" data-pager></nav>
+      </main>
+    </div>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <p class="footer-note">MIT licensed. Source on GitHub.</p>
+        <div class="footer-links">
+          <a href="https://www.npmjs.com/package/fiorejs">npm</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+          <a href="https://github.com/vrtexe/fiore/issues">Issues</a>
+          <a href="https://github.com/vrtexe/fiore/releases">Releases</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

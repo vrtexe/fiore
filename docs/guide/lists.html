@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Lists: fiore</title>
+    <meta name="description" content="Render arrays with signal.map and signal.for(key).map: row reuse, keys, index semantics, repeated keys and performance." />
+    <link rel="canonical" href="https://vrtexe.github.io/fiore/guide/lists.html" />
+    <meta name="theme-color" content="#0a0c0f" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
+    <link rel="stylesheet" href="../assets/site.css" />
+    <script type="module" src="../assets/docs.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <nav class="nav-links" aria-label="Main">
+          <a href="../index.html">Home</a>
+          <a href="../tutorial/">Tutorial</a>
+          <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
+          <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+        </nav>
+        <a class="btn" href="quick-start.html">Quick start</a>
+      </div>
+    </header>
+
+    <div class="wrap docs-layout">
+      <aside class="docs-side">
+        <nav class="docs-nav" aria-label="Documentation" data-nav></nav>
+      </aside>
+
+      <main class="docs-main" id="main">
+        <header class="docs-head">
+          <h1>Lists</h1>
+          <p class="docs-lead">A list renders each item of an array signal as a row and keeps the rows it has already built. When the array changes, only new items are rendered, and rows that stay are moved at most.</p>
+        </header>
+
+        <section id="map">
+          <h2>signal.map</h2>
+          <p>
+            <code>signal.map(render)</code> takes a signal of an array and a function that returns a node
+            for one item. The item itself is the key, so a row is reused when the same item is still in the
+            array. An item replaced by a copy gets a new row.
+          </p>
+          <p>
+            The result is a live value, so pass it directly as the children of an element.
+          </p>
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { ul, li } from 'fiorejs';
+import { state, flush } from '@fiorejs/signals';
+
+const names = state(['Ada', 'Grace']);
+
+const list = ul(names.map((name) =&gt; {
+  console.log('render', name);
+  return li(name);
+}));
+document.body.append(list); // logs "render Ada", "render Grace"
+
+names.set([...names.get(), 'Linus']);
+flush(); // logs "render Linus" only
+console.log(list.children.length); // 3</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state, flush } from '@fiorejs/signals';
+
+const names = state(['Ada', 'Grace']);
+
+const list = (
+  &lt;ul&gt;
+    {names.map((name) =&gt; {
+      console.log('render', name);
+      return &lt;li&gt;{name}&lt;/li&gt;;
+    })}
+  &lt;/ul&gt;
+);
+document.body.append(list); // logs "render Ada", "render Grace"
+
+names.set([...names.get(), 'Linus']);
+flush(); // logs "render Linus" only
+console.log(list.children.length); // 3</code></pre>
+</div>
+        </section>
+
+        <section id="for">
+          <h2>Keyed lists</h2>
+          <p>
+            <code>signal.for().map(render)</code> keys rows by <code>item.key</code>.
+            <code>signal.for((item) => item.id).map(render)</code> keys them by what the function returns.
+            Use it for objects, because a new copy of an object with the same key then keeps its row.
+          </p>
+          <p>
+            A row is rendered once, for the item it was created with. A copy with the same key reuses the
+            row as it is, so fields that change must be signals.
+          </p>
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { ul, li } from 'fiorejs';
+import { classList, state, flush } from '@fiorejs/signals';
+
+const todos = state([
+  { id: 1, text: 'Write docs', done: state(false) },
+  { id: 2, text: 'Publish', done: state(false) },
+]);
+
+const list = ul(
+  todos.for((todo) =&gt; todo.id).map((todo, index) =&gt; {
+    console.log('render', todo.text, 'at', index);
+    return li.props({ className: classList({ done: todo.done }) }).create(todo.text);
+  }),
+);
+document.body.append(list);
+
+todos.get()[0].done.set(true);                // no list work: only a class changes
+todos.set([{ id: 3, text: 'Release', done: state(false) }, ...todos.get()]);
+flush();                                      // logs "render Release at 0"
+console.log(list.children[1].className);      // done</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { classList, state, flush } from '@fiorejs/signals';
+
+const todos = state([
+  { id: 1, text: 'Write docs', done: state(false) },
+  { id: 2, text: 'Publish', done: state(false) },
+]);
+
+const list = (
+  &lt;ul&gt;
+    {todos.for((todo) =&gt; todo.id).map((todo, index) =&gt; {
+      console.log('render', todo.text, 'at', index);
+      return &lt;li class={classList({ done: todo.done })}&gt;{todo.text}&lt;/li&gt;;
+    })}
+  &lt;/ul&gt;
+);
+document.body.append(list);
+
+todos.get()[0].done.set(true);                // no list work: only a class changes
+todos.set([{ id: 3, text: 'Release', done: state(false) }, ...todos.get()]);
+flush();                                      // logs "render Release at 0"
+console.log(list.children[1].className);      // done</code></pre>
+</div>
+        </section>
+
+        <section id="order">
+          <h2>How rows are kept and moved</h2>
+          <p>
+            When the order changes, only the rows that are out of place are moved. A focused input in a
+            row that does not move keeps its focus, and in browsers that have <code>moveBefore</code> it
+            keeps focus in moved rows too. Rows of items that left the array stop, and the bindings inside
+            them stop for good.
+          </p>
+          <p>
+            A row can be a node or a fragment. Each place where a list is bound keeps its own rows. Inside a
+            computed child, give the list its own element, for example
+            <code>computed(() => (show.get() ? ul(todos.map(render)) : null))</code>; rows are then
+            reused only while that computed does not recalculate.
+          </p>
+        </section>
+
+        <section id="index">
+          <h2>Index and repeated keys</h2>
+          <p>
+            <code>render</code> receives the item's index at the time its row is created. A reused row keeps
+            that index, even when the item moves. Do not use it to show a position; derive the position from
+            the array if you need it.
+          </p>
+          <p>
+            A key that appears more than once gets one row per occurrence. Items without a <code>key</code>
+            field all have the key <code>undefined</code> and are matched by position, so such a row keeps
+            showing the item it was created for. Give each item a stable key when its content can change.
+          </p>
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { ul, li } from 'fiorejs';
+import { state, flush } from '@fiorejs/signals';
+
+const items = state([{ key: 'a' }, { key: 'a' }, { key: 'b' }]);
+
+const list = ul(items.for().map((item, index) =&gt; li(`${item.key}${index}`)));
+document.body.append(list);
+console.log(list.textContent); // a0a1b2
+
+items.set([{ key: 'b' }, { key: 'a' }, { key: 'a' }]);
+flush();
+console.log(list.textContent); // b2a0a1: rows moved, labels kept</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { state, flush } from '@fiorejs/signals';
+
+const items = state([{ key: 'a' }, { key: 'a' }, { key: 'b' }]);
+
+const list = &lt;ul&gt;{items.for().map((item, index) =&gt; &lt;li&gt;{item.key}{index}&lt;/li&gt;)}&lt;/ul&gt;;
+document.body.append(list);
+console.log(list.textContent); // a0a1b2
+
+items.set([{ key: 'b' }, { key: 'a' }, { key: 'a' }]);
+flush();
+console.log(list.textContent); // b2a0a1: rows moved, labels kept</code></pre>
+</div>
+        </section>
+
+        <section id="performance">
+          <h2>Performance and errors</h2>
+          <p>
+            Lists of a few thousand rows are fine. In Chromium, 1,000 rows with three bound inputs each
+            render in about 40 ms including layout. A change to one row takes well under a millisecond, and
+            adding, removing or swapping rows moves only the rows involved. For much longer lists the number
+            of DOM nodes becomes the limit, so paginate or render only the visible rows.
+          </p>
+          <p>
+            If <code>render</code> throws, the list keeps the rows it had and stops updating, like any
+            binding that throws. The error is thrown at the end of the flush. See
+            <a href="../signals.html#lists">Signals reference</a> for the full list rules.
+          </p>
+        </section>
+
+        <nav class="pager" aria-label="Pages" data-pager></nav>
+      </main>
+    </div>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <p class="footer-note">MIT licensed. Source on GitHub.</p>
+        <div class="footer-links">
+          <a href="https://www.npmjs.com/package/fiorejs">npm</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+          <a href="https://github.com/vrtexe/fiore/issues">Issues</a>
+          <a href="https://github.com/vrtexe/fiore/releases">Releases</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

@@ -111,11 +111,15 @@ async function User(props: { id: number }) {
 
 Tags, attributes, properties and listeners are typed per element. In a listener, `event.currentTarget` is the element. Listeners for custom event names with a hyphen receive a `CustomEvent`; annotate the parameter to type its `detail`. Custom elements (tags with a hyphen) accept any prop.
 
-A JSX expression is typed as `Node`, not as the specific element. Cast it when you need the element type:
+A JSX expression is typed as `Node`, not as the specific element. To get the element with its type, pass `ref`, a function that is called with the finished element, like the builder's `also`:
 
 ```tsx
-const input = (<input value="Ada" />) as HTMLInputElement;
+let input!: HTMLInputElement;
+const form = <form><input value="Ada" ref={(element) => (input = element)} /></form>;
+input.focus();
 ```
+
+Or cast the expression when it is the element itself: `(<input value="Ada" />) as HTMLInputElement`.
 
 ## Limits
 

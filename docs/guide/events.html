@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Events: fiore</title>
+    <meta name="description" content="Attach listeners with on(): plain handlers, handler objects with options, several listeners per event, event typing and delegation." />
+    <link rel="canonical" href="https://vrtexe.github.io/fiore/guide/events.html" />
+    <meta name="theme-color" content="#0a0c0f" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
+    <link rel="stylesheet" href="../assets/site.css" />
+    <script type="module" src="../assets/docs.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <nav class="nav-links" aria-label="Main">
+          <a href="../index.html">Home</a>
+          <a href="../tutorial/">Tutorial</a>
+          <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
+          <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+        </nav>
+        <a class="btn" href="quick-start.html">Quick start</a>
+      </div>
+    </header>
+
+    <div class="wrap docs-layout">
+      <aside class="docs-side">
+        <nav class="docs-nav" aria-label="Documentation" data-nav></nav>
+      </aside>
+
+      <main class="docs-main" id="main">
+        <header class="docs-head">
+          <h1>Events</h1>
+          <p class="docs-lead">
+            Listeners go in <code>on</code>. Each key is an event name and each value is a handler, or an object with a handler and the options of <code>addEventListener</code>.
+          </p>
+        </header>
+
+        <section id="on">
+          <h2>Adding listeners</h2>
+          <p data-syntax="builder">
+            <code>on(map)</code> maps event names to handlers. fiore calls
+            <code>addEventListener</code> for each entry when the element is created, after the
+            props, attributes and children:
+          </p>
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { button, input } from 'fiorejs';
+
+const field = input
+  .on({ input: (event) =&gt; console.log('value:', event.currentTarget.value) })
+  .create();
+
+const send = button.on({ click: () =&gt; console.log('send') }).create('Send');
+
+document.body.append(field, send);
+send.click();
+// send
+          </code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const field = &lt;input oninput={(event) =&gt; console.log('value:', event.currentTarget.value)} /&gt;;
+
+const send = &lt;button onclick={() =&gt; console.log('send')}&gt;Send&lt;/button&gt;;
+
+document.body.append(field, send);
+send.click();
+// send</code></pre>
+          </div>
+          <p data-syntax="builder">A plain call takes the same map under the <code>on</code> key:
+            <code>button({ on: { click: handler }, children: 'Send' })</code>.</p>
+          <p data-syntax="jsx">In JSX a listener is a prop: <code>on</code> and the event name, so <code>onclick</code> and <code>onClick</code> both listen to <code>click</code>. The name after <code>on</code> is lowercased and used as written otherwise, so <code>oncart-add</code> listens to <code>cart-add</code>.</p>
+        </section>
+
+        <section id="element">
+          <h2>Reaching the element in a handler</h2>
+          <p>
+            Inside a handler, <code>event.currentTarget</code> is the element the listener is
+            attached to. A handler written as a <code>function</code>, not an arrow function, also
+            gets that element as <code>this</code>. <code>event.target</code> can be a descendant,
+            so use <code>currentTarget</code> when you need the element that owns the listener:
+          </p>
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { button, span } from 'fiorejs';
+
+const inner = span('label');
+const toggle = button
+  .on({
+    click: function (event) {
+      console.log(this === event.currentTarget, event.target === inner);
+    },
+  })
+  .create(inner);
+
+document.body.append(toggle);
+inner.click();
+// true true
+          </code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const inner = &lt;span&gt;label&lt;/span&gt;;
+const toggle = (
+  &lt;button
+    onclick={function (event) {
+      console.log(this === event.currentTarget, event.target === inner);
+    }}
+  &gt;
+    {inner}
+  &lt;/button&gt;
+);
+
+document.body.append(toggle);
+inner.click();
+// true true</code></pre>
+          </div>
+        </section>
+
+        <section id="options">
+          <h2>Handler objects with options</h2>
+          <p>
+            To pass options such as <code>once</code>, <code>capture</code>,
+            <code>passive</code> or <code>signal</code>, use an object with a
+            <code>handler</code> and an <code>options</code> key. The options go straight to
+            <code>addEventListener</code>:
+          </p>
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { button } from 'fiorejs';
+
+const once = button
+  .on({
+    click: {
+      handler: () =&gt; console.log('first click only'),
+      options: { once: true },
+    },
+  })
+  .create('Once');
+
+document.body.append(once);
+once.click();
+once.click();
+// first click only
+          </code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const once = (
+  &lt;button onclick={{ handler: () =&gt; console.log('first click only'), options: { once: true } }}&gt;
+    Once
+  &lt;/button&gt;
+);
+
+document.body.append(once);
+once.click();
+once.click();
+// first click only</code></pre>
+          </div>
+          <p>
+            An object without a <code>handler</code> is ignored. In JSX the same object is the value
+            of the listener prop.
+          </p>
+          <h3>Removing a listener</h3>
+          <p>
+            fiore has no method to remove a listener. Pass an <code>AbortSignal</code> in the
+            options and abort it when the listener should go. Aborting removes every listener that
+            shares the signal:
+          </p>
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { button } from 'fiorejs';
+
+const controller = new AbortController();
+
+const stoppable = button
+  .on({ click: { handler: () =&gt; console.log('click'), options: { signal: controller.signal } } })
+  .create('Stoppable');
+
+controller.abort(); // the listener is gone
+          </code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const controller = new AbortController();
+
+const stoppable = (
+  &lt;button onclick={{ handler: () =&gt; console.log('click'), options: { signal: controller.signal } }}&gt;
+    Stoppable
+  &lt;/button&gt;
+);
+
+controller.abort(); // the listener is gone</code></pre>
+          </div>
+        </section>
+
+        <section id="multiple">
+          <h2>Several listeners</h2>
+          <p data-syntax="jsx">A JSX element has one prop for each event name, so a second <code>onclick</code> would replace the first. To run two functions for one event, call both from one handler: <code>onclick={() => { track(); save(); }}</code>. Listeners for different events never clash. The builder example below adds listeners one call at a time.</p>
+          <p>
+            Listeners never replace each other. Every <code>on</code> call on a builder adds its map,
+            so you can build up listeners from a template and a particular use. All of them run, in
+            the order they were added:
+          </p>
+          <pre class="code" tabindex="0"><code class="language-js">import { button } from 'fiorejs';
+
+const tracked = button.on({ click: () =&gt; console.log('track') });
+
+const save = tracked
+  .on({ click: () =&gt; console.log('save') })
+  .on({ focus: () =&gt; console.log('focused') })
+  .create('Save');
+
+document.body.append(save);
+save.click();
+// track
+// save
+          </code></pre>
+          <p>
+            <code>tracked</code> is unchanged, as with every builder method; see
+            <a href="builders.html#immutable">Builders</a>.
+          </p>
+        </section>
+
+        <section id="typing">
+          <h2>Event typing</h2>
+          <p>
+            In TypeScript each element accepts the events of its own event map. A
+            <code>button</code> handler receives a <code>MouseEvent</code> for
+            <code>click</code>, a <code>KeyboardEvent</code> for <code>keydown</code>. In the
+            handler, both <code>this</code> and <code>event.currentTarget</code> are typed as the
+            element, so no cast is needed:
+          </p>
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { input } from 'fiorejs';
+
+input
+  .on({
+    input: (event) =&gt; console.log(event.currentTarget.value), // HTMLInputElement
+    keydown: (event) =&gt; console.log(event.key), // KeyboardEvent
+  })
+  .create();
+          </code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">&lt;input
+  oninput={(event) =&gt; console.log(event.currentTarget.value)} // HTMLInputElement
+  onkeydown={(event) =&gt; console.log(event.key)} // KeyboardEvent
+/&gt;;</code></pre>
+          </div>
+          <p>
+            Some elements take more events: <code>body</code> accepts window events such as
+            <code>popstate</code>, and <code>video</code> accepts media events. Custom event names
+            that contain a hyphen are accepted on every element and typed as
+            <code>CustomEvent</code>. Annotate the parameter to type its <code>detail</code>:
+          </p>
+          <pre class="code" tabindex="0"><code class="language-js">div.on({
+  'cart-add': (event: CustomEvent&lt;{ sku: string }&gt;) =&gt; console.log(event.detail.sku),
+}).create();
+          </code></pre>
+          <p>
+            A custom event name without a hyphen must be added to the global event map first:
+          </p>
+          <p data-syntax="jsx">In JSX a custom event name with a hyphen goes after <code>on</code>: <code>oncart-add={(event: CustomEvent&lt;{ sku: string }&gt;) =&gt; console.log(event.detail.sku)}</code>. The declaration below is the same for both syntaxes.</p>
+          <pre class="code" tabindex="0"><code class="language-js">declare global {
+  interface HTMLElementEventMap {
+    itemselected: CustomEvent&lt;{ id: number }&gt;;
+  }
+}
+          </code></pre>
+        </section>
+
+        <section id="delegation">
+          <h2>Delegation</h2>
+          <p>
+            fiore attaches one listener per element you give it. To handle many children with one
+            listener, attach it to the parent and read <code>event.target</code>. This is useful for
+            long lists, and for children that are added later:
+          </p>
+          <div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { li, ul } from 'fiorejs';
+
+const list = ul
+  .on({
+    click: (event) =&gt; {
+      const item = event.target.closest('li');
+      if (item) console.log('picked', item.textContent);
+    },
+  })
+  .create(['one', 'two', 'three'].map((name) =&gt; li(name)));
+
+document.body.append(list);
+list.children[1].click();
+// picked two
+          </code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">const list = (
+  &lt;ul
+    onclick={(event) =&gt; {
+      const item = event.target.closest('li');
+      if (item) console.log('picked', item.textContent);
+    }}
+  &gt;
+    {['one', 'two', 'three'].map((name) =&gt; (
+      &lt;li&gt;{name}&lt;/li&gt;
+    ))}
+  &lt;/ul&gt;
+);
+
+document.body.append(list);
+list.children[1].click();
+// picked two</code></pre>
+          </div>
+          <p>
+            <span data-syntax="builder">Listeners are the only way to react to events in <code>on</code>. Inline attributes such as <code>onclick</code> are ignored; see <a href="props-attrs.html#handlers">Props and attributes</a>.</span><span data-syntax="jsx">In JSX, <code>onclick</code> is the listener prop; see <a href="props-attrs.html#handlers">Props and attributes</a>.</span> Next:
+            <a href="fragments.html">Fragments</a>.
+          </p>
+        </section>
+
+        <nav class="pager" aria-label="Pages" data-pager></nav>
+      </main>
+    </div>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <p class="footer-note">MIT licensed. Source on GitHub.</p>
+        <div class="footer-links">
+          <a href="https://www.npmjs.com/package/fiorejs">npm</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+          <a href="https://github.com/vrtexe/fiore/issues">Issues</a>
+          <a href="https://github.com/vrtexe/fiore/releases">Releases</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>

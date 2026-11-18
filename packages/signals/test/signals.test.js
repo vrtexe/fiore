@@ -10,7 +10,7 @@ Object.assign(globalThis, {
 });
 
 const { button, div, span, input } = await import('fiorejs');
-const { state, computed, effect, untrack, read, resource, classList, isSignal, flush, tick: flushed, root } = await import('@fiorejs/signals');
+const { state, computed, effect, untrack, read, resource, classList, isSignal, flush, tick: flushed, root, onCleanup } = await import('@fiorejs/signals');
 
 const tick = () => new Promise((resolve) => setTimeout(resolve));
 
@@ -434,6 +434,53 @@ test('a binding that fails while building is reported, leaves no subscriber behi
   assert.equal(reads, 1);
   assert.equal(errors.length, 1);
   assert.equal(element.tagName, 'DIV');
+});
+
+test('onCleanup runs when its root stops, and before the next run of its effect', () => {
+  const log = [];
+  const stop = root(() => onCleanup(() => log.push('root')));
+  const count = state(0);
+  const stopEffect = effect(() => {
+    const seen = count.get();
+    onCleanup(() => log.push(`run ${seen}`));
+  });
+  count.set(1);
+  flush();
+  stop();
+  stopEffect();
+
+  assert.deepEqual(log, ['run 0', 'root', 'run 1']);
+});
+
+test('onCleanup runs when a branch or a list row is removed', () => {
+  const log = [];
+  const open = state(true);
+  const items = state(['a', 'b']);
+  document.body.append(
+    div(open.if(() => (onCleanup(() => log.push('branch')), span('open')))),
+    div(items.map((item) => (onCleanup(() => log.push(item)), span(item)))),
+  );
+  open.set(false);
+  items.set(['a']);
+  flush();
+
+  assert.deepEqual(log.sort(), ['b', 'branch']);
+});
+
+test('onCleanup with no owner never runs, and one that throws does not stop the others', async () => {
+  let ran = 0;
+  onCleanup(() => ran++);
+  const stop = root(() => {
+    onCleanup(() => {
+      throw new Error('cleanup failed');
+    });
+    onCleanup(() => ran++);
+  });
+
+  const errors = await reported(() => stop());
+
+  assert.equal(ran, 1);
+  assert.equal(errors.length, 1);
 });
 
 test('a cleanup that throws does not stop the effect that owns it', async () => {
@@ -1170,6 +1217,19 @@ test('resource keeps its value while reloading, and mutate sets it without loadi
   flush();
   assert.equal(data.get(), 'local');
   assert.equal(calls.length, 2);
+});
+
+test('a resource stopped with its owner while loading is no longer loading', async () => {
+  /** @type {any} */
+  let users;
+  const stop = root(() => {
+    users = resource(() => new Promise(() => {}));
+  });
+  assert.equal(users.loading.get(), true);
+  stop();
+  await flushed();
+
+  assert.equal(users.loading.get(), false);
 });
 
 test('resource runs its fetcher untracked and aborts when its owner stops', async () => {
@@ -2215,4 +2275,134 @@ test('resource does not abort a load that has already failed', async () => {
 
   assert.equal(calls[0].signal.aborted, false);
   assert.equal(calls.length, 2);
+});
+
+test('a warmed chain of 20,000 computeds updates without throwing', () => {
+  const source = state(0);
+  const chain = [source];
+  const warm = [];
+  for (let i = 1; i <= 20_000; i++) {
+    const previous = chain[i - 1];
+    chain.push(computed(() => previous.get() + 1));
+    // The first read of a chain nests once per computed, so the chain is read in steps while it grows.
+    if (i % 1_000 === 0) warm.push(effect(() => chain[i].get()));
+  }
+  const seen = [];
+  effect(() => seen.push(chain[20_000].get()));
+  warm.forEach((stop) => stop());
+
+  source.set(1);
+  flush();
+  source.set(2);
+  flush();
+
+  assert.deepEqual(seen, [20_000, 20_001, 20_002]);
+});
+
+test('a source read twice in one run is followed once', () => {
+  const a = state(1);
+  const b = state(1);
+  const sum = computed(() => a.get() + a.get());
+  let runs = 0;
+  effect(() => {
+    runs++;
+    a.get();
+    b.get();
+    a.get();
+    sum.get();
+    sum.get();
+  });
+
+  a.set(2);
+  flush();
+  b.set(2);
+  flush();
+  a.set(3);
+  flush();
+
+  assert.equal(runs, 4);
+  assert.equal(sum.get(), 6);
+});
+
+test('a run that reads fewer sources, or reads them in another order, follows only what it read', () => {
+  const keys = state(['a', 'b', 'c']);
+  const values = { a: state(1), b: state(1), c: state(1) };
+  let reads = 0;
+  const doubled = computed(() => (reads++, values.c.get() * 2));
+  let runs = 0;
+  effect(() => {
+    runs++;
+    for (const key of keys.get()) (key === 'c' ? doubled : values[key]).get();
+  });
+
+  keys.set(['c', 'a']);
+  flush();
+  values.b.set(2);
+  flush();
+  values.c.set(2);
+  flush();
+  keys.set(['a']);
+  flush();
+  values.c.set(3);
+  flush();
+  values.a.set(2);
+  flush();
+
+  assert.equal(runs, 5);
+  assert.equal(reads, 2);
+});
+
+test('a cleanup that stops the reader while it lets go of its sources leaves nothing subscribed', () => {
+  const show = state(true);
+  const count = state(0);
+  let stop;
+  const view = computed(() => {
+    onCleanup(() => stop());
+    return count.get();
+  });
+  let runs = 0;
+  stop = effect(() => {
+    runs++;
+    if (show.get()) view.get();
+    count.get();
+  });
+
+  show.set(false);
+  flush();
+  count.set(1);
+  flush();
+  show.set(true);
+  flush();
+
+  assert.equal(runs, 2);
+});
+
+test('a computed that threw after reading a state passes on the next change of a dirty computed it did not read', () => {
+  const a = state(0);
+  const x = state(0);
+  const inner = computed(() => x.get() + 1);
+  let fail = false;
+  const outer = computed(() => {
+    a.get();
+    if (fail) throw new Error('outer');
+    return inner.get() * 10;
+  });
+  const seen = [];
+  effect(() => {
+    try {
+      seen.push(outer.get());
+    } catch {
+      seen.push('error');
+    }
+  });
+
+  fail = true;
+  a.set(1);
+  x.set(1);
+  flush();
+  fail = false;
+  x.set(2);
+  flush();
+
+  assert.deepEqual(seen, [10, 'error', 30]);
 });

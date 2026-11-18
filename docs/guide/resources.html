@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Async data: fiore</title>
+    <meta name="description" content="Load data with resource(source, fetcher) and resource(fetcher): loading and error signals, refetch, mutate, aborting and stale results." />
+    <link rel="canonical" href="https://vrtexe.github.io/fiore/guide/resources.html" />
+    <meta name="theme-color" content="#0a0c0f" />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23b8f26d'/%3E%3Cpath d='M12 10l-5 6 5 6M20 10l5 6-5 6' fill='none' stroke='%230a0c0f' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"
+    />
+    <script>try{if(localStorage.getItem('fiore-syntax')==='jsx')document.documentElement.dataset.syntax='jsx'}catch{}</script>
+    <link rel="stylesheet" href="../assets/site.css" />
+    <script type="module" src="../assets/docs.js"></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <header class="nav">
+      <div class="wrap nav-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <nav class="nav-links" aria-label="Main">
+          <a href="../index.html">Home</a>
+          <a href="../tutorial/">Tutorial</a>
+          <a class="is-current" href="quick-start.html" aria-current="page">Docs</a>
+          <a href="../api.html">API</a>
+          <a href="../signals.html">Signals</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+        </nav>
+        <a class="btn" href="quick-start.html">Quick start</a>
+      </div>
+    </header>
+
+    <div class="wrap docs-layout">
+      <aside class="docs-side">
+        <nav class="docs-nav" aria-label="Documentation" data-nav></nav>
+      </aside>
+
+      <main class="docs-main" id="main">
+        <header class="docs-head">
+          <h1>Async data</h1>
+          <p class="docs-lead">A resource loads a value asynchronously and exposes it as a signal, with <code>loading</code> and <code>error</code> as signals of their own. It loads again when its source changes and drops the result of an older load.</p>
+        </header>
+
+        <section id="resource">
+          <h2>resource(source, fetcher)</h2>
+          <p>
+            <code>resource(source, fetcher)</code> calls <code>fetcher</code> with the value of
+            <code>source</code>, a signal or a getter, and loads again whenever the source changes. While the
+            source gives <code>null</code>, <code>undefined</code> or <code>false</code>, nothing is loaded.
+            The fetcher runs untracked, so signals it reads do not become dependencies.
+          </p>
+          <p>
+            The resource is a signal of the last loaded value. It is <code>undefined</code> until the first
+            load finishes, and it keeps the previous value while it reloads.
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { effect, resource, state, tick } from '@fiorejs/signals';
+
+const userId = state(1);
+
+const user = resource(userId, (id, { signal }) =&gt;
+  new Promise((resolve) =&gt; setTimeout(() =&gt; resolve({ id, name: `User ${id}` }), 10)),
+);
+
+effect(() =&gt; console.log(user.loading.get() ? 'loading' : 'idle', user.get()?.name));
+// logs "loading undefined" at once
+
+await new Promise((resolve) =&gt; setTimeout(resolve, 20)); // logs "idle User 1"
+userId.set(2);
+await tick(); // logs "loading User 1": the old value stays while loading
+await new Promise((resolve) =&gt; setTimeout(resolve, 20)); // logs "idle User 2"</code></pre>
+          <p>
+            With <code>fetch</code>, pass the abort signal along:
+            <code>(id, { signal }) =&gt; fetch(`/users/${id}`, { signal }).then((r) =&gt; r.json())</code>.
+            <code>resource(fetcher)</code> without a source loads once.
+          </p>
+        </section>
+
+        <section id="state">
+          <h2>Loading, error, refetch and mutate</h2>
+          <ul>
+            <li><code>resource.loading</code> is a signal that is true while a load runs.</li>
+            <li><code>resource.error</code> is a signal of the last error. It is cleared when a new load starts and when the source becomes <code>null</code>, <code>undefined</code> or <code>false</code>.</li>
+            <li><code>refetch()</code> loads again with the last source value.</li>
+            <li><code>mutate(value)</code> sets the value without loading, for example for an optimistic change.</li>
+          </ul>
+          <p>
+            A failed load that nothing reads <code>error</code> of is also reported with
+            <code>reportError</code>, so it does not go unnoticed. Show the states by binding them:
+          </p>
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div } from 'fiorejs';
+import { computed, resource, state, flush } from '@fiorejs/signals';
+
+const userId = state(1);
+const user = resource(userId, async (id) =&gt; {
+  if (id === 2) throw new Error('not found');
+  return { name: `User ${id}` };
+});
+
+const view = div(
+  computed(() =&gt; (user.error.get() ? 'Could not load' : user.loading.get() ? 'Loading' : user.get()?.name)),
+);
+document.body.append(view);
+
+await new Promise((resolve) =&gt; setTimeout(resolve, 10));
+flush();
+console.log(view.textContent); // User 1
+
+userId.set(2);
+await new Promise((resolve) =&gt; setTimeout(resolve, 10));
+flush();
+console.log(view.textContent); // Could not load
+
+user.mutate({ name: 'Local' }); // sets the value; error stays until the next load</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { computed, resource, state, flush } from '@fiorejs/signals';
+
+const userId = state(1);
+const user = resource(userId, async (id) =&gt; {
+  if (id === 2) throw new Error('not found');
+  return { name: `User ${id}` };
+});
+
+const view = (
+  &lt;div&gt;
+    {computed(() =&gt; (user.error.get() ? 'Could not load' : user.loading.get() ? 'Loading' : user.get()?.name))}
+  &lt;/div&gt;
+);
+document.body.append(view);
+
+await new Promise((resolve) =&gt; setTimeout(resolve, 10));
+flush();
+console.log(view.textContent); // User 1
+
+userId.set(2);
+await new Promise((resolve) =&gt; setTimeout(resolve, 10));
+flush();
+console.log(view.textContent); // Could not load
+
+user.mutate({ name: 'Local' }); // sets the value; error stays until the next load</code></pre>
+</div>
+          <p>
+            Setting <code>loading</code> or <code>error</code> yourself is not supported and confuses the
+            resource. Call <code>refetch()</code> only while the resource is in use: on a resource whose
+            effect or list row has gone away it still starts a load.
+          </p>
+        </section>
+
+        <section id="races">
+          <h2>Aborting and races</h2>
+          <p>
+            The fetcher gets an <code>AbortSignal</code> as <code>{ signal }</code>. It aborts when a newer
+            load starts, and when the effect, computed or list row the resource was created in goes away.
+            The result of an older load is ignored even if it arrives later, so a slow first request cannot
+            overwrite a newer answer.
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { resource, state, tick } from '@fiorejs/signals';
+
+const query = state('a');
+
+const results = resource(query, (text, { signal }) =&gt;
+  new Promise((resolve, reject) =&gt; {
+    const timer = setTimeout(() =&gt; resolve(`results for ${text}`), text === 'a' ? 30 : 5);
+    signal.addEventListener('abort', () =&gt; {
+      console.log('aborted', text);
+      clearTimeout(timer);
+      reject(signal.reason);
+    });
+  }),
+);
+
+query.set('b');
+await tick(); // starts the load for "b" and logs "aborted a"
+await new Promise((resolve) =&gt; setTimeout(resolve, 50));
+console.log(results.get()); // results for b</code></pre>
+          <p>
+            When the aborted fetcher rejects, that error is ignored because the load is no longer the
+            current one. See <a href="cleanup.html">Ownership and cleanup</a> for how a resource stops with
+            its owner, and <a href="../signals.html#resource">Signals reference</a> for the full contract.
+          </p>
+        </section>
+
+        <nav class="pager" aria-label="Pages" data-pager></nav>
+      </main>
+    </div>
+
+    <footer class="footer">
+      <div class="wrap footer-inner">
+        <a class="brand" href="../index.html" aria-label="fiore home">
+          <span class="brand-mark" aria-hidden="true">&lt;/&gt;</span>
+          fiore
+        </a>
+        <p class="footer-note">MIT licensed. Source on GitHub.</p>
+        <div class="footer-links">
+          <a href="https://www.npmjs.com/package/fiorejs">npm</a>
+          <a href="https://github.com/vrtexe/fiore">GitHub</a>
+          <a href="https://github.com/vrtexe/fiore/issues">Issues</a>
+          <a href="https://github.com/vrtexe/fiore/releases">Releases</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
