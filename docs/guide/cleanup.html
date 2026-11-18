@@ -198,6 +198,100 @@ console.log(label.textContent); // 1: resumed with the current value</code></pre
           </p>
         </section>
 
+        <section id="no-owner">
+          <h2>Where code has no owner</h2>
+          <p>
+            Code that runs outside every owner creates effects, bindings and computeds that nothing stops.
+            They live until their signals are garbage-collected. These places have no owner:
+          </p>
+          <ul>
+            <li>inside <code>untrack(fn)</code>, which runs <code>fn</code> without an owner as well as without subscribing;</li>
+            <li>event handlers, timers and other callbacks that run later, because the owner is only set while an owner is running;</li>
+            <li>in an async component or function, everything after the first <code>await</code>. The owner is a synchronous global, and JavaScript has no AsyncContext yet to carry it across an <code>await</code>, so this cannot be fixed in the library.</li>
+          </ul>
+          <p>
+            In all three, wrap what you create in <code>root()</code> and keep the function it returns. Call it
+            when the view is closed.
+          </p>
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { button, div } from 'fiorejs';
+import { effect, flush, root, state } from '@fiorejs/signals';
+
+const count = state(0);
+let stop;
+
+const open = button
+  .on({
+    click: () =&gt; {
+      stop = root(() =&gt; {
+        effect(() =&gt; console.log('count is', count.get()));
+        document.body.append(div(count));
+      });
+    },
+  })
+  .create('Open');
+document.body.append(open);
+
+open.click(); // logs "count is 0"
+count.set(1);
+flush(); // logs "count is 1"
+
+stop();
+count.set(2);
+flush(); // logs nothing
+console.log(document.body.textContent); // Open1</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { effect, flush, root, state } from '@fiorejs/signals';
+
+const count = state(0);
+let stop;
+
+const open = (
+  &lt;button
+    onclick={() =&gt; {
+      stop = root(() =&gt; {
+        effect(() =&gt; console.log('count is', count.get()));
+        document.body.append(&lt;div&gt;{count}&lt;/div&gt;);
+      });
+    }}
+  &gt;
+    Open
+  &lt;/button&gt;
+);
+document.body.append(open);
+
+open.click(); // logs "count is 0"
+count.set(1);
+flush(); // logs "count is 1"
+
+stop();
+count.set(2);
+flush(); // logs nothing
+console.log(document.body.textContent); // Open1</code></pre>
+</div>
+          <p>
+            The same applies after an <code>await</code>. Create the effect in a <code>root</code> and stop it
+            yourself:
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { effect, flush, root, state } from '@fiorejs/signals';
+
+const count = state(0);
+
+async function load() {
+  await Promise.resolve();
+  // no owner here: this effect would never stop
+  return root(() =&gt; {
+    effect(() =&gt; console.log('count is', count.get()));
+  });
+}
+
+const stop = await load(); // logs "count is 0"
+count.set(1);
+flush(); // logs "count is 1"
+stop();
+count.set(2);
+flush(); // logs nothing</code></pre>
+        </section>
+
         <nav class="pager" aria-label="Pages" data-pager></nav>
       </main>
     </div>

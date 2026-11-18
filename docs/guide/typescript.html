@@ -236,6 +236,20 @@ function Greeting(props: { name: Reactive&lt;string&gt;; excited?: boolean }) {
 const users = state&lt;User[]&gt;([{ id: 1, name: 'Ada' }]);
 &lt;div&gt;{users.for((item) =&gt; item.id).map((item) =&gt; &lt;span&gt;{item.name}&lt;/span&gt;)}&lt;/div&gt;; // item is User</code></pre>
 </div>
+          <p data-syntax="jsx">
+            A component that forwards its props to an element takes the element's props type,
+            <code>JSX.IntrinsicElements['input']</code>. <code>JSX</code> is exported from the
+            <code>@fiorejs/jsx/jsx-runtime</code> entry, not from <code>@fiorejs/jsx</code>, so import it as a type from there.
+            The wrapper then accepts every prop and listener of <code>input</code>, with the same types as a plain
+            <code>&lt;input&gt;</code>.
+          </p>
+          <pre class="code" tabindex="0" data-syntax="jsx"><code class="language-tsx">import type { JSX } from '@fiorejs/jsx/jsx-runtime';
+
+export function TextInput(props: JSX.IntrinsicElements['input']) {
+  return &lt;input {...props} /&gt;;
+}
+
+document.body.append(&lt;TextInput type="email" oninput={(event) =&gt; console.log(event.currentTarget.value)} /&gt;);</code></pre>
           <p>
             Signals fit the <code>Live&lt;T&gt;</code> type of fiorejs, so a signal is accepted wherever a value of that type is.
             The full list of signal types is in the <a href="../signals.html#types">Signals reference</a>.
