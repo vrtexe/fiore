@@ -1,7 +1,7 @@
 // Microbenchmark of the reactive engine, without a DOM.
 // Run from packages/signals: node --expose-gc --max-semi-space-size=256 bench/bench.js
 // The large semi-space keeps young-generation collections out of a run, so the heap growth of a run is what it allocated.
-import { computed, effect, flush, state } from '@fiorejs/signals';
+import { computed, effect, flush, selector, state } from '@fiorejs/signals';
 
 const gc = /** @type {() => void} */ (globalThis.gc);
 if (!gc) {
@@ -124,6 +124,50 @@ const cases = [
       }
     },
     teardown: (context) => context.stop(),
+  },
+  {
+    name: 'select over 10,000 keys, a computed per key, 1,000 selections',
+    ops: 1_000,
+    unit: 'selections',
+    setup: () => {
+      const selected = state(0);
+      const stops = Array.from({ length: 10_000 }, (_, key) => {
+        const on = selected.computed((id) => id === key);
+        return effect(() => {
+          on.get();
+        });
+      });
+      return { selected, stops };
+    },
+    run: ({ selected }) => {
+      for (let i = 1; i <= 1_000; i++) {
+        selected.set(i);
+        flush();
+      }
+    },
+    teardown: (context) => context.stops.forEach((stop) => stop()),
+  },
+  {
+    name: 'select over 10,000 keys with selector, 1,000 selections',
+    ops: 1_000,
+    unit: 'selections',
+    setup: () => {
+      const selected = state(0);
+      const isSelected = selector(selected);
+      const stops = Array.from({ length: 10_000 }, (_, key) =>
+        effect(() => {
+          isSelected(key).get();
+        }),
+      );
+      return { selected, stops };
+    },
+    run: ({ selected }) => {
+      for (let i = 1; i <= 1_000; i++) {
+        selected.set(i);
+        flush();
+      }
+    },
+    teardown: (context) => context.stops.forEach((stop) => stop()),
   },
 ];
 
