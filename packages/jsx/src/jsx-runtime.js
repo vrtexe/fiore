@@ -12,7 +12,7 @@ const SVG_TAGS = new Set(
 const htmlTags = new Map();
 const svgTags = new Map();
 
-/** Names of event handlers, in any case. */
+/** Names of event handlers: `on` in any case, then the event name. */
 const HANDLER = /^on/i;
 
 /**
@@ -134,8 +134,10 @@ export function jsx(type, props) {
       continue;
     }
     if (HANDLER.test(name)) {
+      // The event name as written, with its first letter lowercased: the typed onClick is click, onValueChanged is
+      // valueChanged.
       if (value != null) {
-        data.on[name.slice(2).toLowerCase()] = value;
+        data.on[name.charAt(2).toLowerCase() + name.slice(3)] = value;
       }
     } else if (value === null) {
       // null removes the attribute instead of writing "null" into a property.

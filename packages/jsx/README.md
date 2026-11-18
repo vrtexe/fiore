@@ -52,7 +52,7 @@ Each JSX prop goes to one of the fiorejs inputs:
 
 | Prop | Applied as | Example |
 | --- | --- | --- |
-| `on` + event name, in any case; the event name is lowercased | event listener | `onclick` and `onClick` listen to `click`; `oncart-add` to `cart-add` |
+| `on` + event name; the first letter of the event name is lowercased, the rest is kept | event listener | `onclick` and `onClick` listen to `click`, `onvalueChanged` and `onValueChanged` to `valueChanged`, `oncart-add` to `cart-add` |
 | `null` | removes the attribute | `title={null}` |
 | `style` with an object | style properties | `style={{ height: '10px' }}` |
 | a camel-case name the element has a writable property for | property | `className`, `textContent`, `htmlFor`, `selectedIndex` |
@@ -66,7 +66,7 @@ The name alone decides, never the value, so `width="50%"` stays an attribute and
 
 A prop or child can be a live value, such as a signal from [@fiorejs/signals](https://github.com/vrtexe/fiore/tree/main/packages/signals). On built-in elements a live value goes where a plain value with the same name goes, so a signal holding `null` removes the `title` attribute just like `title={null}`. On a custom element an object value, which includes every live value, goes to the property of that name, so bind an attribute such as `class` or `aria-label` with a plain value or set it in code. A function is never live: `class={() => ...}` passes the function itself, so write a derived value as `class={computed(() => ...)}`. On a custom element a function prop is therefore always a callback.
 
-Everything after `on` is used as the event name, exactly as written, so custom events work the same way as built-in ones: `oncart-add` listens to `cart-add`. A listener can also be an object with `handler` and `options`, which go to `addEventListener`:
+Everything after `on` is used as the event name as written, except that its first letter is lowercased, so custom events work the same way as built-in ones: `oncart-add` listens to `cart-add` and `onvalueChanged` or `onValueChanged` to `valueChanged`. Built-in events are lowercase, so `onKeydown` listens to `keydown`, but `onKeyDown` listens to `keyDown`, which no element fires; the types only offer `onkeydown` and `onKeydown`. An event whose name starts with a capital letter, such as `DOMContentLoaded`, has no JSX form; listen to it with the builder's `on({ DOMContentLoaded })` or in code. A listener can also be an object with `handler` and `options`, which go to `addEventListener`:
 
 ```tsx
 <input onkeydown={{ handler: (event) => console.log(event.key), options: { once: true } }} />

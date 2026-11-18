@@ -258,9 +258,9 @@ test('key is accepted and ignored, also after a spread', () => {
   assert.equal(item.hasAttribute('key'), false);
 });
 
-test('event handler names are recognised in any case and listen to the lowercased event', () => {
+test('event handler names start with on in any case and listen to the event with its first letter lowercased', () => {
   let clicks = 0;
-  const upper = jsx('button', { ONCLICK: () => clicks++ }) as HTMLButtonElement;
+  const upper = jsx('button', { Onclick: () => clicks++ }) as HTMLButtonElement;
   const camel = (<button onClick={(event) => event.currentTarget && clicks++} />) as HTMLButtonElement;
   upper.dispatchEvent(new window.Event('click'));
   camel.dispatchEvent(new window.Event('click'));
@@ -378,4 +378,21 @@ test('ref gets the finished element, typed by its tag', () => {
   assert.equal(valueSeen, 'Ada');
   assert.equal(circle?.namespaceURI, 'http://www.w3.org/2000/svg');
   assert.equal(form.querySelector('input')?.hasAttribute('ref'), false);
+});
+
+test('listeners take the event name as written after on, with its first letter lowercased', () => {
+  const heard: string[] = [];
+  const box = (
+    <my-picker
+      onclick={(event: Event) => heard.push(event.type)}
+      onvalueChanged={(event: Event) => heard.push(event.type)}
+      onIonChange={(event: Event) => heard.push(event.type)}
+      onpicker-open={(event: CustomEvent) => heard.push(event.type)}
+    />
+  ) as HTMLElement;
+  for (const name of ['click', 'valueChanged', 'valuechanged', 'ionChange', 'ionchange', 'picker-open']) {
+    box.dispatchEvent(new window.CustomEvent(name));
+  }
+
+  assert.deepEqual(heard, ['click', 'valueChanged', 'ionChange', 'picker-open']);
 });

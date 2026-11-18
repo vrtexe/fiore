@@ -15,6 +15,7 @@ type Listener<T extends Element, E> =
       options?: boolean | AddEventListenerOptions | undefined | null;
     };
 
+/** Listener props: `on` and the event name, or the name with a capital first letter; the runtime lowercases that letter. */
 type EventProps<T extends Element, M> = {
   [K in keyof M & string as `on${K}` | `on${Capitalize<K>}`]?: Listener<T, M[K]> | undefined | null;
 };
