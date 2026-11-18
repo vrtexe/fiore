@@ -1,6 +1,6 @@
 // The tutorial's lessons, by chapter. `body` is HTML; `code` is the starting code and `solution` the finished one.
 // `jsx` holds the same lesson for JSX readers; body text that differs by syntax carries `data-syntax`.
-// Every lesson runs as an ES module in the preview, with `fiorejs` and `@fiorejs/signals` 2.1 in its import map.
+// Every lesson runs as an ES module in the preview, with `fiorejs` and `@fiorejs/signals` 2.2 in its import map.
 
 export const chapters = [
   {
@@ -141,8 +141,9 @@ event. To pass options, give an object with <code>handler</code> and <code>optio
 calls to <code>on</code> never replace each other.</p>
 <pre data-syntax="builder"><code class="language-js">button.on({ click: (event) => console.log(event.currentTarget) }).create('Log')</code></pre>
 <p data-syntax="jsx">A prop that starts with <code>on</code> adds an event listener: <code>onclick</code> and
-<code>onClick</code> both listen to <code>click</code>. The value is a function that gets the event. To pass options,
-give an object with <code>handler</code> and <code>options</code>.</p>
+<code>onClick</code> both listen to <code>click</code>. The first letter of the event name is lowercased and the rest is
+kept, so <code>onvalueChanged</code> listens to <code>valueChanged</code>. The value is a function that gets the event.
+To pass options, give an object with <code>handler</code> and <code>options</code>.</p>
 <pre data-syntax="jsx"><code class="language-jsx">&lt;button onclick={(event) =&gt; console.log(event.currentTarget)}&gt;Log&lt;/button&gt;</code></pre>
 <p>Add a <code>click</code> listener that changes the text of the button to <code>'Clicked'</code> through
 <code>event.currentTarget.textContent</code>.</p>`,
@@ -351,11 +352,12 @@ input.also((element) => (field = element)).create();</code></pre>
 <p>Store the input in a variable with <code>also</code>, then focus it after it is appended.</p>
 </div>
 <div data-syntax="jsx">
-<p>JSX has no <code>also()</code>, and needs none: a JSX expression is the created element, so keep it in a
-variable. The element is not in the document yet, so focusing or measuring works only after you append it. In
-TypeScript the expression is typed as <code>Node</code>; cast it to get the element type.</p>
-<pre><code class="language-jsx">const field = &lt;input /&gt;;</code></pre>
-<p>Store the input in a variable, append it, then focus it.</p>
+<p>JSX has no <code>also()</code>. Its equivalent is <code>ref</code>, a function that is called with the finished element,
+after its props, listeners and children are applied. The element is not in the document yet, so focusing or measuring
+works only after you append it. In TypeScript <code>ref</code> is typed by the tag.</p>
+<pre><code class="language-jsx">let field;
+&lt;input ref={(element) =&gt; (field = element)} /&gt;;</code></pre>
+<p>Store the input in a variable with <code>ref</code>, then focus it after it is appended.</p>
 </div>`,
         code: `import { input } from 'fiorejs';
 
@@ -377,9 +379,9 @@ field.focus();
         jsx: {
           code: `document.body.append(<input placeholder="Type here" />);
 `,
-          solution: `const field = <input placeholder="Type here" />;
+          solution: `let field;
 
-document.body.append(field);
+document.body.append(<input placeholder="Type here" ref={(element) => (field = element)} />);
 
 field.focus();
 `,
@@ -966,7 +968,8 @@ document.body.append(
         title: 'Reading without subscribing',
         body: `
 <p>Reading a signal inside an effect, a computed or a binding subscribes to it. Sometimes you only want the
-current value. <code>untrack(fn)</code> runs <code>fn</code> without subscribing to the signals it reads.</p>
+current value. <code>untrack(fn)</code> runs <code>fn</code> without subscribing to the signals it reads. It keeps the
+current owner, so what it creates still stops with it.</p>
 <pre><code class="language-js">effect(() => console.log(a.get(), untrack(() => b.get())));</code></pre>
 <p>The effect below logs again when either button is pressed. Change it so that only <code>query</code> reruns it,
 and <code>page</code> is read without subscribing.</p>`,
@@ -1149,10 +1152,12 @@ document.body.append(
         title: 'Keyed lists',
         body: `
 <p>With <code>map</code>, the item itself is the key, so an item replaced by a copy gets a new row.
-<code>signal.for(key).map(render)</code> keys the rows by what <code>key</code> returns, for example an id. A row is
-rendered once, so put the fields that change in signals.</p>
-<pre data-syntax="builder"><code class="language-js">todos.for((todo) => todo.id).map((todo) => li(todo.text))</code></pre>
-<pre data-syntax="jsx"><code class="language-jsx">todos.for((todo) =&gt; todo.id).map((todo) =&gt; &lt;li&gt;{todo.text}&lt;/li&gt;)</code></pre>
+<code>signal.for(key).map(render)</code> keys the rows by what <code>key</code> returns, for example an id. In a keyed
+list <code>render</code> gets the item as a read-only signal: read it with <code>todo.get()</code>, or bind a field
+with <code>todo.computed(...)</code>. When a new array keeps the key with another object, the row stays and only the
+bindings that read the signal update.</p>
+<pre data-syntax="builder"><code class="language-js">todos.for((todo) => todo.id).map((todo) => li(todo.computed((item) => item.text)))</code></pre>
+<pre data-syntax="jsx"><code class="language-jsx">todos.for((todo) =&gt; todo.id).map((todo) =&gt; &lt;li&gt;{todo.computed((item) =&gt; item.text)}&lt;/li&gt;)</code></pre>
 <p data-syntax="jsx">The <code>key</code> prop of JSX is ignored, because nothing is diffed. Keyed rows come from
 <code>for</code> in <code>@fiorejs/signals</code>.</p>
 <p>Pressing Add rebuilds every row, because the list is replaced with new objects. Key the list by
@@ -1184,8 +1189,8 @@ let next = 2;
 document.body.append(
   ul(
     todos.for((todo) => todo.id).map((todo) => {
-      console.log('render row', todo.id);
-      return li(todo.text);
+      console.log('render row', todo.get().id);
+      return li(todo.computed((item) => item.text));
     }),
   ),
   button
@@ -1221,8 +1226,8 @@ let next = 2;
 document.body.append(
   <ul>
     {todos.for((todo) => todo.id).map((todo) => {
-      console.log('render row', todo.id);
-      return <li>{todo.text}</li>;
+      console.log('render row', todo.get().id);
+      return <li>{todo.computed((item) => item.text)}</li>;
     })}
   </ul>,
   <button
@@ -1239,9 +1244,10 @@ document.body.append(
         title: 'Conditional rendering',
         body: `
 <p>A component runs once, so <code>open.get() ? a : b</code> is read once and never switches.
-<code>signal.if(then)</code> is the live version: it shows what <code>then</code> returns while the value is
+<code>signal.if(then)</code> is the live version: it shows what <code>then</code> returns for the value while it is
 truthy, and <code>.else(otherwise)</code> adds the other branch. Both are functions, so only the shown branch is
-built.</p>
+built. <code>then</code> gets the value and is built again whenever the value changes; to build it only when the
+truthiness flips, use <code>signal.computed(Boolean).if(...)</code>.</p>
 <pre data-syntax="builder"><code class="language-js">div(open.if(() => p('Details')).else(() => em('closed')))</code></pre>
 <pre data-syntax="jsx"><code class="language-jsx">&lt;div&gt;{open.if(() =&gt; &lt;p&gt;Details&lt;/p&gt;).else(() =&gt; &lt;em&gt;closed&lt;/em&gt;)}&lt;/div&gt;</code></pre>
 <p>The text below is chosen once. Replace it with <code>open.if(...).else(...)</code> so it follows the button.</p>`,
@@ -1292,7 +1298,8 @@ document.body.append(
         body: `
 <p><code>signal.case(match, render)</code> shows what <code>render</code> returns while the value matches. A
 function is a test on the value, and any other value is compared with <code>Object.is</code>. Chain more cases;
-the first match wins. <code>.else(otherwise)</code> covers the rest.</p>
+the first match wins. <code>.else(otherwise)</code> covers the rest. <code>render</code> gets the value, and the branch
+is built again when the value changes.</p>
 <pre><code class="language-js">status.case('loading', () => 'Loading').case('error', () => 'Failed').else(() => 'Done')</code></pre>
 <p>Add a case for <code>'error'</code> that shows <code>'Something went wrong'</code>, and one for
 <code>'done'</code> that shows <code>'Finished'</code>.</p>`,
@@ -1359,7 +1366,8 @@ document.body.append(
         body: `
 <p><code>resource(source, fetcher)</code> calls <code>fetcher</code> with the value of <code>source</code>, and loads
 again when <code>source</code> changes. The resource is a signal of the last loaded value. Its <code>loading</code>
-and <code>error</code> are signals too. The fetcher may return a promise.</p>
+and <code>error</code> are signals too. The fetcher may return a promise. Like a state, a resource has <code>set</code>,
+<code>update</code> and <code>mutate(fn)</code> to change the value without loading.</p>
 <pre><code class="language-js">const user = resource(userId, (id) => loadUser(id));
 user.loading.get(); // true while loading</code></pre>
 <p>The fake <code>loadUser</code> answers after a short delay. Show <code>'Loading…'</code> while
@@ -1583,6 +1591,8 @@ function that stops it.</p>
   const id = setInterval(tick, delay.get());
   return () => clearInterval(id);
 });</code></pre>
+<p>Inside an effect, <code>onCleanup(fn)</code> does the same, also from a function the effect calls; the
+<a href="../guide/cleanup.html#on-cleanup" target="_blank">cleanup guide</a> shows it in components.</p>
 <p>A change reaches the effect on the next flush, so call <code>flush()</code> after <code>name.set('b')</code> to
 run the effect, and its cleanup, right away.</p>
 <p>Return a function from the effect that logs <code>'leaving'</code> and the name, call <code>flush()</code> after
@@ -1646,11 +1656,15 @@ stop();
 <p>Bindings and effects stop on their own when the content that created them is replaced. For the rest,
 <code>root(fn)</code> runs <code>fn</code> with an owner of its own, and returns a function that stops everything
 <code>fn</code> created: effects, bindings, computeds and lists. A root belongs to no other owner, so call its
-function yourself.</p>
-<pre><code class="language-js">const dispose = root(() => document.body.append(App()));
+function yourself. <code>onCleanup(fn)</code> inside the root runs <code>fn</code> when the root is stopped, which is
+the place to undo what you set up yourself, such as a document listener.</p>
+<pre><code class="language-js">const dispose = root(() => {
+  document.body.append(App());
+  onCleanup(() => console.log('stopped'));
+});
 dispose();</code></pre>
 <p>Wrap the creation of the page in <code>root</code>, and call the function it returns after the first update, so
-the effect stops logging.</p>`,
+the effect stops logging. Inside the root, add <code>onCleanup</code> that logs <code>'stopped'</code>.</p>`,
         code: `import { p } from 'fiorejs';
 import { effect, flush, state } from '@fiorejs/signals';
 
@@ -1665,12 +1679,13 @@ count.set(2);
 flush();
 `,
         solution: `import { p } from 'fiorejs';
-import { effect, flush, root, state } from '@fiorejs/signals';
+import { effect, flush, onCleanup, root, state } from '@fiorejs/signals';
 
 const count = state(0);
 
 const dispose = root(() => {
   effect(() => console.log('count', count.get()));
+  onCleanup(() => console.log('stopped'));
   document.body.append(p(count));
 });
 
@@ -1693,12 +1708,13 @@ flush();
 count.set(2);
 flush();
 `,
-          solution: `import { effect, flush, root, state } from '@fiorejs/signals';
+          solution: `import { effect, flush, onCleanup, root, state } from '@fiorejs/signals';
 
 const count = state(0);
 
 const dispose = root(() => {
   effect(() => console.log('count', count.get()));
+  onCleanup(() => console.log('stopped'));
   document.body.append(<p>{count}</p>);
 });
 
@@ -1732,13 +1748,14 @@ const text = state('');
 let nextId = 2;
 
 function renderTodo(todo) {
+  const item = todo.get();
   return li([
     input
-      .props({ type: 'checkbox', checked: todo.done })
-      .on({ change: (event) => todo.done.set(event.currentTarget.checked) })
+      .props({ type: 'checkbox', checked: item.done })
+      .on({ change: (event) => item.done.set(event.currentTarget.checked) })
       .create(),
     ' ',
-    todo.text,
+    item.text,
   ]);
 }
 
@@ -1774,13 +1791,14 @@ let nextId = 2;
 const remaining = computed(() => todos.get().filter((todo) => !todo.done.get()).length);
 
 function renderTodo(todo) {
+  const item = todo.get();
   return li([
     input
-      .props({ type: 'checkbox', checked: todo.done })
-      .on({ change: (event) => todo.done.set(event.currentTarget.checked) })
+      .props({ type: 'checkbox', checked: item.done })
+      .on({ change: (event) => item.done.set(event.currentTarget.checked) })
       .create(),
     ' ',
-    todo.text,
+    item.text,
   ]);
 }
 
@@ -1816,9 +1834,10 @@ const text = state('');
 let nextId = 2;
 
 function renderTodo(todo) {
+  const item = todo.get();
   return (
     <li>
-      <input type="checkbox" checked={todo.done} onchange={(event) => todo.done.set(event.currentTarget.checked)} /> {todo.text}
+      <input type="checkbox" checked={item.done} onchange={(event) => item.done.set(event.currentTarget.checked)} /> {item.text}
     </li>
   );
 }
@@ -1854,9 +1873,10 @@ let nextId = 2;
 const remaining = computed(() => todos.get().filter((todo) => !todo.done.get()).length);
 
 function renderTodo(todo) {
+  const item = todo.get();
   return (
     <li>
-      <input type="checkbox" checked={todo.done} onchange={(event) => todo.done.set(event.currentTarget.checked)} /> {todo.text}
+      <input type="checkbox" checked={item.done} onchange={(event) => item.done.set(event.currentTarget.checked)} /> {item.text}
     </li>
   );
 }
