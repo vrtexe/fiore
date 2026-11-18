@@ -1,4 +1,4 @@
-import { element, fragment } from 'fiorejs';
+import { LIVE, element, fragment } from 'fiorejs';
 import svg, { element as svgElement } from 'fiorejs/svg';
 
 // ponytail: a, script, style and title always create HTML elements; SVG versions need a namespace hint
@@ -119,10 +119,13 @@ export function jsx(type, props) {
     if (!(result instanceof Promise)) {
       return toNode(result);
     }
-    // An async component holds its place with an empty comment until it resolves.
-    const marker = document.createComment('');
-    result.then((value) => marker.replaceWith(toNode(value)), report);
-    return marker;
+    // An async component is a live child that gets its result when it resolves. Its two comments hold its place and stay
+    // when the result arrives, so a list row or a branch that keeps its first and last node keeps the right ones.
+    return fragment({
+      [LIVE]: (/** @type {(value: unknown) => void} */ apply) => {
+        result.then((value) => apply(toNode(value)), report);
+      },
+    });
   }
 
   const { children, ...rest } = props;

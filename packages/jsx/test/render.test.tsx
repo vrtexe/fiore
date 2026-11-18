@@ -127,7 +127,7 @@ test('async components are inserted once they resolve, also inside fragments', a
   assert.equal(card.textContent, 'Hello , ');
 
   await new Promise((resolve) => setTimeout(resolve));
-  assert.equal(card.innerHTML, 'Hello <b>Ada</b>, <b>Grace</b>');
+  assert.equal(card.innerHTML, 'Hello <!----><b>Ada</b><!---->, <!----><b>Grace</b><!---->');
 });
 
 test('an async component works on its own', async () => {
@@ -141,7 +141,7 @@ test('an async component works on its own', async () => {
   host.append(node);
 
   await new Promise((resolve) => setTimeout(resolve));
-  assert.equal(host.innerHTML, '<b>Ada</b>');
+  assert.equal(host.innerHTML, '<!----><b>Ada</b><!---->');
 });
 
 test('a rejected async component is reported and leaves its place empty', async (t) => {
@@ -432,3 +432,37 @@ test('a component may return any child: a live value, null or text renders as th
 const Settings = () => ({ theme: 'dark' });
 // @ts-expect-error an object that is not a node, a live value or text is not a child
 void (<Settings />);
+
+test('async components as list rows keep their rows when the list changes after they resolve', async () => {
+  const { state, flush } = await import('@fiorejs/signals');
+  const wait = () => new Promise((resolve) => setTimeout(resolve, 5));
+  async function Row(props: { id: number }) {
+    await new Promise((resolve) => setTimeout(resolve));
+    return <li>{`row ${props.id}`}</li>;
+  }
+  const keyedIds = state([1, 2, 3]);
+  const plainIds = state([1, 2, 3]);
+  const keyed = (<ul>{keyedIds.for((id) => id).map((id) => <Row id={id.get()} />)}</ul>) as HTMLUListElement;
+  const plain = (<ul>{plainIds.map((id) => <Row id={id} />)}</ul>) as HTMLUListElement;
+  const both = (ids: number[]) => {
+    keyedIds.set(ids);
+    plainIds.set(ids);
+    flush();
+  };
+  const texts = () => [keyed, plain].map((list) => [...list.children].map((row) => row.textContent).join(','));
+  await wait();
+  assert.deepEqual(texts(), ['row 1,row 2,row 3', 'row 1,row 2,row 3']);
+  const first = keyed.children[0];
+
+  both([1, 2, 3, 4]);
+  await wait();
+  assert.deepEqual(texts(), ['row 1,row 2,row 3,row 4', 'row 1,row 2,row 3,row 4']);
+  both([4, 2, 1]);
+  await wait();
+  assert.deepEqual(texts(), ['row 4,row 2,row 1', 'row 4,row 2,row 1']);
+  both([2, 1, 5]);
+  await wait();
+
+  assert.deepEqual(texts(), ['row 2,row 1,row 5', 'row 2,row 1,row 5']);
+  assert.equal(keyed.children[1], first);
+});

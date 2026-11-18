@@ -100,7 +100,7 @@ const Nothing = () => null;
 document.body.append(<Panel />, <Nothing />);
 ```
 
-A component can be `async`. It returns an empty comment that holds its place, and the comment is replaced with the result when it resolves; a rejection goes to `reportError`. This works anywhere, also outside an element:
+A component can be `async`. It returns a fragment with two empty comments that hold its place, and the result is put between them when it resolves, like a live child; a rejection goes to `reportError`. The comments stay, so a list row or a branch made of an async component keeps its place when the list changes later. This works anywhere, also outside an element:
 
 ```tsx
 async function User(props: { id: number }) {
