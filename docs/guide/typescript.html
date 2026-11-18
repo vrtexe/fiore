@@ -208,6 +208,15 @@ declare global {
   &lt;p&gt;Hello&lt;/p&gt;
 &lt;/fiore-modal&gt;;</code></pre>
 </div>
+          <h3 id="ref-signals">Typing a ref signal</h3>
+          <p>
+            A signal given as the JSX <code>ref</code> or to <code>also</code> holds the element or <code>null</code>, so declare
+            it with both: <code>state&lt;HTMLInputElement | null&gt;(null)</code>. In JSX the signal must take this element:
+            <code>&lt;div ref={field} /&gt;</code> with that signal is a type error, and so is a computed, which cannot be
+            written. A builder's <code>also</code> checks the signal like its callbacks, loosely enough that a modifier written
+            for every HTML element fits a specific tag, and still rejects a computed or a signal of something that is not an
+            element.
+          </p>
         </section>
 
         <section id="modifiers">

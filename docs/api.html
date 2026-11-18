@@ -1062,7 +1062,7 @@ dl.<span class="fn">create</span>(terms.<span class="fn">map</span>((term) <span
                 </tr>
                 <tr>
                   <td><code>also(fn)</code></td>
-                  <td>A function that gets the created element, after the listeners. The element is not in the document yet, so focusing or measuring does not work there.</td>
+                  <td>A function that gets the created element, after the listeners. The element is not in the document yet, so focusing or measuring does not work there. A writable signal from <code>@fiorejs/signals</code> instead of a function holds the element while it is in the document, and <code>null</code> otherwise.</td>
                   <td>Add callbacks, run in order.</td>
                 </tr>
                 <tr>

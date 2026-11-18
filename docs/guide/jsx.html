@@ -320,15 +320,31 @@ console.log(input.value, document.activeElement === input); // Ada true</code></
             <code>(&lt;input /&gt;) as HTMLInputElement</code>.
           </p>
           <p>
-            <code>ref</code> runs when the element is created, before a parent inserts it, so the element is not in the
-            document yet, as with <code>also</code>: focusing or measuring it inside <code>ref</code> does nothing. The example
-            above focuses the input after <code>document.body.append(form)</code>. With <code>@fiorejs/signals</code>, run such
-            code in <code>effect.post</code>, whose first run waits for the next flush, when the element is usually in the
-            document:
+            A function <code>ref</code> runs when the element is created, before a parent inserts it, so the element is not in
+            the document yet, as with <code>also</code>: focusing or measuring it inside the function does nothing. The example
+            above focuses the input after <code>document.body.append(form)</code>.
           </p>
-<pre class="code" tabindex="0"><code class="language-jsx">import { effect } from '@fiorejs/signals';
+          <p>
+            For code that needs the element in the document, pass a writable signal instead, such as a
+            <code>state&lt;HTMLInputElement | null&gt;</code> from <code>@fiorejs/signals</code>. The signal holds the element
+            while the element is in the document: it is set to the element when the element is inserted, however much later,
+            to <code>null</code> when it is removed, to the element again when it comes back, and to <code>null</code> for good
+            when its owner stops, such as a root, a branch, a list row or the next run of an effect. An effect that reads the
+            signal then runs right after the insertion, before the browser paints:
+          </p>
+<pre class="code" tabindex="0"><code class="language-tsx">import { effect, state } from '@fiorejs/signals';
 
-const field = &lt;input ref={(element) =&gt; effect.post(() =&gt; element.focus())} /&gt;;</code></pre>
+const field = state&lt;HTMLInputElement | null&gt;(null);
+effect(() =&gt; field.get()?.focus());
+
+const form = &lt;form&gt;&lt;input ref={field} /&gt;&lt;/form&gt;;
+// later, for example after a fetch or from a click handler:
+document.body.append(form); // the input gets the focus</code></pre>
+          <p>
+            Only a writable signal works as a <code>ref</code>, so a computed is a type error, and so is a signal of another
+            element. Inserting the element sets the signal from a <code>MutationObserver</code>, so it needs a browser or a DOM
+            with one.
+          </p>
         </section>
 
         <section id="events">

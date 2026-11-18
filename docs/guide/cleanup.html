@@ -142,6 +142,12 @@ document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' })); // logs
             An effect can also return its cleanup function, as <a href="effects.html">Effects</a> describes;
             <code>onCleanup</code> is for code that is not an effect body, such as a component or a list row.
           </p>
+          <p>
+            A signal given as a <code>ref</code> in JSX, or to <code>also</code> in a builder, is a binding too: it holds the
+            element while the element is in the document and is set to <code>null</code> for good when its owner stops, so an
+            effect that reads it, for example to focus the element or to start a <code>ResizeObserver</code> it stops in its
+            cleanup, runs again when the element is inserted or removed.
+          </p>
         </section>
 
         <section id="root">

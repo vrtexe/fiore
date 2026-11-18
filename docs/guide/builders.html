@@ -65,7 +65,7 @@
                 <tr><td><code>attrs(map)</code></td><td>Attributes, set with <code>setAttribute</code>.</td><td>Combine; later keys win, and <code>null</code> removes an earlier value.</td></tr>
                 <tr><td><code>on(map)</code></td><td>Listeners, as <code>{ click: fn }</code> or <code>{ click: { handler, options } }</code>.</td><td>Add listeners; they never replace each other.</td></tr>
                 <tr><td><code>with(fn)</code></td><td>A function that gets the builder and returns a builder.</td><td>Each call applies its function.</td></tr>
-                <tr><td><code>also(fn)</code></td><td>A function that gets the created element.</td><td>Add callbacks, run in order.</td></tr>
+                <tr><td><code>also(fn)</code></td><td>A function that gets the created element, or a writable signal that holds it while it is in the document.</td><td>Add callbacks, run in order.</td></tr>
                 <tr><td><code>create(children)</code></td><td>The children, or nothing. Creates the element and returns it.</td><td></td></tr>
               </tbody>
             </table>
@@ -216,10 +216,20 @@ document.body.append(surface);
 // connected: false
           </code></pre>
           <p>
-            Use it to keep a reference or to call a method on the new element. For anything that
-            needs the document, wait until the element is appended. Next:
-            <a href="props-attrs.html">Props and attributes</a>.
+            Use it to keep a reference or to call a method on the new element. For anything that needs the document, pass
+            a writable signal from <code>@fiorejs/signals</code> instead of a function. The signal holds the element while
+            the element is in the document: it is set when the element is inserted, however much later, to
+            <code>null</code> when it is removed, and to <code>null</code> for good when its owner stops:
           </p>
+          <pre class="code" tabindex="0"><code class="language-js">import { input } from 'fiorejs';
+import { effect, state } from '@fiorejs/signals';
+
+const field = state(null);
+effect(() =&gt; field.get()?.focus());
+
+const box = input.also(field).create();
+document.body.append(box); // the input gets the focus</code></pre>
+          <p>Next: <a href="props-attrs.html">Props and attributes</a>.</p>
         </section>
 
         <nav class="pager" aria-label="Pages" data-pager></nav>
