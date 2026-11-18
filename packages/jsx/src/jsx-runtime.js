@@ -99,7 +99,17 @@ function report(error) {
 }
 
 /**
- * @param {string | ((props: any) => Node | Promise<Node>)} type
+ * A component's result as a node: a node as it is, and anything else a child can be, such as a live value, text or
+ * null, in a fragment, so it renders as that child would also where it is not a child, at the top level.
+ * @param {unknown} result
+ * @returns {Node}
+ */
+function toNode(result) {
+  return result instanceof Node ? result : fragment(/** @type {any} */ (result));
+}
+
+/**
+ * @param {string | ((props: any) => unknown)} type
  * @param {Record<string, unknown>} props
  * @returns {Node}
  */
@@ -107,11 +117,11 @@ export function jsx(type, props) {
   if (typeof type === 'function') {
     const result = type(props);
     if (!(result instanceof Promise)) {
-      return result;
+      return toNode(result);
     }
     // An async component holds its place with an empty comment until it resolves.
     const marker = document.createComment('');
-    result.then((node) => marker.replaceWith(node), report);
+    result.then((value) => marker.replaceWith(toNode(value)), report);
     return marker;
   }
 

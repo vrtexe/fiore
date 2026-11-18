@@ -76,7 +76,7 @@ On SVG elements every prop except listeners and a `style` object is set as an at
 
 ## Components and fragments
 
-A component is a function that takes props and returns a node:
+A component is a function that takes props and returns a node, or anything else a child can be:
 
 ```tsx
 import type { Child } from '@fiorejs/jsx/jsx-runtime';
@@ -89,6 +89,15 @@ function Card(props: { title: string; children?: Child }) {
     </section>
   );
 }
+```
+
+A component may also return anything a child can be: a live value such as `open.if(...)`, text, `null` or a list. Such a result comes back in a fragment, so it renders as that child would, also when `<Panel />` is appended at the top level rather than placed in an element:
+
+```tsx
+const Panel = () => open.if(() => <p>Open</p>);
+const Nothing = () => null;
+
+document.body.append(<Panel />, <Nothing />);
 ```
 
 A component can be `async`. It returns an empty comment that holds its place, and the comment is replaced with the result when it resolves; a rejection goes to `reportError`. This works anywhere, also outside an element:

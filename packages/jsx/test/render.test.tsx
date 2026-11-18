@@ -396,3 +396,39 @@ test('listeners take the event name as written after on, with its first letter l
 
   assert.deepEqual(heard, ['click', 'valueChanged', 'ionChange', 'picker-open']);
 });
+
+test('a component may return any child: a live value, null or text renders as that child, also at the top level', async () => {
+  const listeners: ((value: Node | null) => void)[] = [];
+  const Panel = () => ({
+    [LIVE](apply: (value: Node | null) => void) {
+      apply(null);
+      listeners.push(apply);
+    },
+  });
+  const Maybe = () => null;
+  const Label = (props: { text: string }) => props.text;
+  const Later = async () => null;
+  const host = document.createElement('section');
+  const top = <Panel />;
+  host.append(top, <Maybe />, <Label text="label" />, <Later />);
+  const nested = (
+    <div>
+      <Panel />
+      <Maybe />
+      <Label text="label" />
+    </div>
+  ) as HTMLDivElement;
+
+  listeners.forEach((apply) => apply(<p>Open</p>));
+  await new Promise((resolve) => setTimeout(resolve));
+
+  assert.ok(top instanceof window.DocumentFragment);
+  assert.equal(host.textContent, 'Openlabel');
+  assert.equal(nested.textContent, 'Openlabel');
+  assert.equal(nested.querySelector('p')?.textContent, 'Open');
+});
+
+// A component that returns something no child can be is rejected.
+const Settings = () => ({ theme: 'dark' });
+// @ts-expect-error an object that is not a node, a live value or text is not a child
+void (<Settings />);
