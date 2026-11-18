@@ -183,6 +183,60 @@ document.body.append(
             to a range input whose <code>max</code> attribute must be set before its <code>value</code> is clamped.
             See <a href="props-attrs.html">Props and attributes</a>.
           </p>
+          <p>
+            The order does not help when the options arrive later, for example after a load. The value is applied while
+            the select is still empty, and when the options are inserted the browser selects the first one. Nothing
+            applies the signal again until it changes, so the select and the signal disagree. Bind <code>selected</code>
+            on each option with a <code>computed</code> instead of <code>value</code> on the select. Each option then
+            follows the signal when it is created and whenever the signal changes:
+          </p>
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { option, select } from 'fiorejs';
+import { computed, flush, state } from '@fiorejs/signals';
+
+const choice = state('b');
+const options = state([]);
+
+const sel = select
+  .on({ change: (event) =&gt; choice.set(event.currentTarget.value) })
+  .create(
+    options.map((o) =&gt; option.props({ value: o, selected: computed(() =&gt; choice.get() === o) }).create(o)),
+  );
+document.body.append(sel);
+
+options.set(['a', 'b', 'c']);
+flush();
+console.log(sel.value); // b
+choice.set('c');
+flush();
+console.log(sel.value); // c</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { computed, flush, state } from '@fiorejs/signals';
+
+const choice = state('b');
+const options = state([]);
+
+const sel = (
+  &lt;select onchange={(event) =&gt; choice.set(event.currentTarget.value)}&gt;
+    {options.map((o) =&gt; (
+      &lt;option value={o} selected={computed(() =&gt; choice.get() === o)}&gt;
+        {o}
+      &lt;/option&gt;
+    ))}
+  &lt;/select&gt;
+);
+document.body.append(sel);
+
+options.set(['a', 'b', 'c']);
+flush();
+console.log(sel.value); // b
+choice.set('c');
+flush();
+console.log(sel.value); // c</code></pre>
+</div>
+          <p>
+            The select shows <code>b</code> after the options load, and <code>c</code> after <code>choice</code> is set to
+            <code>'c'</code>.
+          </p>
         </section>
 
         <section id="validation">

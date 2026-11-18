@@ -117,7 +117,8 @@ console.log(view.innerHTML); // &lt;p&gt;The details&lt;/p&gt;</code></pre>
         <section id="branches">
           <h2>What a branch returns</h2>
           <p>
-            A branch returns text, a node or nothing. It does not track signals itself, since it runs once
+            A branch returns text, a node, several nodes or nothing. Several nodes are an array in the builder and a fragment in
+            JSX, and all of them are removed again when the branch changes. It does not track signals itself, since it runs once
             when it is shown. To show a live value inside a branch, put it in an element:
             <code>.else(() => span(user.computed((u) =&gt; u.name)))</code>.
           </p>
@@ -125,6 +126,47 @@ console.log(view.innerHTML); // &lt;p&gt;The details&lt;/p&gt;</code></pre>
             A branch that throws while it is built keeps the nodes the binding had and stops updating, like
             any binding that throws. The error is thrown at the end of the flush.
           </p>
+          <p>
+            Return several nodes when one condition shows siblings, such as a list and its footer:
+          </p>
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { div, p } from 'fiorejs';
+import { flush, state } from '@fiorejs/signals';
+
+const open = state(false);
+const view = div(open.if(() =&gt; [p('a'), p('b')]));
+document.body.append(view);
+
+open.set(true);
+flush();
+console.log(view.innerHTML); // &lt;p&gt;a&lt;/p&gt;&lt;p&gt;b&lt;/p&gt;
+
+open.set(false);
+flush();
+console.log(JSON.stringify(view.innerHTML)); // ""</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { flush, state } from '@fiorejs/signals';
+
+const open = state(false);
+const view = (
+  &lt;div&gt;
+    {open.if(() =&gt; (
+      &lt;&gt;
+        &lt;p&gt;a&lt;/p&gt;
+        &lt;p&gt;b&lt;/p&gt;
+      &lt;/&gt;
+    ))}
+  &lt;/div&gt;
+);
+document.body.append(view);
+
+open.set(true);
+flush();
+console.log(view.innerHTML); // &lt;p&gt;a&lt;/p&gt;&lt;p&gt;b&lt;/p&gt;
+
+open.set(false);
+flush();
+console.log(JSON.stringify(view.innerHTML)); // ""</code></pre>
+</div>
         </section>
 
         <section id="case">

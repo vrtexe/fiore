@@ -198,6 +198,84 @@ console.log(label.textContent); // 1: resumed with the current value</code></pre
           </p>
         </section>
 
+        <section id="no-owner">
+          <h2>Where code has no owner</h2>
+          <p>
+            An owner is only current while its code runs. Effects, bindings and computeds created where no owner
+            is running are never stopped. These places have no owner:
+          </p>
+          <ul>
+            <li>inside <code>untrack(fn)</code>, which runs <code>fn</code> without an owner as well as without subscribing;</li>
+            <li>event handlers, timers and other callbacks that run later;</li>
+            <li>in an async component or function, everything after the first <code>await</code>, because JavaScript cannot carry the owner across an <code>await</code>.</li>
+          </ul>
+          <p>
+            None of these places needs to create anything. An event handler sets a signal, and the view that
+            reacts to it is already declared with <code>.if</code>, <code>.case</code> or <code>.map</code>. The
+            branch or row owns what it builds, so closing it stops its effects and bindings:
+          </p>
+<div class="code-pair">
+<pre class="code" tabindex="0" data-syntax="builder"><code class="language-js">import { button, div, p } from 'fiorejs';
+import { effect, flush, state } from '@fiorejs/signals';
+
+const count = state(0);
+const open = state(false);
+
+function Panel() {
+  effect(() =&gt; console.log('count is', count.get()));
+  return p(count);
+}
+
+document.body.append(
+  div([
+    button.on({ click: () =&gt; open.set(true) }).create('Open'),
+    open.if(() =&gt; Panel()),
+  ]),
+);
+
+open.set(true);
+flush(); // logs "count is 0"
+count.set(1);
+flush(); // logs "count is 1"
+
+open.set(false);
+flush(); // the branch is gone, and its effect with it
+count.set(2);
+flush(); // logs nothing</code></pre>
+<pre class="code" tabindex="0" data-syntax="jsx"><code class="language-jsx">import { effect, flush, state } from '@fiorejs/signals';
+
+const count = state(0);
+const open = state(false);
+
+function Panel() {
+  effect(() =&gt; console.log('count is', count.get()));
+  return &lt;p&gt;{count}&lt;/p&gt;;
+}
+
+document.body.append(
+  &lt;div&gt;
+    &lt;button onclick={() =&gt; open.set(true)}&gt;Open&lt;/button&gt;
+    {open.if(() =&gt; &lt;Panel /&gt;)}
+  &lt;/div&gt;,
+);
+
+open.set(true);
+flush(); // logs "count is 0"
+count.set(1);
+flush(); // logs "count is 1"
+
+open.set(false);
+flush(); // the branch is gone, and its effect with it
+count.set(2);
+flush(); // logs nothing</code></pre>
+</div>
+          <p>
+            In an async component, create effects before the first <code>await</code>, or load the data with
+            <a href="resources.html"><code>resource</code></a> and show it with <code>.if</code> or a computed
+            child, so everything is built synchronously under the right owner.
+          </p>
+        </section>
+
         <nav class="pager" aria-label="Pages" data-pager></nav>
       </main>
     </div>
