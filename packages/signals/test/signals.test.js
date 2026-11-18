@@ -2406,3 +2406,26 @@ test('a computed that threw after reading a state passes on the next change of a
 
   assert.deepEqual(seen, [10, 'error', 30]);
 });
+
+test('a warmed chain of 20,000 computeds that each also read the changed state updates without throwing', () => {
+  const source = state(1);
+  const chain = [source];
+  const warm = [];
+  for (let i = 1; i <= 20_000; i++) {
+    const previous = chain[i - 1];
+    chain.push(computed(() => previous.get() + source.get()));
+    // The first read of a chain nests once per computed, so the chain is read in steps while it grows.
+    if (i % 1_000 === 0) warm.push(effect(() => chain[i].get()));
+  }
+  const seen = [];
+  effect(() => seen.push(chain[20_000].get()));
+  warm.forEach((stop) => stop());
+
+  source.set(2);
+  flush();
+  source.set(3);
+  flush();
+
+  assert.deepEqual(seen, [20_001, 40_002, 60_003]);
+  assert.equal(chain[20_000].get(), 60_003);
+});
