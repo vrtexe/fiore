@@ -6,6 +6,9 @@
 /** @type {[Queued[], Queued[], Queued[]]} Effects waiting for the flush, by phase: pre, normal, post. */
 const queues = [[], [], []];
 
+/** @type {[Queued[], Queued[], Queued[]]} Empty arrays that take the place of a queue while its batch runs. */
+const spares = [[], [], []];
+
 /** Whether an effect joined a queue out of creation order, so the queue is sorted before it runs. */
 const unsorted = [false, false, false];
 
@@ -56,13 +59,25 @@ export function enqueue(node, phase) {
   scheduled = true;
   if (!task) {
     task = true;
-    queueMicrotask(() => {
-      task = false;
-      if (scheduled) {
-        settle(true);
-      }
-    });
+    queueMicrotask(runTask);
   }
+}
+
+/** The microtask that flushes. */
+function runTask() {
+  task = false;
+  if (scheduled) {
+    settle(true);
+  }
+}
+
+/**
+ * Orders effects by creation.
+ * @param {Queued} a
+ * @param {Queued} b
+ */
+function byId(a, b) {
+  return a.id - b.id;
 }
 
 /**
@@ -116,32 +131,18 @@ function settle(queued) {
       if (phase === -1) {
         break;
       }
-      // Work queued while this batch runs goes to a new queue, for the next round.
+      // Work queued while this batch runs goes to the spare queue, for the next round; the batch is the spare after it.
       const batch = queues[phase];
-      queues[phase] = [];
+      queues[phase] = spares[phase];
+      spares[phase] = batch;
       if (unsorted[phase]) {
         unsorted[phase] = false;
-        batch.sort((a, b) => a.id - b.id);
+        batch.sort(byId);
       }
-      for (const node of batch) {
-        // An effect stopped since it was queued is skipped.
-        if (!node.queued) {
-          continue;
-        }
-        node.queued = false;
-        if (node.flush !== flush) {
-          node.flush = flush;
-          node.runs = 0;
-        }
-        if (++node.runs > MAX_RUNS) {
-          // Only the looping effect stops; the others still run.
-          fail(
-            new Error(`An effect ran more than ${MAX_RUNS} times in one flush; it probably sets a signal it reads.`),
-          );
-          node.stop();
-          continue;
-        }
-        node.run();
+      try {
+        runBatch(batch, flush);
+      } finally {
+        batch.length = 0;
       }
     }
   } finally {
@@ -150,16 +151,46 @@ function settle(queued) {
   const result = failure;
   failure = undefined;
   const waiting = waiters;
-  waiters = [];
-  for (const waiter of waiting) {
-    if (result) {
-      waiter.reject(result.error);
-    } else {
-      waiter.resolve();
+  if (waiting.length > 0) {
+    waiters = [];
+    for (const waiter of waiting) {
+      if (result) {
+        waiter.reject(result.error);
+      } else {
+        waiter.resolve();
+      }
     }
   }
   if (result && !(queued && waiting.length > 0)) {
     throw result.error;
+  }
+}
+
+/**
+ * Runs the effects of one batch, each once, in order.
+ * @param {Queued[]} batch
+ * @param {number} flush the number of the running flush
+ */
+function runBatch(batch, flush) {
+  for (const node of batch) {
+    // An effect stopped since it was queued is skipped.
+    if (!node.queued) {
+      continue;
+    }
+    node.queued = false;
+    if (node.flush !== flush) {
+      node.flush = flush;
+      node.runs = 0;
+    }
+    if (++node.runs > MAX_RUNS) {
+      // Only the looping effect stops; the others still run.
+      fail(
+        new Error(`An effect ran more than ${MAX_RUNS} times in one flush; it probably sets a signal it reads.`),
+      );
+      node.stop();
+      continue;
+    }
+    node.run();
   }
 }
 

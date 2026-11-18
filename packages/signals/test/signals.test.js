@@ -2510,3 +2510,24 @@ test('an effect that the check of its sources stops does not run', () => {
     assert.ok(stopped === -1 || log.lastIndexOf(`run${id}`) < stopped, log.join(' '));
   }
 });
+
+test('effects queued while a flush runs run once in that flush, in creation order, flush after flush', () => {
+  const a = state(0);
+  const b = state(0);
+  const log = [];
+  effect(() => log.push(`first${b.get()}`));
+  effect(() => {
+    const value = a.get();
+    log.push(`second${value}`);
+    b.set(value);
+  });
+  effect(() => log.push(`third${b.get()}`));
+  log.length = 0;
+
+  for (let i = 1; i <= 3; i++) {
+    a.set(i);
+    flush();
+  }
+
+  assert.deepEqual(log, ['second1', 'first1', 'third1', 'second2', 'first2', 'third2', 'second3', 'first3', 'third3']);
+});
