@@ -87,8 +87,27 @@ await new Promise((resolve) =&gt; setTimeout(resolve, 20)); // logs "idle User 2
             <li><code>resource.loading</code> is a signal that is true while a load runs.</li>
             <li><code>resource.error</code> is a signal of the last error. It is cleared when a new load starts and when the source becomes <code>null</code>, <code>undefined</code> or <code>false</code>.</li>
             <li><code>refetch()</code> loads again with the last source value.</li>
-            <li><code>mutate(value)</code> sets the value without loading, for example for an optimistic change.</li>
+            <li><code>mutate(value)</code> sets the value without loading, for example for an optimistic change. A load that is already running still replaces the mutated value when it finishes.</li>
           </ul>
+          <p>
+            A <code>mutate</code> is not a load, so it does not cancel one. Here the load for <code>'b'</code> is
+            running when <code>mutate</code> is called, and its result replaces the mutated value:
+          </p>
+<pre class="code" tabindex="0"><code class="language-js">import { resource, state, tick } from '@fiorejs/signals';
+
+const sleep = (ms) =&gt; new Promise((resolve) =&gt; setTimeout(resolve, ms));
+const query = state('a');
+const rows = resource(query, async (q) =&gt; {
+  await sleep(30);
+  return `loaded ${q}`;
+});
+await sleep(50);
+query.set('b');
+await tick(); // the load for "b" is running
+rows.mutate('optimistic');
+console.log(rows.get()); // optimistic
+await sleep(60);
+console.log(rows.get()); // loaded b</code></pre>
           <p>
             A failed load that nothing reads <code>error</code> of is also reported with
             <code>reportError</code>, so it does not go unnoticed. Show the states by binding them:
