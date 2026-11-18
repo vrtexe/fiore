@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
+import { readFileSync } from 'node:fs';
 import { JSDOM } from 'jsdom';
 import { LIVE } from 'fiorejs';
+import svg from 'fiorejs/svg';
 import { jsx, type Child } from '@fiorejs/jsx/jsx-runtime';
 
 const { window } = new JSDOM();
@@ -484,4 +486,21 @@ test('a dataset object sets data attributes, plain or live', () => {
   assert.equal(box.getAttribute('data-id'), '42');
   assert.equal(box.getAttribute('data-kind'), 'live');
   assert.equal(box.hasAttribute('dataset'), false);
+});
+
+test('every SVG tag of fiorejs/svg except a, script, style and title builds an SVG element', () => {
+  const names = Object.keys(svg)
+    .filter((name) => !['element', 'a', 'script', 'style', 'title'].includes(name))
+    .map((name) => (name === 'switch_' ? 'switch' : name));
+  const html = names.filter((name) => (jsx(name, {}) as Element).namespaceURI !== 'http://www.w3.org/2000/svg');
+
+  assert.equal(names.length, 59);
+  assert.deepEqual(html, []);
+});
+
+test('the runtime takes only the SVG element function, so a bundle without SVG leaves the SVG tags out', () => {
+  const source = readFileSync(new URL(import.meta.resolve('@fiorejs/jsx/jsx-runtime')), 'utf8');
+
+  assert.match(source, /import \{ element as svgElement \} from 'fiorejs\/svg';/);
+  assert.doesNotMatch(source, /import svg\b|import \* as/);
 });

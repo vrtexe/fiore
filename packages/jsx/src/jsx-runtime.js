@@ -1,11 +1,20 @@
 import { LIVE, element, fragment } from 'fiorejs';
-import svg, { element as svgElement } from 'fiorejs/svg';
+import { element as svgElement } from 'fiorejs/svg';
 
 // ponytail: a, script, style and title always create HTML elements; SVG versions need a namespace hint
+/**
+ * The SVG tags of fiorejs/svg, written out so a bundle does not take in every SVG tag function; a test keeps the two
+ * in step.
+ */
 const SVG_TAGS = new Set(
-  Object.keys(svg)
-    .filter((name) => !['element', 'a', 'script', 'style', 'title'].includes(name))
-    .map((name) => (name === 'switch_' ? 'switch' : name)),
+  (
+    'animate animateMotion animateTransform circle clipPath defs desc ellipse feBlend feColorMatrix ' +
+    'feComponentTransfer feComposite feConvolveMatrix feDiffuseLighting feDisplacementMap feDistantLight ' +
+    'feDropShadow feFlood feFuncA feFuncB feFuncG feFuncR feGaussianBlur feImage feMerge feMergeNode feMorphology ' +
+    'feOffset fePointLight feSpecularLighting feSpotLight feTile feTurbulence filter foreignObject g image line ' +
+    'linearGradient marker mask metadata mpath path pattern polygon polyline radialGradient rect set stop svg switch ' +
+    'symbol text textPath tspan use view'
+  ).split(' '),
 );
 
 /** Tag functions by name, so every element name builds its tag function once. */
