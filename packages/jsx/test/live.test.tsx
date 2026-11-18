@@ -18,3 +18,12 @@ void (<input placeholder={() => 'Name'} />);
 void (<button onclick={'not a function'} />);
 
 export {};
+
+// The package root exports the JSX namespace and Child, for components that forward props to an element.
+import type { Child, JSX } from '@fiorejs/jsx';
+
+function TextInput(props: JSX.IntrinsicElements['input']) {
+  return <input {...props} />;
+}
+const label: Child = 'Email';
+void (<label>{label}<TextInput type="email" /></label>);

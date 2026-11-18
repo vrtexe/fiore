@@ -1,5 +1,5 @@
 import { Signal, state } from './signal.js';
-import { effect, untrack } from './tracking.js';
+import { effect, runIn } from './tracking.js';
 import { read } from './utils.js';
 import { report } from './scheduler.js';
 
@@ -52,7 +52,7 @@ class Resource extends Signal {
     this.error.set(undefined);
     const input = this._input;
     // Called inside the promise, so a synchronous throw from the fetcher becomes the error too.
-    new Promise((resolve) => resolve(untrack(() => this._load(input, { signal: own.signal })))).then(
+    new Promise((resolve) => resolve(runIn(null, null, () => this._load(input, { signal: own.signal })))).then(
       (result) => {
         if (this._controller === own) {
           // A finished load is not aborted when the next one starts.

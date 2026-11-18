@@ -4,7 +4,7 @@ import { runInNewContext } from 'node:vm';
 import { JSDOM } from 'jsdom';
 
 const { window } = new JSDOM();
-Object.assign(globalThis, { document: window.document, Node: window.Node });
+Object.assign(globalThis, { document: window.document, Node: window.Node, MutationObserver: window.MutationObserver });
 
 const { div, input, element, LIVE } = await import('../lib/html.js');
 const { default: math } = await import('../lib/math.js');
@@ -902,4 +902,22 @@ test('a listener with options gets them', () => {
   el.dispatchEvent(new window.Event('click'));
 
   assert.equal(calls, 1);
+});
+
+test('a select keeps its value when its options arrive later', async () => {
+  const fixed = select.props({ value: 'b' }).create();
+  let apply = (/** @type {unknown} */ _value) => {};
+  const live = { [LIVE]: (/** @type {(value: unknown) => void} */ set) => ((apply = set), set('c')) };
+  const bound = select.props({ value: /** @type {any} */ (live) }).create();
+  for (const element of [fixed, bound]) {
+    element.append(option.props({ value: 'a' }).create('a'), option.props({ value: 'b' }).create('b'), option.props({ value: 'c' }).create('c'));
+  }
+  await Promise.resolve();
+  assert.equal(fixed.value, 'b');
+  assert.equal(bound.value, 'c');
+
+  apply('a');
+  bound.replaceChildren(option.props({ value: 'x' }).create('x'), option.props({ value: 'a' }).create('a'));
+  await Promise.resolve();
+  assert.equal(bound.value, 'a');
 });
