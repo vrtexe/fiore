@@ -1,6 +1,6 @@
 {
   "name": "@fiorejs/signals",
-  "version": "2.2.1",
+  "version": "2.3.0",
   "description": "Signals for fiorejs. Bind state to properties, attributes and children, and only the bound DOM spot updates.",
   "license": "MIT",
   "author": "vrtexe",
@@ -27,7 +27,7 @@
     "test": "tsc -p test && node --expose-gc --test test/signals.test.js"
   },
   "peerDependencies": {
-    "fiorejs": "^2.2.0"
+    "fiorejs": "^2.3.0"
   },
   "publishConfig": {
     "access": "public"
