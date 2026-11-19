@@ -9,13 +9,13 @@ import { chapters } from './lessons.js';
 
 const CDN = 'https://cdn.jsdelivr.net/npm';
 const IMPORTS = {
-  fiorejs: `${CDN}/fiorejs@2.2.0/lib/html.js`,
-  'fiorejs/html': `${CDN}/fiorejs@2.2.0/lib/html.js`,
-  'fiorejs/svg': `${CDN}/fiorejs@2.2.0/lib/svg.js`,
-  'fiorejs/math': `${CDN}/fiorejs@2.2.0/lib/math.js`,
-  '@fiorejs/signals': `${CDN}/@fiorejs/signals@2.2.0/src/signals.js`,
-  '@fiorejs/jsx': `${CDN}/@fiorejs/jsx@2.2.0/src/index.js`,
-  '@fiorejs/jsx/jsx-runtime': `${CDN}/@fiorejs/jsx@2.2.0/src/jsx-runtime.js`,
+  fiorejs: `${CDN}/fiorejs@2.3.0/lib/html.js`,
+  'fiorejs/html': `${CDN}/fiorejs@2.3.0/lib/html.js`,
+  'fiorejs/svg': `${CDN}/fiorejs@2.3.0/lib/svg.js`,
+  'fiorejs/math': `${CDN}/fiorejs@2.3.0/lib/math.js`,
+  '@fiorejs/signals': `${CDN}/@fiorejs/signals@2.3.0/src/signals.js`,
+  '@fiorejs/jsx': `${CDN}/@fiorejs/jsx@2.3.0/src/index.js`,
+  '@fiorejs/jsx/jsx-runtime': `${CDN}/@fiorejs/jsx@2.3.0/src/jsx-runtime.js`,
 };
 const SUCRASE = 'https://esm.sh/sucrase@3.35.1';
 
