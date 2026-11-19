@@ -1,4 +1,4 @@
-# <img src="https://raw.githubusercontent.com/vrtexe/fiore/main/docs/assets/brand/fiore-tile.svg" alt="" width="44" height="44" align="center" /> fiore
+# <img src="https://raw.githubusercontent.com/vrtexe/fiore/main/docs/assets/brand/fiore-tile.svg" alt="" width="34" height="34" align="absmiddle" /> fiore
 
 Create HTML, SVG and MathML elements in JavaScript with one function per tag.
 
