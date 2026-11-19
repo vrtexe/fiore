@@ -45,6 +45,7 @@ document.body.append(
 | `tick()` | A promise that resolves after the waiting effects and bindings have run. |
 | `root(fn)` | Runs `fn` with an owner of its own and returns a function that stops everything `fn` created; see [Cleanup](#cleanup). |
 | `onCleanup(fn)` | Runs `fn` when the current owner stops: the root is stopped, the branch or list row is removed, or the effect runs again or stops. With no owner it never runs. Use it to remove document listeners, timers or nodes added outside the element. |
+| `state` as a ref | A writable signal given as the JSX `ref` (`<input ref={field} />`) or to a builder's `also(field)` holds the element while it is in the document: it is set when the element is inserted, however much later, to `null` when it is removed, and to `null` for good when its owner stops. `effect(() => field.get()?.focus())` focuses an element that is inserted later. |
 | `untrack(fn)` | Runs `fn` without subscribing to the signals it reads. What `fn` creates still belongs to the current owner and stops with it. |
 | `read(value)` | Returns the current value of a signal, a getter function or a plain value. |
 | `classList(entries)` | A computed value for `className` or the `class` attribute that lists classes by condition; see [Classes](#classes). |

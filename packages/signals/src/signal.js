@@ -15,6 +15,7 @@ import {
   release,
   runTracked,
   stopOwned,
+  untrack,
 } from "./tracking.js";
 import { List, itemKey } from "./list.js";
 import { When } from "./when.js";
@@ -46,7 +47,21 @@ export class Signal {
    * @param {import('fiorejs/type/base.dom.d.ts').BindContext} context
    */
   [LIVE](apply, context) {
-    attach(() => this.get(), apply, context);
+    if (context.kind === 'ref') {
+      // A ref binding sets the signal to its element when it starts and back to null when it stops.
+      const element = context.element;
+      const signal = /** @type {{ set(value: unknown): void }} */ (/** @type {unknown} */ (this));
+      attach(
+        () => element,
+        (value) => {
+          signal.set(value);
+          return () => untrack(() => signal.set(null));
+        },
+        context,
+      );
+    } else {
+      attach(() => this.get(), apply, context);
+    }
   }
 
   /**

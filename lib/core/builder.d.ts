@@ -8,7 +8,7 @@
  *   attrs(map: LiveAttributes<A>): Builder<T, A, On>,
  *   on(map: On): Builder<T, A, On>,
  *   with(fn: (builder: Builder<T, A, On>) => Builder<Element, unknown, object>): Builder<T, A, On>,
- *   also(fn: Callback<T>): Builder<T, A, On>,
+ *   also(fn: Callback<T> | Ref<T>): Builder<T, A, On>,
  *   create(children?: Children): T,
  * }} Tag
  */
@@ -35,9 +35,9 @@ export class Builder<T extends Element, A, On extends object> {
      * @param {object} [props]
      * @param {object} [attrs]
      * @param {readonly object[]} [on]
-     * @param {readonly Callback<T>[]} [also]
+     * @param {readonly (Callback<T> | Ref<any>)[]} [also]
      */
-    constructor(props?: object, attrs?: object, on?: readonly object[], also?: readonly Callback<T>[]);
+    constructor(props?: object, attrs?: object, on?: readonly object[], also?: readonly (Callback<T> | Ref<any>)[]);
     /**
      * Creates the element of the tag.
      * @returns {T}
@@ -48,10 +48,10 @@ export class Builder<T extends Element, A, On extends object> {
      * @param {object} [props]
      * @param {object} [attrs]
      * @param {readonly object[]} [on]
-     * @param {readonly Callback<T>[]} [also]
+     * @param {readonly (Callback<T> | Ref<any>)[]} [also]
      * @returns {Builder<T, A, On>}
      */
-    next(props?: object, attrs?: object, on?: readonly object[], also?: readonly Callback<T>[]): Builder<T, A, On>;
+    next(props?: object, attrs?: object, on?: readonly object[], also?: readonly (Callback<T> | Ref<any>)[]): Builder<T, A, On>;
     /**
      * DOM properties. Repeated calls combine them; later keys win.
      * @param {ElementProps<T>} map
@@ -74,10 +74,12 @@ export class Builder<T extends Element, A, On extends object> {
      */
     with(fn: (builder: Builder<T, A, On>) => Builder<Element, unknown, object>): Builder<T, A, On>;
     /**
-     * Calls `fn` with the created element, after the listeners; it is not connected to the document yet.
-     * @param {Callback<T>} fn
+     * Calls `fn` with the created element, after the listeners; it is not connected to the document yet. A signal instead
+     * of a function holds the element while it is in the document: it is set to the element when the element is
+     * inserted, to null when it is removed, and to null for good when the binding's owner stops.
+     * @param {Callback<T> | Ref<T>} fn
      */
-    also(fn: Callback<T>): Builder<T, A, On>;
+    also(fn: Callback<T> | Ref<T>): Builder<T, A, On>;
     /**
      * Creates the element with these children and returns it.
      * @param {Children} [children]
@@ -98,8 +100,16 @@ export type Tag<T extends Element, A, On extends object> = ((data?: TagData<T, A
     attrs(map: LiveAttributes<A>): Builder<T, A, On>;
     on(map: On): Builder<T, A, On>;
     with(fn: (builder: Builder<T, A, On>) => Builder<Element, unknown, object>): Builder<T, A, On>;
-    also(fn: Callback<T>): Builder<T, A, On>;
+    also(fn: Callback<T> | Ref<T>): Builder<T, A, On>;
     create(children?: Children): T;
+};
+/**
+ * A writable signal given to `also`, which holds the element while it is in the document. Declared through methods,
+ * like `Callback`, so a builder of a specific element still fits a modifier written for every HTML element.
+ */
+export type Ref<T> = {
+    [LIVE](apply: (value: T | null) => void, context: import("../types/base.dom.d.ts").BindContext): void;
+    set(value: T | null): void;
 };
 /**
  * A callback that gets the created element. It is declared through a method, so a builder of a specific element, such
@@ -112,3 +122,4 @@ import type { ElementProps } from '../types/base.dom.d.ts';
 import type { LiveAttributes } from '../types/base.dom.d.ts';
 import type { Children } from '../types/base.dom.d.ts';
 import type { TagData } from '../types/base.dom.d.ts';
+import { LIVE } from './base.js';

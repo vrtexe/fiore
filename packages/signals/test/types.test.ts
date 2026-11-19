@@ -91,3 +91,12 @@ void picked;
 // if gives the branch the truthy value.
 const someone = state<{ name: string } | null>(null);
 div(someone.if((person) => person.name).else(() => 'nobody'));
+
+// also takes a writable signal of the element as a ref; a signal of something else or a computed is rejected. Like a
+// callback, it is checked as a method, so modifiers for every element keep working.
+const inputRef = state<HTMLInputElement | null>(null);
+input.also(inputRef).create();
+// @ts-expect-error a number is not an element
+div.also(state<number | null>(null)).create();
+// @ts-expect-error a computed cannot be written
+input.also(computed((): HTMLInputElement | null => null)).create();

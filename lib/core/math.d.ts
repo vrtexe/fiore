@@ -1,4 +1,4 @@
-/** @import { Callback } from './builder.js' */
+/** @import { Callback, Ref } from './builder.js' */
 /** @import { MathElementEventData, MathElementTagNameMap, MathTag } from '../types/math.dom.d.ts' */
 /** @import { HTMLElementsAttributesMap } from '../types/attributes.d.ts' */
 /**
@@ -19,19 +19,19 @@ export class MathBuilder<K extends keyof MathElementTagNameMap> extends Builder<
      * @param {object} [props]
      * @param {object} [attrs]
      * @param {readonly object[]} [on]
-     * @param {readonly Callback<MathElementTagNameMap[K]>[]} [also]
+     * @param {readonly (Callback<MathElementTagNameMap[K]> | Ref<any>)[]} [also]
      */
-    constructor(name: K, props?: object, attrs?: object, on?: readonly object[], also?: readonly Callback<MathElementTagNameMap[K]>[]);
+    constructor(name: K, props?: object, attrs?: object, on?: readonly object[], also?: readonly (Callback<MathElementTagNameMap[K]> | Ref<any>)[]);
     /** @override */
     override make(): MathMLElement;
     /**
      * @param {object} [props]
      * @param {object} [attrs]
      * @param {readonly object[]} [on]
-     * @param {readonly Callback<MathElementTagNameMap[K]>[]} [also]
+     * @param {readonly (Callback<MathElementTagNameMap[K]> | Ref<any>)[]} [also]
      * @override
      */
-    override next(props?: object, attrs?: object, on?: readonly object[], also?: readonly Callback<MathElementTagNameMap[K]>[]): MathBuilder<K>;
+    override next(props?: object, attrs?: object, on?: readonly object[], also?: readonly (Callback<MathElementTagNameMap[K]> | Ref<any>)[]): MathBuilder<K>;
     #private;
 }
 import type { MathElementTagNameMap } from '../types/math.dom.d.ts';
@@ -40,3 +40,4 @@ import type { HTMLElementsAttributesMap } from '../types/attributes.d.ts';
 import type { MathElementEventData } from '../types/math.dom.d.ts';
 import { Builder } from './builder.js';
 import type { Callback } from './builder.js';
+import type { Ref } from './builder.js';

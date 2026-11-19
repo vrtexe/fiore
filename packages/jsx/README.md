@@ -129,7 +129,13 @@ document.body.append(form);
 input.focus();
 ```
 
-`ref` runs when the element is created, before a parent inserts it, so the element is not in the document yet and focusing or measuring it inside `ref` does nothing. Use the element after inserting the tree, as above, or, with `@fiorejs/signals`, in `effect.post`, whose first run waits for the next flush: `<input ref={(element) => effect.post(() => element.focus())} />`.
+A function `ref` runs when the element is created, before a parent inserts it, so the element is not in the document yet and focusing or measuring it there does nothing. For that, pass a writable signal instead, such as `state<HTMLInputElement | null>(null)` from `@fiorejs/signals`: it holds the element while the element is in the document, is set when the element is inserted, however much later, and back to `null` when it is removed or its owner stops.
+
+```tsx
+const field = state<HTMLInputElement | null>(null);
+effect(() => field.get()?.focus());
+document.body.append(<form><input ref={field} /></form>); // the input gets the focus
+```
 
 Or cast the expression when it is the element itself: `(<input value="Ada" />) as HTMLInputElement`.
 
