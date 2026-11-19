@@ -1,8 +1,5 @@
 <p>
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/vrtexe/fiore/main/docs/assets/brand/fiore-symbol-green.svg" />
-    <img src="https://raw.githubusercontent.com/vrtexe/fiore/main/docs/assets/brand/fiore-symbol-dark.svg" alt="fiore logo" width="72" height="72" />
-  </picture>
+  <img src="https://raw.githubusercontent.com/vrtexe/fiore/main/docs/assets/brand/fiore-tile.svg" alt="fiore logo" width="72" height="72" />
 </p>
 
 # fiore
