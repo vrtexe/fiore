@@ -65,9 +65,12 @@ type NestedChild = Child | LiveValue<Child | Child[]> | NestedChild[];
 /** One child, a live value of children, or an array of children nested as deep as needed. */
 export type Children = Live<Child | Child[]> | NestedChild[];
 
+/** A `dataset` prop: its keys are merged into the element's data-* attributes. */
+export type DatasetProps = { [key: string]: Live<string | undefined> | undefined };
+
 /** The props of an element: its writable properties, and `dataset`, whose keys are merged into its data-* attributes. */
 export type ElementProps<T extends BaseElement> = PickWritable<RecursivePartial<T>> &
-  (T extends HTMLOrSVGElement ? { dataset?: { [key: string]: Live<string | undefined> | undefined } | undefined } : {});
+  (T extends HTMLOrSVGElement ? { dataset?: DatasetProps | undefined } : {});
 
 export type BaseElement = Element;
 

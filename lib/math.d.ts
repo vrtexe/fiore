@@ -1,4 +1,5 @@
 export { mathElement as element };
+/** @typedef {import('./types/base.dom.d.ts').Children} Children */
 /** @deprecated `a` is not a MathML element; wrap the math in an HTML `a` or set an `href` attribute instead. */
 export const a: import("./types/math.dom.js").MathTag<"a">;
 export const annotation: import("./types/math.dom.js").MathTag<"annotation">;
@@ -66,4 +67,5 @@ declare namespace _default {
     export { semantics };
 }
 export default _default;
+export type Children = import("./types/base.dom.d.ts").Children;
 import { mathElement } from './core/math.js';

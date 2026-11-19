@@ -72,7 +72,7 @@ Everything after `on` is used as the event name as written, except that its firs
 <input onkeydown={{ handler: (event) => console.log(event.key), options: { once: true } }} />
 ```
 
-On SVG elements every prop except listeners and a `style` object is set as an attribute.
+On SVG elements every prop except listeners and a `style` or `dataset` object is set as an attribute.
 
 ## Components and fragments
 
@@ -125,8 +125,11 @@ A JSX expression is typed as `Node`, not as the specific element. To get the ele
 ```tsx
 let input!: HTMLInputElement;
 const form = <form><input value="Ada" ref={(element) => (input = element)} /></form>;
+document.body.append(form);
 input.focus();
 ```
+
+`ref` runs when the element is created, before a parent inserts it, so the element is not in the document yet and focusing or measuring it inside `ref` does nothing. Use the element after inserting the tree, as above, or, with `@fiorejs/signals`, in `effect.post`, whose first run waits for the next flush: `<input ref={(element) => effect.post(() => element.focus())} />`.
 
 Or cast the expression when it is the element itself: `(<input value="Ada" />) as HTMLInputElement`.
 

@@ -202,6 +202,19 @@ write(
 );
 
 const jsxOptions = jsx ? { jsx: 'react-jsx', jsxImportSource: '@fiorejs/jsx' } : {};
+// Vite takes the JSX import source of tsconfig.json only for the files that config includes, so it is set for every
+// file in the Vite config, in TypeScript and JavaScript projects alike.
+if (jsx) {
+  write(
+    `vite.config.${language}`,
+    `import { defineConfig } from 'vite';
+
+export default defineConfig({
+  oxc: { jsx: { importSource: '@fiorejs/jsx' } },
+});
+`,
+  );
+}
 if (language === 'ts') {
   write(
     'tsconfig.json',
@@ -220,15 +233,6 @@ if (language === 'ts') {
     }),
   );
 } else if (jsx) {
-  write(
-    'vite.config.js',
-    `import { defineConfig } from 'vite';
-
-export default defineConfig({
-  oxc: { jsx: { importSource: '@fiorejs/jsx' } },
-});
-`,
-  );
   write(
     'jsconfig.json',
     json({ compilerOptions: { target: 'es2022', module: 'esnext', moduleResolution: 'bundler', ...jsxOptions }, include: ['src'] }),

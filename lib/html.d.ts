@@ -4,6 +4,7 @@ export { element };
  * @typedef {import('./types/base.dom.d.ts').LiveValue<T>} LiveValue
  */
 /** @typedef {import('./types/base.dom.d.ts').BindContext} BindContext */
+/** @typedef {import('./types/base.dom.d.ts').Children} Children */
 /**
  * @template T
  * @typedef {import('./types/base.dom.d.ts').Live<T>} Live
@@ -240,6 +241,7 @@ declare const _default: Readonly<{
 export default _default;
 export type LiveValue<T> = import("./types/base.dom.d.ts").LiveValue<T>;
 export type BindContext = import("./types/base.dom.d.ts").BindContext;
+export type Children = import("./types/base.dom.d.ts").Children;
 export type Live<T> = import("./types/base.dom.d.ts").Live<T>;
 export type HTMLBuilder = import("./types/html.dom.d.ts").HTMLBuilder;
 export type HTMLModifier = import("./types/html.dom.d.ts").HTMLModifier;

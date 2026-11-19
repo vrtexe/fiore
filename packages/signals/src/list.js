@@ -1,7 +1,7 @@
 import { LIVE } from 'fiorejs';
 import { adopt, own } from './tracking.js';
 import { attach } from './dom.js';
-import { Item } from './signal.js';
+import { state } from './signal.js';
 
 /**
  * @template T
@@ -9,7 +9,7 @@ import { Item } from './signal.js';
  */
 
 /**
- * @typedef {{ first: Node | null, last: Node | null, stop: () => void, pass: number, item: Item<unknown> | undefined }} Row
+ * @typedef {{ first: Node | null, last: Node | null, stop: () => void, pass: number, item: (Signal<unknown> & { set(value: unknown): void }) | undefined }} Row
  */
 
 /**
@@ -82,7 +82,7 @@ export class List {
               row = this._live ? createLiveRow(this._render, item, index) : createRow(() => this._render(item, index));
               created.push(row);
             } else if (row.item !== undefined) {
-              row.item._replace(item);
+              row.item.set(item);
             }
             row.pass = pass;
             const list = next.get(id);
@@ -136,13 +136,14 @@ function createRow(render) {
 
 /**
  * Renders a row that gets a signal of its item.
- * @param {(item: Item<unknown>, index: number) => Node} render
+ * @param {(item: Signal<unknown>, index: number) => Node} render
  * @param {unknown} value
  * @param {number} index
  * @returns {Row}
  */
 function createLiveRow(render, value, index) {
-  const item = new Item(value);
+  // A state, read-only through the types: only the list sets it.
+  const item = state(value);
   const row = createRow(() => render(item, index));
   row.item = item;
   return row;

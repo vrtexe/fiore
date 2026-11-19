@@ -26,6 +26,8 @@ test('without a terminal it uses the defaults: Vite, TypeScript, JSX, signals, O
   assert.equal(manifest.scripts.build, 'tsc && vite build');
   assert.match(app.read('src/main.tsx'), /@fiorejs\/signals/);
   assert.equal(JSON.parse(app.read('tsconfig.json')).compilerOptions.jsxImportSource, '@fiorejs/jsx');
+  // The tsconfig covers src only, so Vite gets the import source for every .tsx file from its own config.
+  assert.match(app.read('vite.config.ts'), /importSource: '@fiorejs\/jsx'/);
   assert.ok(app.has('.gitignore') && app.has('.oxlintrc.json') && app.has('.prettierrc.json'));
   assert.match(app.stdout, /cd My App!\n {2}npm install\n {2}npm run dev/);
 });
